@@ -389,25 +389,38 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
 
         case _C_UINT:
             if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM)
-                *(unsigned int*)where = (unsigned int) NUM2INT(rb_val);
+                *(unsigned int*)where = (unsigned int) NUM2UINT(rb_val);
             else
                 ret = NO;
             break;
 
         case _C_LNG:
             if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
-                *(long*)where = (long) NUM2INT(rb_val);
+                *(long*)where = (long) NUM2LONG(rb_val);
             else
                 ret = NO;	  	
             break;
 
         case _C_ULNG:
             if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
-                *(unsigned long*)where = (unsigned long) NUM2INT(rb_val);
+                *(unsigned long*)where = (unsigned long) NUM2ULONG(rb_val);
             else
                 ret = NO;	  	
             break;
 
+        case _C_LNG_LNG:
+            if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
+                *(long long*)where = (long long) NUM2LL(rb_val);
+            else
+                ret = NO;	  	
+            break;
+
+        case _C_ULNG_LNG:
+            if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )              
+                *(unsigned long long*)where = (unsigned long long) NUM2ULL(rb_val);
+            else
+                ret = NO;	  	
+            break;
 
         case _C_FLT:
             if ( (TYPE(rb_val) == T_FLOAT) || 
@@ -619,15 +632,17 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   if ([val respondsToSelector: @selector(retain)]) {
                       [val retain];
                   }
-                  
-                  NSDebugLog(@"Class of arg transmitted to Ruby = %@",NSStringFromClass([val class]));
 
-                  rb_class = (VALUE) NSMapGet(knownClasses, (void *)[val class]);
+                  Class retClass = [val classForCoder] ?: [val class];
+                  
+                  NSDebugLog(@"Class of arg transmitted to Ruby = %@",NSStringFromClass(retClass));
+
+                  rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
                   
                   // if the class of the returned object is unknown to Ruby
                   // then register the new class with Ruby first
                   if (rb_class == Qfalse) {
-                      rb_class = rb_objc_register_class_from_objc([val class]);
+                      rb_class = rb_objc_register_class_from_objc(retClass);
                   }
                   rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,val);
               }
@@ -679,17 +694,25 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             break;
 
         case _C_UINT:
-            rb_val = INT2FIX(*(unsigned int*)where);
+            rb_val = UINT2NUM(*(unsigned int*)where);
             break;
 
         case _C_LNG:
-            rb_val = INT2NUM(*(long*)where);
+            rb_val = LONG2NUM(*(long*)where);
             break;
 
         case _C_ULNG:
-            rb_val = INT2FIX(*(unsigned long*)where);
+            rb_val = ULONG2NUM(*(unsigned long*)where);
             break;
 
+        case _C_LNG_LNG:
+            rb_val = LL2NUM(*(long*)where);
+            break;
+
+        case _C_ULNG_LNG:
+            rb_val = ULL2NUM(*(unsigned long*)where);
+            break;
+            
         case _C_FLT:
           {
             // FIXME
@@ -1160,7 +1183,7 @@ rb_objc_register_class_from_objc (Class objc_class)
     // it is like: Rigs.import(cname)
     // FIXME: It goes into recursive call with the Ruby NSxxx.rb code and leads
     // to top level constant defined twice (warning). Need to fix that...
-    //NSLog(@"Calling RIGS.importC(%s) from Objc", cname);
+    NSDebugLog(@"Calling ObjRuby.import(%s) from Objc", cname);
     
     rb_funcall(rb_mRigs, rb_intern("import"), 1,rb_str_new2(cname));
     
@@ -1336,8 +1359,8 @@ Init_obj_ext()
                                     0);
     
     // Create 2 ruby class methods under the ObjC Ruby module
-    // - Rigs.class("className") : registers ObjC class with Ruby
-    // - Rigs.register(class): register Ruby class with Objective C
+    // - ObjRuby.class("className") : registers ObjC class with Ruby
+    // - ObjRuby.register(class): register Ruby class with Objective C
 
     rb_mRigs = rb_define_module("ObjRuby");
     rb_define_singleton_method(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);

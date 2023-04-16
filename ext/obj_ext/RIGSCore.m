@@ -340,6 +340,10 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         case _C_CHR:
             if ((TYPE(rb_val) == T_FIXNUM) || (TYPE(rb_val) == T_STRING)) 
                 *(char*)where = (char) NUM2CHR(rb_val);
+            else if (TYPE(rb_val) == T_TRUE)
+                *(char*)where = YES;
+            else if (TYPE(rb_val) == T_FALSE)
+                *(char*)where = NO;
             else
                 ret = NO;
             break;
@@ -347,11 +351,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         case _C_UCHR:
             if ( ((TYPE(rb_val) == T_FIXNUM) && FIX2INT(rb_val)>=0) ||
                  (TYPE(rb_val) == T_STRING)) 
-                *(char*)where = (char) NUM2CHR(rb_val);
-            else if (TYPE(rb_val) == T_TRUE)
-                *(unsigned char*)where = YES;
-            else if (TYPE(rb_val) == T_FALSE)
-                *(unsigned char*)where = NO;
+                *(unsigned char*)where = (unsigned char) NUM2CHR(rb_val);
             else
                 ret = NO;
             break;
@@ -668,17 +668,17 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
           break;
 
         case _C_CHR:
-          rb_val = CHR2FIX(*(unsigned char *)where);
+            // Assume that if YES or NO then it's a BOOLean
+            if ( *(char *)where == YES) 
+                rb_val = Qtrue;
+            else if ( *(char *)where == NO)
+                rb_val = Qfalse;
+            else
+                rb_val = CHR2FIX(*(char *)where);
             break;
 
         case _C_UCHR:
-            // Assume that if YES or NO then it's a BOOLean
-            if ( *(unsigned char *)where == YES) 
-                rb_val = Qtrue;
-            else if ( *(unsigned char *)where == NO)
-                rb_val = Qfalse;
-            else
-                rb_val = CHR2FIX(*(unsigned char *)where);
+            rb_val = CHR2FIX(*(unsigned char *)where);
             break;
 
         case _C_SHT:

@@ -11,7 +11,10 @@ describe NSArray do
   end
 
   it "can call instance methods" do
-    array = described_class.arrayWithObject(described_class.new)
+    nested_array = described_class.new
+    array = described_class.arrayWithObject(nested_array)
+    
     expect(array.count).to eq 1
+    expect(array.containsObject(nested_array)).to be true
   end
 end

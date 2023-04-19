@@ -17,4 +17,9 @@ describe NSArray do
     expect(array.count).to eq 1
     expect(array.containsObject(nested_array)).to be true
   end
+
+  it "can receive a Ruby array" do
+    array = NSArray.arrayWithRubyArray([1,2,3])
+    expect(array.count).to eq 3
+  end
 end

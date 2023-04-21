@@ -11,7 +11,7 @@ describe NSString do
   end
 
   it "can call instance methods" do
-    string = described_class.stringWithString("hello")
+    string = described_class.stringWithCString("hello")
 
     expect(string.length).to eq 5
     expect(string).to eq "hello"

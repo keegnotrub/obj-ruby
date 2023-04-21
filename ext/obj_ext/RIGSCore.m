@@ -219,6 +219,8 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         void	*where;
         VALUE	rb_val;
 
+        type = objc_skip_type_qualifiers (type);
+        
         NSGetSizeAndAlignment(type, &tsize, &align);
    
         offset = ROUND(offset, align);
@@ -459,7 +461,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
             
                 s = rb_string_value_cstr(&rb_val);
                 l = strlen(s)+1;
-                d = [NSMutableData dataWithBytesNoCopy: s length: l];
+                d = [NSMutableData dataWithBytesNoCopy: s length: l freeWhenDone:NO];
                 *(char**)where = (char*)[d mutableBytes];
             
             } else if (TYPE(rb_val) == T_DATA) {
@@ -482,7 +484,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
             
                 s = rb_string_value_cstr(&rb_val);
                 l = strlen(s);
-                d = [NSMutableData dataWithBytesNoCopy: s length: l];
+                d = [NSMutableData dataWithBytesNoCopy: s length: l freeWhenDone:NO];
                 *(void**)where = (void*)[d mutableBytes];
             
             } else if (TYPE(rb_val) == T_DATA) {
@@ -571,6 +573,8 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
       NSUInteger tsize;
       void	*where;
 
+      type = objc_skip_type_qualifiers (type);
+        
       NSDebugLog(@"Converting ObjC value (0x%lx) of type '%c' to Ruby value",
                  *(id*)data, *type);
 

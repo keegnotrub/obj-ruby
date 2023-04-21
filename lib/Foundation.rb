@@ -1,4 +1,4 @@
-# Foundation.rb - Load all Foundation  classes at once
+# Foundation.rb - Load all Foundation classes at once
 #
 #  $Id$
 #
@@ -28,7 +28,6 @@
 require 'obj_ruby'
 
 FoundationClasses = [ 
-"NSDebug",
 "NSObject",
 "NSArchiver",
 "NSArray",

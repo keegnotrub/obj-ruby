@@ -126,12 +126,7 @@ AppKitClasses = [
 "NSTextContainer",
 "NSTextStorage",
 "NSUserInterfaceValidation",
-"NSWindowController",
-
-# GNUstep extensions
-"GSTable",
-"GSHbox",
-"GSVbox" ]
+"NSWindowController" ]
 
 # Now import them all
 AppKitClasses.each { |aClass|  ObjRuby.import(aClass) }

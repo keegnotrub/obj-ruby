@@ -710,11 +710,11 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             break;
 
         case _C_LNG_LNG:
-            rb_val = LL2NUM(*(long*)where);
+            rb_val = LL2NUM(*(long long*)where);
             break;
 
         case _C_ULNG_LNG:
-            rb_val = ULL2NUM(*(unsigned long*)where);
+            rb_val = ULL2NUM(*(unsigned long long*)where);
             break;
             
         case _C_FLT:
@@ -1392,7 +1392,7 @@ Init_obj_ext()
 
     // Define the NSNotFound enum constant that is used all over the place
     // as a return value by Objective C methods
-    rb_define_global_const("NSNotFound", INT2FIX((int)NSNotFound));
+    rb_define_global_const("NSNotFound", LL2NUM((long long)NSNotFound));
     
     // Initialize Process Info and Main Bundle
     rigs_argv = rb_gv_get("$*");

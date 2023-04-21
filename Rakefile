@@ -3,10 +3,9 @@
 require "rake/extensiontask"
 require "bundler/gem_tasks"
 require "rspec/core/rake_task"
+require "standard/rake"
 
 Rake::ExtensionTask.new('obj_ext')
 RSpec::Core::RakeTask.new(:spec)
 
-require "standard/rake"
-
-task default: %i[compile spec]
+task default: [:compile, :spec]

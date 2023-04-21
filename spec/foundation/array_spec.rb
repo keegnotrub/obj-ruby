@@ -16,6 +16,7 @@ describe NSArray do
     
     expect(array.count).to eq 1
     expect(array.containsObject(nested_array)).to be true
+    expect(array.indexOfObject("not here")).to eq NSNotFound
   end
 
   it "can receive a Ruby array" do

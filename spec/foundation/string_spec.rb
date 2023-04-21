@@ -6,8 +6,8 @@ describe NSString do
   it "can create an instance" do
     string = described_class.new
 
-    expect(string).to be_a NSString
     expect(string).not_to be_nil
+    expect(string).to be_a NSString
   end
 
   it "can call instance methods" do

@@ -45,9 +45,12 @@ NSTitledWindowMask  	= 1
 NSClosableWindowMask  	= 2
 NSMiniaturizableWindowMask = 4
 NSResizableWindowMask  	= 8
-NSIconWindowMask  	= 64	# GNUstep extension - app icon window
-NSMiniWindowMask  	= 128	# GNUstep extension - miniwindows
 
+NSWindowStyleMaskBorderless = 0
+NSWindowStyleMaskTitled = 1
+NSWindowStyleMaskClosable = 2
+NSWindowStyleMaskMiniaturizable = 4
+NSWindowStyleMaskResizable = 8
 
 #enum NSSelectionDirection 
 NSDirectSelection   = 0

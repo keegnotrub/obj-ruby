@@ -34,3 +34,7 @@ NSRunContinuesResponse = 2
 NSTerminateCancel = 0     # For compatibility reason this is equivalent to NO (false)
 NSTerminateNow    = 1     # For compatibility reason this is equivalent to NO (false)
 NSTerminateLater  = 2     # Not (yet) used in GNUstep
+
+NSApplicationActivationPolicyRegular = 0
+NSApplicationActivationPolicyAccessory = 1
+NSApplicationActivationPolicyProhibited = 2

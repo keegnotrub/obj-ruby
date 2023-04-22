@@ -156,13 +156,7 @@ static NSMutableDictionary *_rodict = NULL;
 
         [anInvocation getArgument:&objcArg atIndex:i ];
 
-#if     defined(GNUSTEP_BASE_VERSION) || defined(__APPLE__)
         type = [signature getArgumentTypeAtIndex: i];
-#elif   defined(LIB_FOUNDATION_LIBRARY)
-        type = ([signature argumentInfoAtIndex: i]).type;
-#else
-#include "DON'T KNOW HOW TO GET METHOD SIGNATURE INFO"
-#endif
         NSUInteger tsize;
         NSGetSizeAndAlignment(type, &tsize, NULL);
         data = alloca(tsize);

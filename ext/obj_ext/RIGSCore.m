@@ -256,7 +256,11 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                        } */
           
                     break;
-          
+
+                case T_SYMBOL:
+                    rb_val = rb_sym_to_s(rb_val);
+                    *(NSString**)where = [NSString stringWithCString: rb_string_value_cstr(&rb_val)];
+                    break;
           
                 case T_STRING:
                     /* Ruby sends a string to a ObjC method waiting for an id

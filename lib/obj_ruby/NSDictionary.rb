@@ -54,18 +54,7 @@ module ObjRuby
 	    end
 
 	end
-
-	private
-	#
-	# initialize a GS Dictionary with a Ruby hash
-	#
-	def NSDictionary.dictionaryWithRubyHash(hash)
-
-	    self.dictionaryWithObjects_forKeys(NSArray.new(hash.values),
-					       NSArray.new(hash.keys))
-	end
 	    
-	public
 	#
 	# return all the objects of an NSDictionary in a native Ruby Dictionary
 	#

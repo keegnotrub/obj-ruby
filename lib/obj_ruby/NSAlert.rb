@@ -7,8 +7,6 @@
 #    Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
 #    Date: April 2023
 #   
-#    This file is part of the GNUstep Ruby Interface Library.
-#
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Library General Public
 #    License as published by the Free Software Foundation; either

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    obj_ruby (1.0.0)
+    obj_ruby (0.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -57,6 +57,7 @@ GEM
 PLATFORMS
   x86_64-darwin-20
   x86_64-darwin-21
+  x86_64-darwin-22
 
 DEPENDENCIES
   obj_ruby!

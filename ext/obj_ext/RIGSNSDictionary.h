@@ -3,13 +3,11 @@
 
    $Id$
 
-   Copyright (C) 2001 Free Software Foundation, Inc.
+   Copyright (C) 2023 thoughtbot, Inc.
    
-   Written by:  Laurent Julliard <laurent@julliard-online.org>
-   Date: July 2001
+   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Date: April 2023
    
-   This file is part of the GNUstep RubyInterface Library.
-
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
    License as published by the Free Software Foundation; either

@@ -1,4 +1,4 @@
-# Appkit.rb - Load all AppKit GUI classes at once
+# app_kit.rb - Load all AppKit GUI classes at once
 #
 #  $Id$
 #
@@ -25,11 +25,12 @@
 #
 
 # Make sure Foundation classes are loaded first
-require 'Foundation'
+require 'foundation'
 
 AppKitClasses = [ 
 "NSActionCell",
 "NSAffineTransform",
+"NSAlert",
 "NSApplication",
 "NSAttributedString",
 "NSBezierPath",

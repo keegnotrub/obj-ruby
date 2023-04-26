@@ -1,4 +1,4 @@
-# Foundation.rb - Load all Foundation classes at once
+# foundation.rb - Load all Foundation classes at once
 #
 #  $Id$
 #

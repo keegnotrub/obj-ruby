@@ -64,3 +64,8 @@ ObjRuby is a fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), whi
 >  was built in my spare time when my 3 children are in bed :-)
 
 It's really a testimate to both Laurent and the Objective-C runtime in general that while much of the original code was written in 2001, an incredible amount of it runs unchanged over 20 years later on modern versions of macOS and Ruby.
+
+
+## License
+
+This project is Copyright © 2023 Ryan Krug and thoughtbot. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.

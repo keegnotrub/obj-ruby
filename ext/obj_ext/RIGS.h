@@ -36,7 +36,7 @@ typedef struct objc_method_list * MethodList_t;
 #ifdef VERSION
 #define RIGS_VERSION VERSION
 #else
-#define RIGS_VERSION "1.0.0"
+#define RIGS_VERSION "0.1.0"
 #endif
 
 

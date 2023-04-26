@@ -16,7 +16,7 @@ You can run:
 Or you can include in your Gemfile:
 
 ```ruby
-gem 'obj_ruby', '~> 1.0'
+gem 'obj_ruby', '~> 0.1'
 ```
 
 ## Usage

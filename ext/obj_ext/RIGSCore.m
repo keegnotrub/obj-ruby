@@ -1,4 +1,4 @@
-/* RIGS.m - Ruby Interface to GNUStep
+/* RIGS.m - Ruby Interface to GNUstep
 
    $Id$
 
@@ -633,7 +633,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   free(block);
               } else {
                   
-                /* Retain the value otherwise GNUStep releases it and Ruby crashes
+                /* Retain the value otherwise GNUstep releases it and Ruby crashes
                                 It's Ruby garbage collector job to indirectly release the ObjC 
                                 object by calling rb_objc_release()
                             */

@@ -1,4 +1,4 @@
-/* RIGSCore.h - Ruby Interface to GNUStep - main module
+/* RIGSCore.h - Ruby Interface to GNUstep - main module
 
    $Id$
 

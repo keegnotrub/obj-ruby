@@ -1,6 +1,6 @@
 # ObjRuby [![Build Status](https://github.com/keegnotrub/obj-ruby/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/keegnotrub/obj-ruby/actions?query=workflow%3Aci+branch%3Amain)
 
-A fork of [GNUStep's RIGS](https://github.com/gnustep/libs-ruby), updated for modern verions of macOS and Ruby.
+A fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), updated for modern verions of macOS and Ruby.
 
 ## Dependencies
 
@@ -59,7 +59,7 @@ alert.runModal
 
 ## Credit
 
-ObjRuby is a fork of [GNUStep's RIGS](https://github.com/gnustep/libs-ruby), which according to it's author/maintainer [Laurent Julliard](https://github.com/ljulliar):
+ObjRuby is a fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), which according to it's author/maintainer [Laurent Julliard](https://github.com/ljulliar):
 
 >  was built in my spare time when my 3 children are in bed :-)
 

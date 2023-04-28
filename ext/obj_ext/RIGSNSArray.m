@@ -29,7 +29,6 @@
 #undef _
 
 #include <objc/runtime.h>
-#include <Foundation/NSArray.h>
 
 #include "RIGS.h"
 #include "RIGSCore.h"

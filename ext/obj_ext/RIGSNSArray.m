@@ -79,7 +79,7 @@
   }
 
   returnArray = [array initWithObjects: objects  count:count];
-  free (gnustepObjects);
+  free (objects);
 
   return returnArray;
 }

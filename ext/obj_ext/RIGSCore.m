@@ -62,6 +62,8 @@
 #include "RIGSSelectorMapping.h"
 #include "RIGSProxySetup.h"
 #include "RIGSNSApplication.h"
+#include "RIGSNSDictionary.h"
+#include "RIGSNSArray.h"
 
 // Our own argc and argv rebuilt  from Ruby ARGV ($*)
 char **ourargv;
@@ -281,12 +283,11 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                     break;
           
                 case T_ARRAY:
+                    *(NSArray**)where = [NSArray arrayWithRubyArray:rb_val];
+                    break;
+                    
                 case T_HASH:
-                    /* For hashes and array do not create ObjC proxy for the
-                                       moment
-                                       FIXME?? Should probably be handled like T_OBJECT and T_CLASS */
-                    *(id*)where = (id) [RIGSWrapObject objectWithRubyObject: rb_val];
-                    NSDebugLog(@"Wrapping Ruby Object of type: 0x%02x (ObjC object at 0x%lx)",TYPE(rb_val), *(id*)where);
+                    *(NSDictionary**)where = [NSDictionary dictionaryWithRubyHash:rb_val];
                     break;
 
                 case T_FIXNUM:

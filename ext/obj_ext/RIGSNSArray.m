@@ -44,18 +44,15 @@
   return YES;
 }
 
-// The argument we receive here is actually a wrapped Ruby array
-// (RIGSWrapObject)
-+ (id) arrayWithRubyArray: (RIGSWrapObject *) wrapped_ruby_array
++ (id) arrayWithRubyArray: (VALUE) ruby_array
 {
   NSArray *array = [NSArray alloc];
   NSArray *returnArray;
   int i;
   int count;
-  id *gnustepObjects;
+  id *objects;
   VALUE rb_elt;
   BOOL okydoky;
-  VALUE ruby_array = [wrapped_ruby_array getRubyObject];
   const char idType[] = {_C_ID,'\0' };
   
   
@@ -66,22 +63,22 @@
     
   // Loop through the elements of the ruby array and generate a NSArray
   count = RARRAY_LEN(RARRAY(ruby_array));
-  gnustepObjects = malloc (sizeof (id) * count);
-  if (gnustepObjects == NULL) {
+  objects = malloc (sizeof (id) * count);
+  if (objects == NULL) {
       return nil;
   }
 
-  // Loop through the elements of the ruby array, convert them to GNUstep
+  // Loop through the elements of the ruby array, convert them to Objective-C
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSArray
   for (i = 0; i < count; i++) {
       
       rb_elt = rb_ary_entry(ruby_array, (long)i);
      
-      okydoky = rb_objc_convert_to_objc(rb_elt, &gnustepObjects[i], 0,idType);
+      okydoky = rb_objc_convert_to_objc(rb_elt, &objects[i], 0, idType);
   }
 
-  returnArray = [array initWithObjects: gnustepObjects  count:count];
+  returnArray = [array initWithObjects: objects  count:count];
   free (gnustepObjects);
 
   return returnArray;

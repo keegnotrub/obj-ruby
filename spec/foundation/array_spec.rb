@@ -21,7 +21,7 @@ describe NSArray do
   end
 
   it "can receive a Ruby array" do
-    array = described_class.arrayWithRubyArray([1,2,3,4,5])
+    array = described_class.arrayWithArray([1,2,3,4,5])
 
     manual_array = described_class.new
     manual_array = manual_array.arrayByAddingObject(1)

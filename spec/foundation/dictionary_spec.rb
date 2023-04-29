@@ -18,7 +18,7 @@ describe NSDictionary do
   end
 
   it "can receive a Ruby hash" do
-    dict = described_class.dictionaryWithRubyHash(key: "value")
+    dict = described_class.dictionaryWithDictionary(key: "value")
 
     expect(dict.objectForKey("key")).to eq "value"
     expect(dict.objectForKey("not_key")).to be_nil

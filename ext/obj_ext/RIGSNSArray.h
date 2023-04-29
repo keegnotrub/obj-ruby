@@ -33,14 +33,13 @@
 #undef _
 
 #include <Foundation/NSArray.h>
-#include "RIGSWrapObject.h"
 
 
 // Extend NSArray with a couple of new methods
 @interface NSArray ( RIGSNSArray )
 
 + (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
-+ (id) arrayWithRubyArray: (RIGSWrapObject *) wrapped_ruby_array;
++ (id) arrayWithRubyArray: (VALUE) ruby_array;
 
 @end
 

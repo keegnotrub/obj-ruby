@@ -31,14 +31,13 @@
 #undef _
 
 #include <Foundation/NSDictionary.h>
-#include "RIGSWrapObject.h"
 
 
 // Extend NSDictionary with a couple of new methods
 @interface NSDictionary ( RIGSNSDictionary )
 
 + (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
-+ (id) dictionaryWithRubyHash: (RIGSWrapObject *) wrapped_ruby_hash;
++ (id) dictionaryWithRubyHash: (VALUE) ruby_hash;
 
 @end
 

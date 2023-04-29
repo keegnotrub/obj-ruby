@@ -53,9 +53,7 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   return YES;
 }
 
-// The argument we receive here is actually a wrapped Ruby hash
-// (RIGSWrapObject)
-+ (id) dictionaryWithRubyHash: (RIGSWrapObject *) wrapped_ruby_hash
++ (id) dictionaryWithRubyHash: (VALUE) ruby_hash
 {
   NSDictionary *returnDictionary;
   int i;
@@ -67,7 +65,6 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   BOOL okydoky;
   VALUE ruby_keys;
   VALUE ruby_values;
-  VALUE ruby_hash = [wrapped_ruby_hash getRubyObject];
   const char idType[] = {_C_ID,'\0' };
   
   // A nil value should not get there. It should be a 
@@ -89,7 +86,7 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
       return nil;
   }
 
-  // Loop through the elements of the ruby hash, convert them to GNUstep
+  // Loop through the elements of the ruby hash, convert them to Objective-C
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSDictionary
   for (i = 0; i < count; i++) {

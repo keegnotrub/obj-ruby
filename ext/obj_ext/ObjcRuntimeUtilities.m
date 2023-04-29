@@ -39,7 +39,6 @@
 #include <string.h>
 
 /* For macOS 11 - objc/runtime.h doesn't define these */
-#ifndef _C_CONST
 #define _C_CONST       'r'
 #define _C_IN          'n'
 #define _C_INOUT       'N'
@@ -47,7 +46,6 @@
 #define _C_BYCOPY      'O'
 #define _C_BYREF       'R'
 #define _C_ONEWAY      'V'
-#endif
 
 const char *ObjcUtilities_build_runtime_Objc_signature (const char 
 							       *types)
@@ -57,8 +55,8 @@ const char *ObjcUtilities_build_runtime_Objc_signature (const char
   sig = [NSMethodSignature signatureWithObjCTypes: types];
   
   NSMutableString	*str;
-  unsigned		count;
-  unsigned		index;
+  NSUInteger		count;
+  NSUInteger		index;
   
   str = [NSMutableString stringWithCapacity: 128];
   [str appendFormat: @"%s", [sig methodReturnType]];

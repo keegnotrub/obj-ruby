@@ -1,6 +1,9 @@
+$LOAD_PATH << File.expand_path("lib", __dir__)
+require "obj_ruby/version"
+
 Gem::Specification.new do |s|
   s.name        = "obj_ruby"
-  s.version     = "0.1.0"
+  s.version     = ObjRuby::VERSION
   s.authors     = ["Ryan Krug"]
   s.email       = ["ryan.krug@thoughtbot.com"]
   s.homepage    = "http://github.com/keegnotrub/obj_ruby"

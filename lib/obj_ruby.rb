@@ -79,3 +79,6 @@ require 'obj_ruby/NSPoint.rb'
 require 'obj_ruby/NSSize.rb'
 require 'obj_ruby/NSRect.rb'
 require 'obj_ruby/NSSelector.rb'
+
+# Version
+require 'obj_ruby/version.rb'

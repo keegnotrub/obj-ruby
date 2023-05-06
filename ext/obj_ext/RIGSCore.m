@@ -72,9 +72,6 @@ char **ourargv;
 int ourargc;
 extern char** environ;
 
-
-static char *rigsVersion = RIGS_VERSION;
-
 // Hash table  that maps known ObjC class to Ruby class VALUE
 static NSMapTable *knownClasses = 0;
 
@@ -1271,9 +1268,6 @@ Init_obj_ext()
     rb_define_singleton_method(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
     rb_define_singleton_method(rb_mRigs, "register", _RIGS_register_ruby_class_from_ruby, 1);
  
-    // Define Rigs::VERSION in Ruby
-    rb_define_const(rb_mRigs, "VERSION", rb_str_new2(rigsVersion));
-
     // Define the NSNotFound enum constant that is used all over the place
     // as a return value by Objective C methods
     rb_define_global_const("NSNotFound", LL2NUM((long long)NSNotFound));

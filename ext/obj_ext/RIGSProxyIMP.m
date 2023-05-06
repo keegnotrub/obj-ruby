@@ -115,7 +115,7 @@
           struct dummy *block = malloc(sizeof *block + size * sizeof(char)); \
               int offset = 0; \
                 *block= va_arg(ap, struct dummy); \
-	        okydoky = rb_objc_convert_to_rb((void *) block, offset, type, &rb_args[i]); \
+          okydoky = rb_objc_convert_to_rb((void *) block, offset, type, &rb_args[i], NO); \
           free(block); \
               } \
           type = objc_skip_argspec (type); \

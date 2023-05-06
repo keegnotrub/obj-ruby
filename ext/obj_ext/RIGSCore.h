@@ -43,7 +43,7 @@ void  rb_objc_mark(VALUE rb_object);
 VALUE rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
 
 BOOL rb_objc_convert_to_objc(VALUE rb_val, void *data, int offset, const char *type);
-BOOL rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_ptr);
+BOOL rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_ptr, BOOL autoconvert);
 
 VALUE rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self);

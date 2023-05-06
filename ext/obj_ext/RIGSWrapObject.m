@@ -86,10 +86,16 @@ static NSMutableDictionary *_rodict = NULL;
   return _ro;
 }
 
-/* Return the description of the native ruby object */
 - (NSString *) description
 {
-  VALUE rbval = rb_funcall(_ro,rb_intern("to_s"), 0);
+  VALUE rbval = rb_any_to_s(_ro);
+  return( [NSString stringWithCString:
+                      rb_string_value_cstr(&rbval)] );
+}
+
+- (NSString *) debugDescription
+{
+  VALUE rbval = rb_inspect(_ro);
   return( [NSString stringWithCString:
                       rb_string_value_cstr(&rbval)] );
 }
@@ -163,7 +169,7 @@ static NSMutableDictionary *_rodict = NULL;
         [anInvocation getArgument:data atIndex:i ];
 
         NSDebugLog(@"   -arg%d: ObjC id 0x%lx, type %c", *(id *)data,*type);
-        okydoky = rb_objc_convert_to_rb(data, 0, type, &rbargs[i]);
+        okydoky = rb_objc_convert_to_rb(data, 0, type, &rbargs[i], NO);
     }
 
     /*
@@ -240,7 +246,7 @@ static NSMutableDictionary *_rodict = NULL;
 
   NSDebugLog(@"Ruby Wrapped Object received performSelector:  '%@' withObject: %@",rbSELstg, anObject);
 
-  okydoky = rb_objc_convert_to_rb((void *)&anObject,0,idType,&rbarg);
+  okydoky = rb_objc_convert_to_rb((void *)&anObject,0,idType,&rbarg,NO);
 
   rbval = rb_funcall(_ro, rb_intern([rbSELstg cString]), 1, rbarg);
 
@@ -262,8 +268,8 @@ static NSMutableDictionary *_rodict = NULL;
 
   NSDebugLog(@"Ruby Wrapped Object received performSelector:  '%@' withObject: %@ withObject: %@",rbSELstg, object1, object2);
 
-  okydoky = rb_objc_convert_to_rb((void *)&object1,0,idType,&rbarg1);
-  okydoky = rb_objc_convert_to_rb((void *)&object2,0,idType,&rbarg2);
+  okydoky = rb_objc_convert_to_rb((void *)&object1,0,idType,&rbarg1,NO);
+  okydoky = rb_objc_convert_to_rb((void *)&object2,0,idType,&rbarg2,NO);
 
   rbval = rb_funcall(_ro, rb_intern([rbSELstg cString]), 2, rbarg1, rbarg2); 
  

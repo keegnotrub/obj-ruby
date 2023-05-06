@@ -36,7 +36,7 @@
 
 @implementation NSString ( RIGSNSString )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class
++ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class
 {
 
   // Nothing specific for the moment
@@ -56,6 +56,26 @@
   
   return [RIGSWrapObject objectWithRubyObject:rb_ary];
   
+}
+
++ (id) stringWithRubyString:(VALUE)rb_string
+{
+  return [NSString stringWithCString: rb_string_value_cstr(&rb_string)];
+}
+
++ (id) stringWithRubySymbol:(VALUE)rb_symbol
+{
+  return [NSString stringWithRubyString: rb_sym_to_s(rb_symbol)];
+}
+
+- (id) to_s
+{
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyString]];
+}
+
+- (VALUE) getRubyString
+{
+  return rb_str_new_cstr([self cString]);
 }
 
 @end

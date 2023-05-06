@@ -23,4 +23,14 @@ describe NSDictionary do
     expect(dict.objectForKey("key")).to eq "value"
     expect(dict.objectForKey("not_key")).to be_nil
   end
+
+  it "can be transformed into a Ruby hash" do
+    dict = described_class.dictionaryWithDictionary(key: "value")
+
+    hash = dict.to_h
+
+    expect(hash).to be_a Hash
+    expect(hash.include?("key")).to be true
+    expect(hash["key"]).to eq "value"
+  end
 end

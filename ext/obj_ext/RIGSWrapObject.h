@@ -27,7 +27,7 @@
 #include <ruby.h>
 #undef _ /* must do it to avoid conflict with the following include */
 
-#include <Foundation/NSObject.h>
+#import <Foundation/NSObject.h>
 
 @interface RIGSWrapObject : NSObject
 {
@@ -39,6 +39,7 @@
 - (void) dealloc;
 - (VALUE) getRubyObject;
 - (NSString *) description;
+- (NSString *) debugDescription;
 - (id) initWithRubyObject: (VALUE)rubyObject;
 - (void) forwardInvocation: (NSInvocation *)anInvocation;
 - (BOOL) respondsToSelector: (SEL)aSelector;
@@ -48,5 +49,6 @@
 - (id) performSelector: (SEL)aSelector withObject: object1 withObject: object2;
 
 @end
+
 
 #endif

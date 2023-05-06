@@ -1,5 +1,5 @@
-/* RIGSNSDictionary.h - Some additional to properly wrap the
-   NSDictionary class in Ruby and provide some new methods
+/* RIGSNSObject.m - Some additional code to properly wrap the
+   NSObject class in Ruby and provide some convenient new methods
 
    $Id$
 
@@ -21,26 +21,40 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */ 
+   */
 
-#ifndef __RIGSNSDictionary_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSDictionary_h_GNUSTEP_RUBY_INCLUDE
+#import "RIGSWrapObject.h"
+#import "RIGSNSObject.h"
 
+@implementation NSObject ( RIGSNSObject )
 
-#include <ruby.h>
-#undef _
++ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class
+{
+  // Nothing to do for the moment
+  return YES;
+}
 
-#include <Foundation/NSDictionary.h>
+- (id) to_s
+{
+  VALUE rb_val;
+  NSString *str;
+  
+  str = [self description];
+  rb_val = rb_str_new_cstr([str cString]);
+  
+  return [RIGSWrapObject objectWithRubyObject:rb_val];
+}
 
+- (id) inspect
+{
+  VALUE rb_val;
+  NSString *str;
 
-// Extend NSDictionary with a couple of new methods
-@interface NSDictionary ( RIGSNSDictionary )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
-+ (id) dictionaryWithRubyHash: (VALUE) ruby_hash;
-
-- (id) to_h;
+  str = [self debugDescription];
+  rb_val = rb_str_new_cstr([str cString]);
+  
+  return [RIGSWrapObject objectWithRubyObject:rb_val];
+}
 
 @end
-
-#endif
+      

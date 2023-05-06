@@ -64,6 +64,8 @@
 #include "RIGSNSApplication.h"
 #include "RIGSNSDictionary.h"
 #include "RIGSNSArray.h"
+#include "RIGSNSString.h"
+#include "RIGSNSNumber.h"
 
 // Our own argc and argv rebuilt  from Ruby ARGV ($*)
 char **ourargv;
@@ -81,37 +83,6 @@ static NSMapTable *knownObjects = 0;
 
 // Rigs Ruby module
 static VALUE rb_mRigs;
-
-/* map to global Ruby variable $STRING_AUTOCONVERT
-   If true Ruby Strings are automatically converted
-   to NSString and vice versa */
-static VALUE stringAutoConvert = Qfalse;
-
-#define IS_STRING_AUTOCONVERT_ON() \
-(stringAutoConvert == Qtrue)
-
-/* map to global Ruby variable $SELECTOR_AUTOCONVERT
-   If true selectors can be passed to Obj C as Ruby string and
-   conversely SEL returned to Ruby are converted to Ruby string
-   If false then Ruby must use selector("...") and an NSSelector
-   object is returned to Ruby */
-static VALUE selectorAutoConvert = Qfalse;
-
-#define IS_SELECTOR_AUTOCONVERT_ON() \
-(selectorAutoConvert == Qtrue)
-
-/* map to global Ruby variable $NUMBER_AUTOCONVERT
-   If true Ruby numbers can be passed to Obj C where an 
-   NSNumber is expected and conversely NSNumber returned
-   to Ruby are converted to Ruby number
-   If false then Ruby will be returned NSNumber objects. Arguments
-   passed as Ruby number will however be translated to NSNumber
-  in all cases */
-static VALUE numberAutoConvert = Qfalse;
-
-#define IS_NUMBER_AUTOCONVERT_ON() \
-(numberAutoConvert == Qtrue)
-
 
 /* Define a couple of macros to get/set Ruby CStruct objects 
     (CStruct class is the Ruby equivalent of the C structure */
@@ -260,14 +231,11 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                     break;
 
                 case T_SYMBOL:
-                    rb_val = rb_sym_to_s(rb_val);
-                    *(NSString**)where = [NSString stringWithCString: rb_string_value_cstr(&rb_val)];
+                    *(NSString**)where = [NSString stringWithRubySymbol:rb_val];
                     break;
           
                 case T_STRING:
-                    /* Ruby sends a string to a ObjC method waiting for an id
-                                       so convert it to NSString automatically */
-                    *(NSString**)where = [NSString stringWithCString: rb_string_value_cstr(&rb_val)];
+                    *(NSString**)where = [NSString stringWithRubyString:rb_val];
                     break;
           
                 case T_OBJECT:
@@ -291,19 +259,15 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                     break;
 
                 case T_FIXNUM:
-                    // automatic morphing into a NSNumber Int
-                    *(NSNumber**)where = [NSNumber numberWithInt: FIX2INT(rb_val)];
+                    *(NSNumber**)where = [NSNumber numberWithRubyFixnum:rb_val];
                     break;
-        
+                    
                 case T_BIGNUM:
-                    // Possible overflow because bignum can be very big!!!
-                    // FIXME: not sure how to check the overflow
-                    *(NSNumber**)where = [NSNumber numberWithInt: FIX2INT(rb_val)];
+                    *(NSNumber**)where = [NSNumber numberWithRubyBignum:rb_val];
                     break;
 
                 case T_FLOAT:
-                    // Map it to double in any case to be sure there isn't any overflow
-                    *(NSNumber**)where = [NSNumber numberWithDouble: NUM2DBL(rb_val)];
+                    *(NSNumber**)where = [NSNumber numberWithRubyFloat:rb_val];
                     break;
 
                 case T_FALSE:
@@ -324,7 +288,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         case _C_SEL:
             if (TYPE(rb_val) == T_STRING) {
             
-                *(SEL*)where = NSSelectorFromString([NSString stringWithCString: rb_string_value_cstr(&rb_val)]);
+                *(SEL*)where = [NSSelector selectorWithRubyString:rb_val];
             
             } else if (TYPE(rb_val) == T_DATA) {
 
@@ -546,7 +510,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
 
 
 BOOL
-rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_ptr)
+rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_ptr, BOOL autoconvert)
 {
     BOOL ret = YES;
     VALUE rb_class;
@@ -609,29 +573,15 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   // This a native ruby object wrapped into an Objective C 
                   // nutshell. Returns what's in the nutshell
                   rb_val = [val getRubyObject];
-                  
-              } else if ( [val isKindOfClass: [NSString class]] &&
-                          ( IS_STRING_AUTOCONVERT_ON() ) ) {
-                  
-                  // FIXME: Not sure what to do with memory management here ??
-                  rb_val = rb_str_new2([val cString]);
-                  
-              } else if ([val isKindOfClass: [NSNumber class]] &&
-                         ( IS_NUMBER_AUTOCONVERT_ON() ) ) {
 
-                  // Convert the NSNumber to a Ruby number according
-                  // to its type
-                  const char *tmptype = [val objCType];
-                  NSUInteger tmpsize;
-                  NSGetSizeAndAlignment(tmptype, &tmpsize, NULL);
-                  struct dummy { struct { } __empty_; char val[]; };
-                  struct dummy *block = malloc(sizeof *block + tmpsize * sizeof(char));
-
-                  [val getValue: (void *)block];
-              
-                  rb_objc_convert_to_rb(block, 0, tmptype, &rb_val);
-
-                  free(block);
+              } else if ( autoconvert && [val isKindOfClass:[NSString class]] ) {
+                  rb_val = [[val to_s] getRubyObject];
+              } else if ( autoconvert && [val isKindOfClass:[NSNumber class]] ) {
+                  rb_val = [[val to_n] getRubyObject];
+              } else if ( autoconvert && [val isKindOfClass:[NSArray class]] ) {
+                  rb_val = [[val to_a] getRubyObject];
+              } else if ( autoconvert && [val isKindOfClass:[NSDictionary class]] ) {
+                  rb_val = [[val to_h] getRubyObject];
               } else {
                   
                 /* Retain the value otherwise GNUstep releases it and Ruby crashes
@@ -763,24 +713,17 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             SEL val = *(SEL*)where;
             
             NSDebugLog(@"ObjC Selector = 0x%lx", val);
-            // ObjC selectors can either be returned as Ruby String
-            // or as instance of class NSSelector
-            if (IS_SELECTOR_AUTOCONVERT_ON()) {
+            // ObjC selectors can either be returned as an instance of class NSSelector
               
-              rb_val = rb_str_new2([NSStringFromSelector(val) cString]);
-              
-            } else {
-              
-                // Before instantiating NSSelector make sure it is known to
-                // Ruby
-                rb_class = (VALUE) NSMapGet(knownClasses, (void *)[NSSelector class]);
+            // Before instantiating NSSelector make sure it is known to
+            // Ruby
+            rb_class = (VALUE) NSMapGet(knownClasses, (void *)[NSSelector class]);
 
-                if (rb_class == Qfalse) {
-                    rb_class = rb_objc_register_class_from_objc([NSSelector class]);
-                }
-                selObj = [[NSSelector selectorWithSEL: (SEL)val] retain];
-                rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,selObj);
+            if (rb_class == Qfalse) {
+                rb_class = rb_objc_register_class_from_objc([NSSelector class]);
             }
+            selObj = [[NSSelector selectorWithSEL: (SEL)val] retain];
+            rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,selObj);
           }
           break;
 
@@ -790,7 +733,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
               // We are attacking a new embedded structure in a structure
             
           
-            if ( rb_objc_convert_to_rb(where, 0, type, &rb_val) == NO) {     
+            if ( rb_objc_convert_to_rb(where, 0, type, &rb_val, autoconvert) == NO) {     
                 // if something went wrong in the conversion just return Qnil
                 rb_val = Qnil;
                 ret = NO;
@@ -955,7 +898,7 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
         // (e.g. double on 32 bits architecture)
         NSDebugLog(@"ObjC return value = 0x%lx",data);
 
-        okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval);
+        okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
 
     } else {
         // This is a method with no return value (void). Must return something
@@ -978,21 +921,6 @@ rb_objc_handler(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 	return rb_objc_send(rb_id2name(rb_frame_this_func()), rigs_argc, rigs_argv, rb_self);
 }
 
-VALUE 
-rb_objc_to_s_handler(VALUE rb_self)
-{
-    @autoreleasepool {
-    id rcv;
-    VALUE rb_desc;
-
-    // Invoke ObjC description method and always return a Ruby string
-    Data_Get_Struct(rb_self,id,rcv);
-    rb_desc = rb_str_new2([[rcv description] cString]);
- 
-    return rb_desc;
-    }
-}
-
 VALUE
 rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 {
@@ -1013,28 +941,6 @@ instance_method_selectors_for_class(Class class, BOOL use_super)
 {
   return(method_selectors_for_class(class, use_super));
 }
-
-/*
-This is to mimic a  MACOSX function and have a single
-method_selectors_for_class  function for MACOSX and GNUstep
-(see below)
-*/
-/*
-static MethodList_t class_getNextMethodList( Class class, void ** iterator_ptr )
-{
-  MethodList_t mlist;
-  
-  if (*iterator_ptr) {
-    mlist = ((MethodList_t) (*iterator_ptr) )->method_next;
-  } else {
-    mlist = class->methods;
-  }
-
-  *iterator_ptr = (void *)mlist;
-  return mlist;
-    
-}
-*/
 
 NSArray* 
 method_selectors_for_class(Class class, BOOL use_super)
@@ -1085,10 +991,6 @@ int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
         imth_cnt++;
     }
 
-    // map ObjC object description method to Ruby to_s
-    // Ideally it should be a new method calling description and returning
-    //rb_define_alias(rb_class, "to_s", "description");
-    rb_define_method(rb_class, "to_s", rb_objc_to_s_handler,0);
     return imth_cnt;
     
 }
@@ -1369,23 +1271,6 @@ Init_obj_ext()
     rb_define_singleton_method(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
     rb_define_singleton_method(rb_mRigs, "register", _RIGS_register_ruby_class_from_ruby, 1);
  
-    /* Some variable visible from Ruby
-           - STRING_AUTOCONVERT: determine whether Ruby String are
-              systematically converted to NSString and vice-versa.
-           - SELECTOR_AUTOCONVERT: determine whether Ruby Strings are
-              systematically converted to Selector when ObjC expects a selector
-              and vice-versa when a selector is returned to ruby
-           - NUMBER_AUTOCONVERT: determine whether Ruby numbers are
-             systematically converted to NSNumber when ObjC expects a NSNumber
-             and vice-versa when a NSNumber is returned to ruby 
-       */
-    rb_define_variable("$STRING_AUTOCONVERT", &stringAutoConvert);
-    rb_global_variable(&stringAutoConvert);
-    rb_define_variable("$SELECTOR_AUTOCONVERT", &selectorAutoConvert);
-    rb_global_variable(&selectorAutoConvert);
-    rb_define_variable("$NUMBER_AUTOCONVERT", &numberAutoConvert);
-    rb_global_variable(&numberAutoConvert);
-
     // Define Rigs::VERSION in Ruby
     rb_define_const(rb_mRigs, "VERSION", rb_str_new2(rigsVersion));
 

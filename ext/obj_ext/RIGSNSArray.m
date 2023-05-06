@@ -84,6 +84,29 @@
   return returnArray;
 }
 
+- (id) to_a
+{
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyArray]];
+}
+
+- (VALUE) getRubyArray
+{
+  const char idType[] = {_C_ID,'\0'};
+  VALUE rb_array;
+  VALUE rb_elt;
+  BOOL okydoky;
+
+  rb_array = rb_ary_new_capa([self count]);
+
+  for (id objc_elt in self) {
+    okydoky = rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt, YES);
+    if (okydoky)
+      rb_ary_push(rb_array, rb_elt);
+  }
+  
+  return rb_array;
+}
+
 
 @end
       

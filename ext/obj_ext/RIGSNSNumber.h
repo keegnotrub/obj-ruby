@@ -1,15 +1,13 @@
-/* RIGSNSString.h - Some additional stuff to properly wrap the
-   NSString class in Ruby
+/* RIGSNSNumber.h - Some additional to properly wrap the
+   NSNumber class in Ruby and provide some new methods
 
    $Id$
 
-     Copyright (C) 2001 Free Software Foundation, Inc.
+   Copyright (C) 2023 thoughtbot, Inc.
    
-   Written by:  Laurent Julliard <laurent@julliard-online.org>
-   Date: July 2001
+   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Date: April 2023
    
-   This file is part of the GNUstep RubyInterface Library.
-
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
    License as published by the Free Software Foundation; either
@@ -25,23 +23,28 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-#ifndef __RIGSNSApplication_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSApplication_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSNSNumber_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSNSNumber_h_GNUSTEP_RUBY_INCLUDE
 
-#include <Foundation/NSString.h>
+
 #include <ruby.h>
+#undef _
 
-// Extend NSApplication with some finishing registration code
-@interface NSString ( RIGSNSString )
+#include <Foundation/NSValue.h>
+
+
+// Extend NSNumber with a couple of new methods
+@interface NSNumber ( RIGSNSNumber )
 
 + (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class;
-+ (id) availableStringEncodingsAsRubyArray;
-+ (id) stringWithRubyString: (VALUE)rb_string;
-+ (id) stringWithRubySymbol: (VALUE)rb_symbol;
++ (id) numberWithRubyBignum: (VALUE) rb_bignum;
++ (id) numberWithRubyFixnum: (VALUE) rb_fixnum;
++ (id) numberWithRubyFloat: (VALUE) rb_float;
 
-- (id) to_s;
+- (id) to_i;
+- (id) to_f;
+- (id) to_n;
 
 @end
-
 
 #endif

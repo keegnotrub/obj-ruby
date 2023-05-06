@@ -45,10 +45,13 @@
 + (id) selectorWithCString: (char *) selCString;
 + (id) selectorWithString: (NSString*) selString;
 + (id) selectorWithSEL: (SEL) sel;
++ (id) selectorWithRubyString: (VALUE) rbString;
 - (id) initSelectorWithCString: (char *) selCString;
 - (id) initSelectorWithString: (NSString*) selString;
 - (id) initSelectorWithSEL: (SEL)sel;
+- (id) initWithRubyString: (VALUE) rbString;
 - (SEL) getSEL;
+- (id) to_s;
 
 @end
 

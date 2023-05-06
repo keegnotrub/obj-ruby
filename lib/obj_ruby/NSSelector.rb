@@ -27,26 +27,3 @@
 require ('obj_ruby/NSString')
 
 NSSelector = ObjRuby.class("NSSelector")
-
-module ObjRuby
-
-    # undefine the default new method that was registered
-    # from the Objective C side of ObjRuby
-    class << NSSelector
-	remove_method :new
-    end
-    
-    class NSSelector
-	# Now redefine the new method (Don't use initialize
-	# because it's not a native Ruby object)
-	def NSSelector.new (selString)
-	    if ($SELECTOR_AUTOCONVERT)
-		return(selString)
-	    else
-		return NSSelector.selectorWithString(AT(selString))
-	    end
-	end
-	
-    end
-
-end

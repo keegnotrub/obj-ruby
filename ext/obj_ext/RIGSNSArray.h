@@ -41,6 +41,8 @@
 + (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
 + (id) arrayWithRubyArray: (VALUE) ruby_array;
 
+- (id) to_a;
+
 @end
 
 #endif

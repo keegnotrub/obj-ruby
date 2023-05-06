@@ -35,4 +35,15 @@ describe NSArray do
     expect(array.indexOfObject_inRange(1, NSRange.new(1, array.count - 1))).to eq NSNotFound
     expect(array.isEqualToArray(manual_array)).to be true
   end
+
+  it "can be transformed into a Ruby array" do
+    array = described_class.arrayWithArray([1,2,3,4,5])
+
+    result = array.to_a
+
+    expect(result).to be_a Array
+    expect(result.size).to eq 5
+    expect(result.first).to eq 1
+    expect(result.last).to eq 5
+  end
 end

@@ -31,6 +31,7 @@
 
 
 #include "RIGS.h"
+#include "RIGSWrapObject.h"
 #include "RIGSSelectorMapping.h"
 
 
@@ -49,6 +50,11 @@
 + (id) selectorWithSEL: (SEL) sel
 {
   return [[NSSelector alloc] initSelectorWithSEL: sel];
+}
+
++ (id) selectorWithRubyString: (VALUE) rbString
+{
+  return [[NSSelector alloc] initWithRubyString: rbString];
 }
 
 - (id) initSelectorWithCString: (char *) selCString
@@ -78,9 +84,28 @@
   return self;
 }
 
+- (id) initWithRubyString: (VALUE) rbString
+{
+  self = [self init];
+
+  NSString *selString = [NSString stringWithCString: rb_string_value_cstr(&rbString)];
+  _sel = NSSelectorFromString(selString);
+  return self;
+}
+
 - (SEL) getSEL
 {
   return _sel;
+}
+
+- (id) to_s
+{
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyString]];
+}
+
+- (VALUE) getRubyString
+{
+  return rb_str_new_cstr([NSStringFromSelector(_sel) cString]);
 }
 
 @end
@@ -94,6 +119,10 @@ NSString *
 SelectorStringFromRubyName (char *name, int numArgs)
 {
 	id selname  = [NSString stringWithCString: name];
+
+  // Allow Ruby-ish conversion to pass (to_s, to_i, to_f, to_a, to_h, etc)
+  if (numArgs == 0 && [selname length] == 4 && [selname hasPrefix:@"to_"])
+    return selname;
         
 	selname = [[selname componentsSeparatedByString: @"_"]
 				componentsJoinedByString: @":"];

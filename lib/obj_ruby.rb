@@ -30,29 +30,6 @@
 
 require 'obj_ext'
 
-#
-# Invoking AT"a string..." in Ruby will automatically generate
-# a NSString (the '@' sign can't be used as in GNUstep
-# because it is a reserved character for instance and class
-# variables. AT has no effect if String autoconversion is ON
-#
-def AT(stg)
-  if ($STRING_AUTOCONVERT)
-	  return stg
-  else
-	  return NSString.stringWithCString(stg)
-  end
-end
-
-#
-# selector is a shortcut to NSSelector#new
-# (mimics @selector in Objective C)
-#
-def selector(selString)
-  return NSSelector.new(selString)
-end
-
-
 module ObjRuby
 
   #
@@ -74,15 +51,13 @@ module ObjRuby
   # with import or automagically registered from Objective C
   def ObjRuby.import(className)
 	  begin
-	    isClassDefined = Object.const_defined? className
-
-	    if not isClassDefined
+	    unless Object.const_defined?(className)
 		    classFile = "obj_ruby/#{className}.rb"
 		    begin
 		      result = require classFile
 		    rescue LoadError
 		      rbClass = ObjRuby.class(className)
-		      if !(Object.const_defined? className)
+		      unless Object.const_defined?(className)
 			      Object.const_set(className, rbClass)
 		      end
 		    end
@@ -95,9 +70,7 @@ module ObjRuby
 	    # accessible from the Ruby Side.
 	    puts "Warning: ObjRuby.import says #{className} is not a Constant - Doing nothing"
 	  end 
-
   end
-
 end
 
 # Systematically load these "pseudo" or Ruby only classes
@@ -106,22 +79,3 @@ require 'obj_ruby/NSPoint.rb'
 require 'obj_ruby/NSSize.rb'
 require 'obj_ruby/NSRect.rb'
 require 'obj_ruby/NSSelector.rb'
-
-
-# Set it to true if you want all Ruby String arguments
-# to be automatically transformed to NSString
-# and returned NSString object transformed to Ruby String
-$STRING_AUTOCONVERT = false
-
-# Set it to true if you want to bothe express SELectors with
-# simple strings in Ruby or conversely have an ObjC sel
-# returned as a String
-# In all cases you can invoke selector("selectorString:") in Ruby
-# to generate a selector.
-$SELECTOR_AUTOCONVERT = false
-
-# Set it to true if you want ObjC NSNumbers return values
-# to be automatically transformed into a Ruby numberl
-# In all cases Ruby numbers passed to ObjC are automatically
-# morphed to NSNumber when ObjC expects an id as argument
-$NUMBER_AUTOCONVERT = false

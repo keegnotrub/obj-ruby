@@ -105,6 +105,33 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   return returnDictionary;
 }
 
+- (id) to_h
+{
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyHash]];
+}
+
+- (VALUE) getRubyHash
+{
+  const char idType[] = {_C_ID,'\0'};
+  VALUE rb_hash;
+  VALUE rb_key;
+  VALUE rb_value;
+  id objc_value;
+  BOOL okydoky;
+
+  rb_hash = rb_hash_new();
+
+  for (id objc_key in self) {
+    objc_value = [self objectForKey:objc_key];
+    okydoky = rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key, YES);
+    okydoky = okydoky && rb_objc_convert_to_rb((void *)&objc_value, 0, idType, &rb_value, YES);
+    if (okydoky)
+      rb_hash_aset(rb_hash, rb_key, rb_value);
+  }
+  
+  return rb_hash;
+}
+
 
 @end
       

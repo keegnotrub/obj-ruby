@@ -30,7 +30,7 @@
 #include <Foundation/Foundation.h>
 
 /*
- * ObjcUtilities_build_runtime_Objc_signature:
+ * objc_build_runtime_signature
  *
  * This method creates a runtime objc signature which can be used 
  * to describe type for a selector *on this machine* (you need this 
@@ -53,14 +53,13 @@
  * "i@:@" for an instance method returning int and taking an object arg. 
  * (NB: "i" = @encode(int), "@" = @encode(id), ":" = @encode(SEL)).
  *
- * On my machine, ObjcUtilities_build_runtime_Objc_signature ("i@:@")
+ * On my machine, objc_build_runtime_signature ("i@:@")
  * returns "i12@0:4@8", which I can then use as selector type when 
  * creating entries in MethodList.
  *
  */
 
-const char *ObjcUtilities_build_runtime_Objc_signature (const char *);
-
+const char *objc_build_runtime_signature (const char *types);
 const char *objc_skip_type_qualifiers (const char *type);
 const char *objc_skip_typespec (const char *type);
 const char *objc_skip_offset (const char *type);

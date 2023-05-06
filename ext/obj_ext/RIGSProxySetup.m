@@ -183,7 +183,7 @@ Class _RIGS_register_ruby_class (VALUE rb_class)
         
         // Build the method ObjC types and then the full signature
         guessed = _RIGS_build_objc_types(rb_class, rb_mth_name, '\0', nbArgs, objcTypes);
-        signature = ObjcUtilities_build_runtime_Objc_signature(objcTypes); 
+        signature = objc_build_runtime_signature(objcTypes); 
         
         NSDebugLog(@"Inserting ObjC method %@ with signature '%s'",objcMthName,signature);
 

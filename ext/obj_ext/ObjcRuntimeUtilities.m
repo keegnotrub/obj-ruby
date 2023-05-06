@@ -47,8 +47,8 @@
 #define _C_BYREF       'R'
 #define _C_ONEWAY      'V'
 
-const char *ObjcUtilities_build_runtime_Objc_signature (const char 
-							       *types)
+const char *
+objc_build_runtime_signature (const char *types)
 {
   NSMethodSignature *sig;
   

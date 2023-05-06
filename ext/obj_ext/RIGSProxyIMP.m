@@ -90,7 +90,7 @@
 #define BUILD_METHOD_SIGNATURE(retValueType) \
   guessed = _RIGS_build_objc_types(rb_class, rb_mth_name, retValueType, nbArgs, objcTypes); \
  \
-  type = ObjcUtilities_build_runtime_Objc_signature(objcTypes); \
+  type = objc_build_runtime_signature(objcTypes); \
   return_type = type; \
   NSDebugLog(@"Generated signature '%s'", type); \
 

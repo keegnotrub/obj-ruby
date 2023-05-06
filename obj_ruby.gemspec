@@ -12,9 +12,10 @@ Gem::Specification.new do |s|
   s.require_paths    = ["lib"]
   s.extensions       = ["ext/obj_ext/extconf.rb"]
 
+  s.platform              = Gem::Platform.new("darwin")
   s.required_ruby_version = Gem::Requirement.new(">= 2.7.0")
   
-  s.add_development_dependency('rake-compiler', '~> 1.0')
-  s.add_development_dependency('rspec', '~> 3.0')
-  s.add_development_dependency('standard', '~> 1.0')
+  s.add_development_dependency("rake-compiler", "~> 1.0")
+  s.add_development_dependency("rspec", "~> 3.0")
+  s.add_development_dependency("standard", "~> 1.0")
 end

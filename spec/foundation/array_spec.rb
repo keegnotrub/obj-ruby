@@ -32,7 +32,7 @@ describe ObjRuby::NSArray do
 
     expect(array.count).to eq 5
     expect(array.indexOfObject(1)).to eq 0
-    expect(array.indexOfObject_inRange(1, NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
+    expect(array.indexOfObject_inRange(1, ObjRuby::NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
     expect(array.isEqualToArray(manual_array)).to be true
   end
 

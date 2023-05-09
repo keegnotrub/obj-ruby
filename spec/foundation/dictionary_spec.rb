@@ -2,12 +2,12 @@ require "spec_helper"
 
 ObjRuby.import("NSDictionary")
 
-describe NSDictionary do
+describe ObjRuby::NSDictionary do
   it "can create an instance" do
     date = described_class.new
-    
+
     expect(date).not_to be_nil
-    expect(date).to be_a NSDictionary
+    expect(date).to be_a described_class
   end
 
   it "can call instance methods" do

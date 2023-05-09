@@ -3,53 +3,52 @@
 #  $Id$
 #
 #    Copyright (C) 2001 Free Software Foundation, Inc.
-#   
+#
 #    Written by:  Laurent Julliard <laurent@julliard-online.org>
 #    Date: July 2001
-#   
+#
 #    This file is part of the GNUstep Ruby Interface Library.
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Library General Public
 #    License as published by the Free Software Foundation; either
 #    version 2 of the License, or (at your option) any later version.
-#   
+#
 #    This library is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 #    Library General Public License for more details.
-#   
+#
 #    You should have received a copy of the GNU Library General Public
 #    License along with this library; if not, write to the Free
 #    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 
-NSButtonCell = ObjRuby.class("NSButtonCell")
+module ObjRuby
+  # NSButtonType
+  NSMomentaryPushButton = 0
+  NSPushOnPushOffButton = 1
+  NSToggleButton = 2
+  NSSwitchButton = 3
+  NSRadioButton = 4
+  NSMomentaryChangeButton = 5
+  NSOnOffButton = 6
+  NSMomentaryLight = 7
 
-# NSButtonType 
-NSMomentaryPushButton = 0
-NSPushOnPushOffButton = 1
-NSToggleButton = 2
-NSSwitchButton = 3
-NSRadioButton = 4
-NSMomentaryChangeButton = 5
-NSOnOffButton = 6
-NSMomentaryLight = 7
+  # NSBezelStyle
+  NSRoundedBezelStyle = 0
+  NSRegularSquareBezelStyle = 1
+  NSThickSquareBezelStyle = 2
+  NSThickerSquareBezelStyle = 3
+  NSNeXTBezelStyle = 4
+  NSPushButtonBezelStyle = 5
+  NSSmallIconButtonBezelStyle = 6
+  NSMediumIconButtonBezelStyle = 7
+  NSLargeIconButtonBezelStyle = 8
 
-
-# NSBezelStyle 
-NSRoundedBezelStyle = 0
-NSRegularSquareBezelStyle = 1
-NSThickSquareBezelStyle = 2
-NSThickerSquareBezelStyle = 3
-NSNeXTBezelStyle = 4
-NSPushButtonBezelStyle = 5
-NSSmallIconButtonBezelStyle = 6
-NSMediumIconButtonBezelStyle = 7
-NSLargeIconButtonBezelStyle = 8
-
-# NSGradientType 
-NSGradientNone = 0
-NSGradientConcanveWeak = 1
-NSGradientConcaveStrong = 2
-NSGradientConvexWeak = 3
-NSGradientConvexStrong = 4
+  # NSGradientType
+  NSGradientNone = 0
+  NSGradientConcanveWeak = 1
+  NSGradientConcaveStrong = 2
+  NSGradientConvexWeak = 3
+  NSGradientConvexStrong = 4
+end

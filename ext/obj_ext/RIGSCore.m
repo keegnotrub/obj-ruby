@@ -85,7 +85,7 @@ static VALUE rb_mRigs;
     (CStruct class is the Ruby equivalent of the C structure */
    
 #define RB_CSTRUCT_CLASS \
-rb_const_get(rb_cObject, rb_intern("CStruct"))
+rb_const_get(rb_mRigs, rb_intern("CStruct"))
 
 #define RB_CSTRUCT_NEW() \
 rb_class_new_instance(0,NULL, RB_CSTRUCT_CLASS)
@@ -144,10 +144,23 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     // will take care of deallocating it by calling rb_objc_release()
 
     obj  = [[objc_class alloc] init];
-    new_rb_object = Data_Wrap_Struct(rb_class, 0, rb_objc_release, obj);
-    NSMapInsertKnownAbsent(knownObjects, (void*)obj, (void*)new_rb_object);
-    NSDebugLog(@"Creating new object of Class %@ (id = 0x%lx, VALUE = 0x%lx)",
-               NSStringFromClass([objc_class class]), obj, new_rb_object);
+
+    new_rb_object = NSMapGet(knownObjects, (void*)obj);
+
+    if (new_rb_object == NULL) {
+      NSDebugLog(@"Creating new object of Class %@ (id = 0x%lx, VALUE = 0x%lx)",
+                 NSStringFromClass([objc_class classForCoder]), obj, new_rb_object);
+      
+      new_rb_object = Data_Wrap_Struct(rb_class, 0, rb_objc_release, obj);
+   
+      NSMapInsertKnownAbsent(knownObjects, (void*)obj, (void*)new_rb_object);
+    }
+    else {
+      NSDebugLog(@"Found existing object of Class %@ (id = 0x%lx, VALUE = 0x%lx)",
+                 NSStringFromClass([objc_class classForCoder]), obj, new_rb_object);
+      
+      [obj release];
+    }
 
     return new_rb_object;
     }
@@ -1082,18 +1095,10 @@ rb_objc_register_class_from_objc (Class objc_class)
 
     // also make sure to load the corresponding ruby file and execute
     // any additional Ruby code for this class
-    // it is like: Rigs.import(cname)
-    // FIXME: It goes into recursive call with the Ruby NSxxx.rb code and leads
-    // to top level constant defined twice (warning). Need to fix that...
-    NSDebugLog(@"Calling ObjRuby.import(%s) from Objc", cname);
+    NSDebugLog(@"Calling ObjRuby.extend_class(%s) from Objc", cname);
     
-    rb_funcall(rb_mRigs, rb_intern("import"), 1,rb_str_new2(cname));
+    rb_funcall(rb_mRigs, rb_intern("extend_class"), 1,rb_str_new2(cname));
     
-    // Define a top level Ruby constant  with the same name as the class name
-    // No don't do that! Force user to use Rigs#import on the Ruby side to
-    // load any additional Ruby code if there is some
-    //rb_define_global_const(cname, rb_class);
-
     return rb_class;
     }
 }
@@ -1270,7 +1275,7 @@ Init_obj_ext()
  
     // Define the NSNotFound enum constant that is used all over the place
     // as a return value by Objective C methods
-    rb_define_global_const("NSNotFound", LL2NUM((long long)NSNotFound));
+    rb_define_const(rb_mRigs, "NSNotFound", LL2NUM((long long)NSNotFound));
     
     // Initialize Process Info and Main Bundle
     rigs_argv = rb_gv_get("$*");

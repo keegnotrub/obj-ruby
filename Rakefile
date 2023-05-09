@@ -11,4 +11,4 @@ end
 
 RSpec::Core::RakeTask.new(:spec)
 
-task default: [:compile, :spec]
+task default: [:standard, :compile, :spec]

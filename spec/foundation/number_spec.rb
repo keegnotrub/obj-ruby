@@ -2,12 +2,12 @@ require "spec_helper"
 
 ObjRuby.import("NSNumber")
 
-describe NSNumber do
+describe ObjRuby::NSNumber do
   it "can create an instance" do
     number = described_class.numberWithBool(true)
-    
+
     expect(number).not_to be_nil
-    expect(number).to be_a NSNumber
+    expect(number).to be_a described_class
   end
 
   it "can call instance methods" do

@@ -2,12 +2,12 @@ require "spec_helper"
 
 ObjRuby.import("NSDate")
 
-describe NSDate do
+describe ObjRuby::NSDate do
   it "can create an instance" do
     date = described_class.new
-    
+
     expect(date).not_to be_nil
-    expect(date).to be_a NSDate
+    expect(date).to be_a described_class
   end
 
   it "can call instance methods" do

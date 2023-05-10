@@ -30,7 +30,5 @@
 #define __RIGS_h_GNUSTEP_RUBY_INCLUDE
 
 #define NSDebugLog NSLog
-#define class_get_meta_class(class) objc_getMetaClass([NSStringFromClass(class) cString])
-typedef struct objc_method_list * MethodList_t;
 
 #endif

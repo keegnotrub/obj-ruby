@@ -950,7 +950,7 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 NSArray* 
 class_method_selectors_for_class(Class class, BOOL use_super)
 {    
-  Class meta_class =  class_get_meta_class(class);
+  Class meta_class = objc_getMetaClass([NSStringFromClass(class) cString]);
   return(method_selectors_for_class(meta_class, use_super));
 }
 
@@ -1019,7 +1019,7 @@ int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
     NSEnumerator *mthEnum;
     NSString *mthSel;
     NSString *mthRubyName;
-    Class objc_meta_class = class_get_meta_class(objc_class);
+    Class objc_meta_class = objc_getMetaClass([NSStringFromClass(objc_class) cString]);
     
     int cmth_cnt = 0;
 

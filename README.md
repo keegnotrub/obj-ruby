@@ -41,6 +41,7 @@ dict.setObject_forKey(NSDate.new, "Hello!")
 ```
 
 ``` ruby
+ObjRuby.require_framework("Foundation")
 ObjRuby.require_framework("AppKit")
 
 app = NSApplication.sharedApplication

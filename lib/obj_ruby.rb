@@ -31,8 +31,6 @@
 require "obj_ext"
 
 require "obj_ruby/version"
-require "obj_ruby/foundation"
-require "obj_ruby/app_kit"
 
 module ObjRuby
   def self.import(class_name)
@@ -47,18 +45,6 @@ module ObjRuby
     require "obj_ruby/#{class_name}"
   rescue LoadError
     # Not extended by ObjRuby
-  end
-
-  def self.require_framework(framework)
-    case framework
-    when "Foundation"
-      FOUNDATION.map { |class_name| import(class_name) }
-    when "AppKit"
-      FOUNDATION.each { |class_name| import(class_name) }
-      APP_KIT.map { |class_name| import(class_name) }
-    else
-      puts "Warning: ObjRuby.require_framework says #{framework} is not supported - Doing nothing"
-    end
   end
 end
 

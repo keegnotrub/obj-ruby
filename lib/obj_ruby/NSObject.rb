@@ -30,9 +30,4 @@ module ObjRuby
       isEqual(other)
     end
   end
-
-  # define constants that are in NSObject.h
-  NSOrderedAscending = -1
-  NSOrderedSame = 0
-  NSOrderedDescending = 1
 end

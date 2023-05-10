@@ -57,8 +57,12 @@ NSArray* method_selectors_for_class(Class class, BOOL use_super);
 int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
 int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
 VALUE rb_objc_register_class_from_objc (Class objc_class);
+void rb_objc_register_float_from_objc(const char *name, double value);
+void rb_objc_register_integer_from_objc(const char *name, long long value);
 VALUE rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name);
 VALUE rb_objc_get_ruby_value_from_string(char * classname);
+
+VALUE rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name);
 
 void rb_objc_raise_exception(NSException *exception);
 

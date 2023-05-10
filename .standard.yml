@@ -1,5 +1,3 @@
 ignore:
   - 'ext/obj_ext/extconf.rb':
     - Style/GlobalVars
-  - 'lib/obj_ruby/NS*':
-    - Naming/ConstantName

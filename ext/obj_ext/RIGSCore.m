@@ -44,6 +44,7 @@
 #include <Foundation/NSException.h>
 #include <Foundation/NSInvocation.h>
 #include <Foundation/NSMapTable.h>
+#include <Foundation/NSHashTable.h>
 #include <Foundation/NSSet.h>
 #include <Foundation/NSProcessInfo.h>
 #include <Foundation/NSBundle.h>
@@ -52,6 +53,9 @@
 #include <Foundation/NSString.h>
 #include <Foundation/NSData.h>
 #include <Foundation/NSValue.h>
+
+#import <Foundation/NSURL.h>
+#import <Foundation/NSXMLParser.h>
 
 #include <AppKit/NSApplication.h>
 
@@ -66,6 +70,7 @@
 #include "RIGSNSArray.h"
 #include "RIGSNSString.h"
 #include "RIGSNSNumber.h"
+#include "RIGSBridgeSupportParser.h"
 
 // Our own argc and argv rebuilt  from Ruby ARGV ($*)
 char **ourargv;
@@ -77,6 +82,9 @@ static NSMapTable *knownClasses = 0;
 
 // Hash table that maps known ObjC objects to Ruby object VALUE
 static NSMapTable *knownObjects = 0;
+
+// Hash table that contains loaded Framework bundleIdentifiers
+static NSHashTable *knownFrameworks = 0;
 
 // Rigs Ruby module
 static VALUE rb_mRigs;
@@ -1037,6 +1045,27 @@ int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 }
 
 
+void
+rb_objc_register_float_from_objc(const char *name, double value)
+{
+  VALUE rb_float;
+
+  rb_float = DBL2NUM(value);
+  
+  rb_define_const(rb_mRigs, name, rb_float);
+}
+
+void
+rb_objc_register_integer_from_objc(const char *name, long long value)
+{
+  VALUE rb_integer;
+
+  rb_integer = LL2NUM(value);
+  
+  rb_define_const(rb_mRigs, name, rb_integer);
+}
+
+
 VALUE
 rb_objc_register_class_from_objc (Class objc_class)
 {
@@ -1117,6 +1146,44 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name)
 
     return rb_class;
     }
+}
+
+VALUE
+rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
+{
+  @autoreleasepool {
+  char *cname = rb_string_value_cstr(&rb_name);
+  NSString *path = [NSString stringWithFormat:@"/System/Library/Frameworks/%s.framework/", cname];
+  NSURL *url = [NSURL fileURLWithPath:path];
+  NSBundle *bundle = [NSBundle bundleWithURL:url];
+
+  if (bundle == nil) {
+    rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
+  }
+  
+  if (NSHashGet(knownFrameworks, (void*)bundle.bundleIdentifier)) {
+    return Qfalse;
+  }
+
+  path = [NSString stringWithFormat:@"BridgeSupport/%s.bridgesupport", cname];
+  url = [[bundle resourceURL] URLByAppendingPathComponent:path];
+  
+  NSXMLParser *parser = [[NSXMLParser alloc] initWithContentsOfURL:url];
+  RIGSBridgeSupportParser *delegate = [[RIGSBridgeSupportParser alloc] init];
+
+  parser.delegate = delegate;
+
+  BOOL parsed = [parser parse];
+
+  [parser release];
+  [delegate release];
+
+  if (parsed) {
+    NSHashInsertKnownAbsent(knownFrameworks, (void*)bundle.bundleIdentifier);
+    return Qtrue;
+  }
+  rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
+  }
 }
 
 VALUE
@@ -1264,6 +1331,7 @@ Init_obj_ext()
     knownObjects = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
                                     NSNonOwnedPointerMapValueCallBacks,
                                     0);
+    knownFrameworks = NSCreateHashTable(NSNonOwnedPointerHashCallBacks, 0);
     
     // Create 2 ruby class methods under the ObjC Ruby module
     // - ObjRuby.class("className") : registers ObjC class with Ruby
@@ -1272,9 +1340,10 @@ Init_obj_ext()
     rb_mRigs = rb_define_module("ObjRuby");
     rb_define_singleton_method(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
     rb_define_singleton_method(rb_mRigs, "register", _RIGS_register_ruby_class_from_ruby, 1);
+    rb_define_singleton_method(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
  
     // Define the NSNotFound enum constant that is used all over the place
-    // as a return value by Objective C methods
+    // as a return value by Objective C methods (it's also not defined correctly in bridge support)
     rb_define_const(rb_mRigs, "NSNotFound", LL2NUM((long long)NSNotFound));
     
     // Initialize Process Info and Main Bundle
@@ -1283,4 +1352,3 @@ Init_obj_ext()
 
     _rb_objc_initialize_process_context(rigs_argc, rigs_argv);
 }
-

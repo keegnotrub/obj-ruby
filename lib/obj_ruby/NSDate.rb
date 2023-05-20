@@ -1,13 +1,11 @@
-# NSRect- Define a fake NSRect class and methods that go with it
+# NSDate.rb - Add a couple of things to the NSArray class
 #
 #  $Id$
 #
-#    Copyright (C) 2001 Free Software Foundation, Inc.
+#    Copyright (C) 2023 thoughtbot
 #
-#    Written by:  Laurent Julliard <laurent@julliard-online.org>
-#    Date: September 2001
-#
-#    This file is part of the GNUstep RubyInterface Library.
+#    Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+#    Date: May 2023
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Library General Public
@@ -22,18 +20,11 @@
 #    You should have received a copy of the GNU Library General Public
 #    License along with this library; if not, write to the Free
 #    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-#
-
-require "obj_ruby/CStruct"
-require "obj_ruby/NSPoint"
-require "obj_ruby/NSSize"
 
 module ObjRuby
-  class NSRect < CStruct
-    def self.new(x = 0, y = 0, width = 0, height = 0)
-      CStruct[NSPoint.new(x, y), NSSize.new(width, height)]
+  class NSDate
+    def ==(other)
+      isEqualToDate(other)
     end
   end
-
-  NSZeroRect = NSRect.new(0, 0, 0, 0)
 end

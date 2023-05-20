@@ -1,6 +1,5 @@
 require "spec_helper"
-
-ObjRuby.import("NSNumber")
+require "obj_ruby/foundation"
 
 describe ObjRuby::NSNumber do
   it "can create an instance" do

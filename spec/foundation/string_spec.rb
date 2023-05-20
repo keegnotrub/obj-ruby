@@ -1,6 +1,5 @@
 require "spec_helper"
-
-ObjRuby.import("NSString")
+require "obj_ruby/foundation"
 
 describe ObjRuby::NSString do
   it "can create an instance" do

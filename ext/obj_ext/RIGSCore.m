@@ -32,10 +32,12 @@
 */
 
 #include <objc/objc-class.h>
-#define ROUND(V, A) \
+
+#define HASH_SEED 5381
+#define HASH_BITSHIFT 5
+#define ROUND(V, A)                        \
   ({ typeof(V) __v=(V); typeof(A) __a=(A); \
      __a*((__v+__a-1)/__a); })
-
 
 /* Do not include the whole <Foundation/Foundation.h> to avoid
    conflict with ID definition in ruby.h for MACOSX */
@@ -83,26 +85,14 @@ static NSMapTable *knownClasses = 0;
 // Hash table that maps known ObjC objects to Ruby object VALUE
 static NSMapTable *knownObjects = 0;
 
+// Hash table that maps known ObjC structs to Ruby struct VALUE
+static NSMapTable *knownStructs = 0;
+
 // Hash table that contains loaded Framework bundleIdentifiers
 static NSHashTable *knownFrameworks = 0;
 
 // Rigs Ruby module
 static VALUE rb_mRigs;
-
-/* Define a couple of macros to get/set Ruby CStruct objects 
-    (CStruct class is the Ruby equivalent of the C structure */
-   
-#define RB_CSTRUCT_CLASS \
-rb_const_get(rb_mRigs, rb_intern("CStruct"))
-
-#define RB_CSTRUCT_NEW() \
-rb_class_new_instance(0,NULL, RB_CSTRUCT_CLASS)
-
-#define RB_CSTRUCT_ENTRY(aCStruct, idx) \
-rb_funcall(aCStruct, rb_intern("[]"), 1, INT2FIX(idx))
-
-#define RB_CSTRUCT_PUSH(aCStruct, aValue) \
-rb_funcall(aCStruct, rb_intern("push"), 1, aValue)
 
 void
 rb_objc_release(id objc_object) 
@@ -223,8 +213,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                    rb_thing, TYPE(rb_thing),*type,where);
 
         if (inStruct) {
-            rb_val = RB_CSTRUCT_ENTRY(rb_thing,idx);
-            idx++;
+            rb_val = rb_struct_aref(rb_thing, INT2NUM(idx++));
         } else {
             rb_val = rb_thing;
         }
@@ -487,18 +476,14 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         case _C_STRUCT_B: 
           {
             // We are attacking a new embedded structure in a structure
-            
-            // The Ruby argument must be of type CStruct or a sub-class of it
-            if (rb_obj_is_kind_of(rb_val, RB_CSTRUCT_CLASS) == Qtrue) {
-              
+            if (TYPE(rb_val) == T_STRUCT) {
                 if ( rb_objc_convert_to_objc(rb_val, where, 0, type) == NO) {     
                     // if something went wrong in the conversion just return Qnil
                     rb_val = Qnil;
                     ret = NO;
                 }
-     
             } else {
-                ret = NO;
+              ret = NO;
             }
           }
           
@@ -535,15 +520,19 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
     double dbl_value;
     NSSelector *selObj;
     BOOL inStruct = NO;
+    unsigned long inStructHash;
     VALUE end = Qnil;
-
 
     if (*type == _C_STRUCT_B) {
 
         NSDebugLog(@"Starting conversion of ObjC structure %s to Ruby value", type);
 
         inStruct = YES;
-        while (*type != _C_STRUCT_E && *type++ != '=');
+        inStructHash = HASH_SEED;
+        while (*type != _C_STRUCT_E && *type++ != '=') {
+          if (*type == '=') continue;
+          inStructHash = ((inStructHash << HASH_BITSHIFT) + inStructHash) + (*type);
+        }
         if (*type == _C_STRUCT_E) {
             // this is an empty structure !! Illegal... and we don't know
             // what to return
@@ -774,15 +763,15 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
 
           if (end == Qnil) {
               // first time in there so allocate a new Ruby array
-              end = RB_CSTRUCT_NEW();
-              RB_CSTRUCT_PUSH(end, rb_val);
+              end = rb_ary_new();
+              rb_ary_push(end, rb_val);
               *rb_val_ptr = end;
-              
           } else {
               // Next component in the same structure. Append it to 
               // the end of the running Ruby array
-              RB_CSTRUCT_PUSH(end, rb_val);
+              rb_ary_push(end, rb_val);
           }
+
 
 
       } else {
@@ -797,6 +786,10 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
  
  
   } while (inStruct && *type != _C_STRUCT_E);
+
+  if (end != Qnil && NSMapGet(knownStructs, inStructHash)) {
+    *rb_val_ptr = rb_struct_alloc(NSMapGet(knownStructs, inStructHash), end);
+  }
 
   NSDebugLog(@"End of ObjC to Ruby conversion");
     
@@ -1003,6 +996,7 @@ int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
     while ( (mthSel = [mthEnum nextObject]) ) {
        
         mthRubyName = RubyNameFromSelectorString(mthSel);
+        // TODO: (variable length args - output this with ObjRuby.import("NSArray"))
         //NSDebugLog(@"Registering Objc method %@ under Ruby name %@)", mthSel,mthRubyName);
 
         rb_define_method(rb_class, [mthRubyName cString], rb_objc_handler, -1);
@@ -1063,6 +1057,48 @@ rb_objc_register_integer_from_objc(const char *name, long long value)
   rb_integer = LL2NUM(value);
   
   rb_define_const(rb_mRigs, name, rb_integer);
+}
+
+void
+rb_objc_register_struct_from_objc(const char *key, const char *name, const char *args[], int argCount)
+{
+  VALUE rb_struct;
+  char keyChar;
+  unsigned long hash = HASH_SEED;
+
+  while (keyChar = *key++) {
+    hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
+  }
+
+  if (NSMapGet(knownStructs, hash)) {
+    return;
+  }
+  
+  switch(argCount) {
+  case 1:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], NULL);
+    break;
+  case 2:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], NULL);
+    break;
+  case 3:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], NULL);
+    break;
+  case 4:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], NULL);
+    break;
+  case 5:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], NULL);
+    break;
+  case 6:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], NULL);
+    break;
+  default:
+    rb_raise(rb_eTypeError, "Unsupported struct '%s' with argument size: %d", name, argCount);
+    break;
+  }
+
+  NSMapInsertKnownAbsent(knownStructs, hash, (void*)rb_struct);
 }
 
 
@@ -1161,7 +1197,7 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
     rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
   }
   
-  if (NSHashGet(knownFrameworks, (void*)bundle.bundleIdentifier)) {
+  if (NSHashGet(knownFrameworks, bundle.bundleIdentifier.hash)) {
     return Qfalse;
   }
 
@@ -1179,10 +1215,10 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
   [delegate release];
 
   if (parsed) {
-    NSHashInsertKnownAbsent(knownFrameworks, (void*)bundle.bundleIdentifier);
+    NSHashInsertKnownAbsent(knownFrameworks, bundle.bundleIdentifier.hash);
     return Qtrue;
   }
-  rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
+  rb_raise(rb_eLoadError, "cannot parse such framework -- %s", cname);
   }
 }
 
@@ -1331,7 +1367,10 @@ Init_obj_ext()
     knownObjects = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
                                     NSNonOwnedPointerMapValueCallBacks,
                                     0);
-    knownFrameworks = NSCreateHashTable(NSNonOwnedPointerHashCallBacks, 0);
+    knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks,
+                                    NSNonOwnedPointerMapValueCallBacks,
+                                    0);
+    knownFrameworks = NSCreateHashTable(NSIntegerHashCallBacks, 0);
     
     // Create 2 ruby class methods under the ObjC Ruby module
     // - ObjRuby.class("className") : registers ObjC class with Ruby
@@ -1341,11 +1380,7 @@ Init_obj_ext()
     rb_define_singleton_method(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
     rb_define_singleton_method(rb_mRigs, "register", _RIGS_register_ruby_class_from_ruby, 1);
     rb_define_singleton_method(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
- 
-    // Define the NSNotFound enum constant that is used all over the place
-    // as a return value by Objective C methods (it's also not defined correctly in bridge support)
-    rb_define_const(rb_mRigs, "NSNotFound", LL2NUM((long long)NSNotFound));
-    
+
     // Initialize Process Info and Main Bundle
     rigs_argv = rb_gv_get("$*");
     rigs_argc = INT2FIX(RARRAY_LEN(RARRAY(rigs_argv)));

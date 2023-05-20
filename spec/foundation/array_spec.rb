@@ -1,6 +1,5 @@
 require "spec_helper"
-
-ObjRuby.import("NSArray")
+require "obj_ruby/foundation"
 
 describe ObjRuby::NSArray do
   it "can create an instance" do

@@ -25,6 +25,7 @@
 #import <Foundation/NSString.h>
 #import <Foundation/NSDictionary.h>
 #import <Foundation/NSScanner.h>
+#import <Foundation/NSCharacterSet.h>
 #import "RIGSBridgeSupportParser.h"
 #include "RIGSCore.h"
 
@@ -35,35 +36,87 @@ didStartElement:(NSString *)elementName
   namespaceURI:(NSString *)namespaceURI 
  qualifiedName:(NSString *)qName 
     attributes:(NSDictionary*)attributeDict {
-  if ([elementName isEqualToString:@"enum"]) {
-    NSString *name = [attributeDict objectForKey:@"name"];
-
-    if ([name isEqualToString:@"NSNotFound"]) {
-      // Bug in BridgeSupport - call with NSIntegerMax
-      return;
-    }
-    
-    NSString *value = [attributeDict objectForKey:@"value64"];
-    NSScanner *scanner = [NSScanner scannerWithString:value];
-    long long integerResult;
-    double floatResult;
-
-    if ([scanner scanLongLong:&integerResult] && scanner.atEnd) {
-      rb_objc_register_integer_from_objc([name cString], integerResult);
-    }
-    else if ([scanner scanDouble:&floatResult] && scanner.atEnd) {
-      rb_objc_register_float_from_objc([name cString], floatResult);
-    }
+  if ([elementName isEqualToString:@"struct"]) {
+    [self parseStructWithName:[attributeDict objectForKey:@"name"]
+                         type:[attributeDict objectForKey:@"type64"]];
+  }
+  else if ([elementName isEqualToString:@"enum"]) {
+    [self parseEnumWithName:[attributeDict objectForKey:@"name"]
+                      value:[attributeDict objectForKey:@"value64"]];
   }
   else if ([elementName isEqualToString:@"class"]) {
-    NSString *name = [attributeDict objectForKey:@"name"];
-
-    Class objc_class = NSClassFromString(name);
-
-    if (objc_class) {
-      rb_objc_register_class_from_objc(objc_class);
-    }
+    [self parseClassWithName:[attributeDict objectForKey:@"name"]];
   }
+}
+
+- (void)parseStructWithName:(NSString*)name type:(NSString*)type
+{
+  NSScanner *scanner = [NSScanner scannerWithString:type];
+  NSString *structKey;
+  NSString *arg;
+
+  [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"{"] intoString:NULL];
+  [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"="] intoString:&structKey];
+  [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"="] intoString:NULL];
+  [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\"}"] intoString:NULL];
+
+  NSUInteger argCount = [self parseStructArgCountWithType:type];
+
+  const char **args = malloc(argCount * sizeof(const char *));
+  int argIndex = 0;
+  while (!scanner.atEnd) {
+    [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:NULL];
+    [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:&arg];
+
+    [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:NULL];
+    [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\"}"] intoString:NULL];
+    [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"}"] intoString:NULL];
+
+    args[argIndex++] = [arg cString];
+  }
+
+  rb_objc_register_struct_from_objc([structKey cString], [name cString], args, argCount);
+
+  free(args);
+}
+
+- (void)parseEnumWithName:(NSString*)name value:(NSString*)value
+{
+  if ([name isEqualToString:@"NSNotFound"]) {
+    rb_objc_register_integer_from_objc([name cString], NSIntegerMax);
+    return;
+  }
+    
+  NSScanner *scanner = [NSScanner scannerWithString:value];
+  long long integerResult;
+  double floatResult;
+
+  if ([scanner scanLongLong:&integerResult] && scanner.atEnd) {
+    rb_objc_register_integer_from_objc([name cString], integerResult);
+  }
+  else if ([scanner scanDouble:&floatResult] && scanner.atEnd) {
+    rb_objc_register_float_from_objc([name cString], floatResult);
+  }
+}
+
+- (void)parseClassWithName:(NSString*)name
+{
+  Class objc_class = NSClassFromString(name);
+
+  if (objc_class) {
+    rb_objc_register_class_from_objc(objc_class);
+  }
+}
+
+- (NSUInteger)parseStructArgCountWithType:(NSString*)type
+{
+  NSMutableString *mType = [NSMutableString stringWithString:type];
+  NSUInteger quoteCount = [mType replaceOccurrencesOfString:@"\""
+                                                 withString:@""
+                                                    options:NSLiteralSearch
+                                                      range:NSMakeRange(0, [type length])];
+
+  return quoteCount / 2;
 }
 
 @end

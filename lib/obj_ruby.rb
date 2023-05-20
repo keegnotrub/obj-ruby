@@ -47,9 +47,3 @@ module ObjRuby
     # Not extended by ObjRuby
   end
 end
-
-# Systematically load these "pseudo" or Ruby only classes
-require "obj_ruby/NSRange"
-require "obj_ruby/NSPoint"
-require "obj_ruby/NSSize"
-require "obj_ruby/NSRect"

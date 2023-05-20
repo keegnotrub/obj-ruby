@@ -1,13 +1,11 @@
-# NSSize- Define a fake NSSize class and methods that go with it
+# foundation.rb - Load Foundation Framework
 #
 #  $Id$
 #
-#    Copyright (C) 2001 Free Software Foundation, Inc.
+#    Copyright (C) 2023 thoughtbot
 #
-#    Written by:  Laurent Julliard <laurent@julliard-online.org>
-#    Date: September 2001
-#
-#    This file is part of the GNUstep RubyInterface Library.
+#    Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+#    Date: May 2023
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Library General Public
@@ -22,16 +20,5 @@
 #    You should have received a copy of the GNU Library General Public
 #    License along with this library; if not, write to the Free
 #    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-#
 
-require "obj_ruby/CStruct"
-
-module ObjRuby
-  class NSSize < CStruct
-    def self.new(width, height)
-      CStruct[width, height]
-    end
-  end
-
-  NSZeroSize = NSSize.new(0, 0)
-end
+ObjRuby.require_framework("Foundation")

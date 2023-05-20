@@ -1,6 +1,5 @@
 require "spec_helper"
-
-ObjRuby.import("NSDictionary")
+require "obj_ruby/foundation"
 
 describe ObjRuby::NSDictionary do
   it "can create an instance" do

@@ -34,15 +34,15 @@ earlier_date = date.earlierDate(other_date)
 Oftentimes you'll want to import all of a particular framework like [Foundation](https://developer.apple.com/documentation/foundation?language=objc) or [AppKit](https://developer.apple.com/documentation/appkit?language=objc). ObjRuby provides convenience requires for each:
 
 ``` ruby
-ObjRuby.require_framework("Foundation")
+require "obj_ruby/foundation"
 
 dict = NSMutableDictionary.new
 dict.setObject_forKey(NSDate.new, "Hello!")
 ```
 
 ``` ruby
-ObjRuby.require_framework("Foundation")
-ObjRuby.require_framework("AppKit")
+require "obj_ruby/foundation"
+require "obj_ruby/app_kit"
 
 app = NSApplication.sharedApplication
 app.setActivationPolicy NSApplicationActivationPolicyRegular

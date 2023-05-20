@@ -1,6 +1,6 @@
 require "spec_helper"
-
-ObjRuby.import("NSAlert")
+require "obj_ruby/foundation"
+require "obj_ruby/app_kit"
 
 describe ObjRuby::NSAlert do
   it "can create an instance" do

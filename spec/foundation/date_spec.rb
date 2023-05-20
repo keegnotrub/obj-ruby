@@ -1,6 +1,5 @@
 require "spec_helper"
-
-ObjRuby.import("NSDate")
+require "obj_ruby/foundation"
 
 describe ObjRuby::NSDate do
   it "can create an instance" do

@@ -1,13 +1,11 @@
-# NSRange- Define a fake NSRange class and methods that go with it
+# app_kit.rb - Load AppKit Framework
 #
 #  $Id$
 #
-#    Copyright (C) 2001 Free Software Foundation, Inc.
+#    Copyright (C) 2023 thoughtbot
 #
-#    Written by:  Laurent Julliard <laurent@julliard-online.org>
-#    Date: September 2001
-#
-#    This file is part of the GNUstep RubyInterface Library.
+#    Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+#    Date: May 2023
 #
 #    This library is free software; you can redistribute it and/or
 #    modify it under the terms of the GNU Library General Public
@@ -22,16 +20,5 @@
 #    You should have received a copy of the GNU Library General Public
 #    License along with this library; if not, write to the Free
 #    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-#
 
-require "obj_ruby/CStruct"
-
-module ObjRuby
-  class NSRange < CStruct
-    def self.new(location, length)
-      CStruct[location, length]
-    end
-  end
-
-  NSZeroRange = NSRange.new(0, 0)
-end
+ObjRuby.require_framework("AppKit")

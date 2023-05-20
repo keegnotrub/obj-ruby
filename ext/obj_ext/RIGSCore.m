@@ -1140,6 +1140,7 @@ rb_objc_register_class_from_objc (Class objc_class)
           (Rigs.import deals with Class with non Constant name to avoid NameError
           exception */
     rb_class = rb_define_class_under(rb_mRigs, cname, rb_super_class);
+    rb_undef_alloc_func(rb_class);
 
     cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
     imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);

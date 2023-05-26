@@ -20,6 +20,20 @@ describe ObjRuby do
     end
 
     it "loads Objective-C structs of a given framework into Ruby's namespace" do
+      described_class.require_framework("Foundation")
+
+      expect(described_class.const_defined?(:NSRange)).to be true
+      expect(described_class.const_defined?(:NSPoint)).to be true
+      expect(described_class.const_defined?(:NSSize)).to be true
+      expect(described_class.const_defined?(:NSRect)).to be true
+    end
+
+    it "loads Objective-C enums of a given framework into Ruby's namespace" do
+      described_class.require_framework("Foundation")
+
+      expect(described_class.const_defined?(:NSNotFound)).to be true
+      expect(described_class.const_defined?(:NSOrderedSame)).to be true
+      expect(described_class.const_defined?(:NSASCIIStringEncoding)).to be true
     end
   end
 end

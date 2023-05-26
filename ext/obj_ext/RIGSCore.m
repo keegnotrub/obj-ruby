@@ -278,11 +278,8 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                     break;
 
                 case T_FALSE:
-                    *(BOOL*)where = NO;
-                    break;
-
                 case T_TRUE:
-                    *(BOOL*)where = YES;
+                    *(NSNumber**)where = [NSNumber numberWithRubyBool:rb_val];
                     break;
 
                 default:
@@ -295,7 +292,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         case _C_SEL:
             if (TYPE(rb_val) == T_STRING) {
             
-                *(SEL*)where = [NSSelector selectorWithRubyString:rb_val];
+                *(SEL*)where = [[NSSelector selectorWithRubyString:rb_val] getSEL];
             
             } else if (TYPE(rb_val) == T_DATA) {
 
@@ -584,7 +581,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
               } else if ( autoconvert && [val isKindOfClass:[NSString class]] ) {
                   rb_val = [[val to_s] getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSNumber class]] ) {
-                  rb_val = [[val to_n] getRubyObject];
+                  rb_val = [val getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSArray class]] ) {
                   rb_val = [[val to_a] getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSDictionary class]] ) {
@@ -820,36 +817,31 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     NSInvocation *invocation;
     NSMethodSignature	*signature;
     const char *type;
-    VALUE rb_retval = Qnil;
+    VALUE rb_retval;
     int i;
     int nbArgs;
     void *data;
     BOOL okydoky;
+    const char idType[] = {_C_ID,'\0'};
         
         
     /* determine the receiver type - Class or instance ? */
     switch (TYPE(rb_self)) {
-
     case T_DATA:
         NSDebugLog(@"Self Ruby value is 0x%lx (ObjC is at 0x%lx)",rb_self,DATA_PTR(rb_self));
-        
         Data_Get_Struct(rb_self,id,rcv);
-        
-        NSDebugLog(@"Self is an object of Class %@ (description is '%@')",NSStringFromClass([rcv class]),rcv);
+        NSDebugLog(@"Self is an object of Class %@ (description is '%@')",NSStringFromClass([rcv classForCoder]),rcv);
       break;
-
     case T_CLASS:
-        rcv = (id) NUM2LL(rb_iv_get(rb_self, "@objc_class"));
+        rcv = (Class) NUM2LL(rb_iv_get(rb_self, "@objc_class"));
         NSDebugLog(@"Self is Class: %@", NSStringFromClass(rcv));
       break;
-
     default:
       /* raise exception */
       NSDebugLog(@"Don't know how to handle self Ruby object of type 0x%02x",TYPE(rb_self));
       rb_raise(rb_eTypeError, "not valid self value");
       return Qnil;
       break;
-      
     }
   
       
@@ -862,34 +854,59 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
               NSStringFromSelector(sel));
         return Qnil;
     }
-  
+
 
     // Check that we have the right number of arguments
     nbArgs = [signature numberOfArguments];
-    if ( nbArgs != rigs_argc+2) {
+    if (rigs_argc < nbArgs-2) {
         rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs-2);
         return Qnil;
     }
-    
-    NSDebugLog(@"Number of arguments = %d", nbArgs-2);
 
-    // Create an Objective C invocation based on the  signature
-    // and convert arguments from Ruby VALUE to ObjC types
+    if (rigs_argc > nbArgs-2) {
+      char objcTypes[128];
+      int objcTypesIndex = 0;
+      int j;
+      type = [signature methodReturnType];
+      for (j=0; j<strlen(type); j++) {
+        objcTypes[objcTypesIndex++] = type[j];
+      }
+      for(i=0; i<nbArgs; i++) {
+        type = [signature getArgumentTypeAtIndex:i];
+        for (j=0; j<strlen(type); j++) {
+          objcTypes[objcTypesIndex++] = type[j];
+        }
+      }
+      // TODO: check for a printf
+      for(i=0; i<rigs_argc-(nbArgs-2); i++) {
+        objcTypes[objcTypesIndex++] = _C_ID;
+      }
+      objcTypes[objcTypesIndex++] = '\0';
+      signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
+      nbArgs = [signature numberOfArguments];
+    }
+    
+    NSDebugLog(@"Number of arguments = %d on %@", nbArgs-2, NSStringFromSelector(sel));
+    for (i = 2; i < [signature numberOfArguments]; i++) {
+        NSDebugLog (@"%ld -> %s", i-2, [signature getArgumentTypeAtIndex: i]);
+    }
+    NSDebugLog (@"returning %s", [signature methodReturnType]);
+    
     invocation = [NSInvocation invocationWithMethodSignature: signature];
+
     [invocation setTarget: rcv];
     [invocation setSelector: sel];
 	
+    // Convert arguments from Ruby VALUE to ObjC types
     for(i=2; i < nbArgs; i++) {
-
-        type = [signature getArgumentTypeAtIndex: i];
-        NSUInteger tsize;
-        NSGetSizeAndAlignment(type, &tsize, NULL);
-        data = alloca(tsize);
-                        
-        okydoky = rb_objc_convert_to_objc(rigs_argv[i-2], data, 0, type);
-        [invocation setArgument: data atIndex: i];
+      type = [signature getArgumentTypeAtIndex:i];
+      NSUInteger tsize;
+      NSGetSizeAndAlignment(type, &tsize, NULL);
+      data = alloca(tsize);
+      okydoky = rb_objc_convert_to_objc(rigs_argv[i-2], data, 0, type);
+      [invocation setArgument:data atIndex:i];
     }
- 
+
     // Really invoke the Obj C method now
     [invocation invoke];
 
@@ -897,31 +914,30 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     // after conversion
     if([signature methodReturnLength]) {
       
-        type = [signature methodReturnType];
+      type = [signature methodReturnType];
             
-        NSDebugLog(@"Return Length = %d", [[invocation methodSignature] methodReturnLength]);
-        NSDebugLog(@"Return Type = %s", type);
+      NSDebugLog(@"Return Length = %d", [signature methodReturnLength]);
+      NSDebugLog(@"Return Type = %s", type);
         
-        data = alloca([signature methodReturnLength]);
-        [invocation getReturnValue: data];
+      data = alloca([signature methodReturnLength]);
+      [invocation getReturnValue: data];
 
-        // Won't work if return length > sizeof(int)  but we do not care
-        // (e.g. double on 32 bits architecture)
-        NSDebugLog(@"ObjC return value = 0x%lx",data);
+      // Won't work if return length > sizeof(int)  but we do not care
+      // (e.g. double on 32 bits architecture)
+      NSDebugLog(@"ObjC return value = 0x%lx",data);
 
-        okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
+      okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
 
     } else {
-        // This is a method with no return value (void). Must return something
-        // in any case in ruby. So return Qnil.
-        NSDebugLog(@"No ObjC return value (void) - returning Qnil",data);
-        rb_retval = Qnil;
-    }
-        
+      // This is a method with no return value (void). Must return something
+      // in any case in ruby. So return Qnil.
+      NSDebugLog(@"No ObjC return value (void) - returning Qnil",data);
+      rb_retval = Qnil;
+    }      
         
     NSDebugLog(@">>>>> VALUE returned to Ruby = 0x%lx (class %s)",
                rb_retval, rb_class2name(CLASS_OF(rb_retval)));
-        
+    
     return rb_retval;
     }
 }
@@ -996,7 +1012,6 @@ int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
     while ( (mthSel = [mthEnum nextObject]) ) {
        
         mthRubyName = RubyNameFromSelectorString(mthSel);
-        // TODO: (variable length args - output this with ObjRuby.import("NSArray"))
         //NSDebugLog(@"Registering Objc method %@ under Ruby name %@)", mthSel,mthRubyName);
 
         rb_define_method(rb_class, [mthRubyName cString], rb_objc_handler, -1);

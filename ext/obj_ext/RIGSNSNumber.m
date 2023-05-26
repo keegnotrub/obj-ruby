@@ -58,6 +58,11 @@
   return [NSNumber numberWithDouble:RFLOAT_VALUE(rb_float)];
 }
 
++ (id) numberWithRubyBool: (VALUE) rb_bool
+{
+  return [NSNumber numberWithBool:rb_bool == Qtrue];
+}
+
 - (id) to_i
 {  
   return [RIGSWrapObject objectWithRubyObject:[self getRubyInteger]];
@@ -68,15 +73,15 @@
   return [RIGSWrapObject objectWithRubyObject:[self getRubyFloat]];
 }
 
-- (id) to_n
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyNumeric]];
-}
-
-- (VALUE) getRubyNumeric
+- (VALUE) getRubyObject
 {
   const char *type = [self objCType];
 
+  if (*type == _C_CHR) {
+    if ([self charValue] == YES) return Qtrue;
+    if ([self charValue] == NO) return Qfalse;
+  }
+  
   switch (*type) {
   case _C_ULNG_LNG:
     return ULL2NUM([self unsignedLongLongValue]);

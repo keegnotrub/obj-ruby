@@ -61,7 +61,7 @@
 {
   self = [self init];
   
-  NSDebugLog(@"Creating a new Selector for stringSEL %s",selCString);
+  NSDebugLog(@"Creating a new Selector for C string SEL %s",selCString);
   _sel = NSSelectorFromString([NSString stringWithCString: selCString]);
   return self;
 }
@@ -70,7 +70,7 @@
 {
   self = [self init];
   
-  NSDebugLog(@"Creating a new Selector for NSStringSEL %@",selString);
+  NSDebugLog(@"Creating a new Selector for NSString SEL %@",selString);
   _sel = NSSelectorFromString(selString);
   return self;
 }
@@ -79,7 +79,7 @@
 {
   self = [self init];
   
-  NSDebugLog(@"Creating a new Selector for SEL for %@",NSStringFromSelector(sel));
+  NSDebugLog(@"Creating a new Selector for SEL %@",NSStringFromSelector(sel));
   _sel = sel;
   return self;
 }
@@ -89,6 +89,7 @@
   self = [self init];
 
   NSString *selString = [NSString stringWithCString: rb_string_value_cstr(&rbString)];
+  NSDebugLog(@"Creating a new Selector for Ruby string SEL %@",selString);
   _sel = NSSelectorFromString(selString);
   return self;
 }
@@ -136,7 +137,7 @@ SelectorStringFromRubyName (char *name, int numArgs)
                   (this is for ObjC methods with unnamed arguments in the
                   method selector) */
         {
-          int diffNum,i;
+          int i;
           int curNum = 0;
           char *ch = name;
 
@@ -146,8 +147,7 @@ SelectorStringFromRubyName (char *name, int numArgs)
           }
 
           // Add missing ":" at the end
-          diffNum = numArgs - curNum;
-          for(i=0;i<diffNum;i++) {
+          if (numArgs > curNum) {
             selname = [selname stringByAppendingString: @":"];
           }
         }

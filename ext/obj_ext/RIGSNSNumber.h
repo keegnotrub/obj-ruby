@@ -40,10 +40,11 @@
 + (id) numberWithRubyBignum: (VALUE) rb_bignum;
 + (id) numberWithRubyFixnum: (VALUE) rb_fixnum;
 + (id) numberWithRubyFloat: (VALUE) rb_float;
++ (id) numberWithRubyBool: (VALUE) rb_bool;
 
 - (id) to_i;
 - (id) to_f;
-- (id) to_n;
+- (id) getRubyObject;
 
 @end
 

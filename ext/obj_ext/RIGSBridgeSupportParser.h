@@ -29,6 +29,10 @@
 #import <Foundation/NSXMLParser.h>
 
 @interface RIGSBridgeSupportParser : NSObject<NSXMLParserDelegate>
+{
+  NSString *_variadicMethod;
+}
+
 @end
 
 #endif

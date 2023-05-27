@@ -47,6 +47,38 @@ didStartElement:(NSString *)elementName
   else if ([elementName isEqualToString:@"class"]) {
     [self parseClassWithName:[attributeDict objectForKey:@"name"]];
   }
+  else if ([elementName isEqualToString:@"method"]) {
+    [self parseMethodWithSelector:[attributeDict objectForKey:@"selector"]
+                         variadic:[attributeDict objectForKey:@"variadic"]];
+  }
+  else if ([elementName isEqualToString:@"arg"]) {
+    [self parseArgWithIndex:[attributeDict objectForKey:@"index"]
+                     printf:[attributeDict objectForKey:@"printf_format"]];
+  }
+}
+
+- (void)parser:(NSXMLParser *)parser 
+ didEndElement:(NSString *)elementName 
+  namespaceURI:(NSString *)namespaceURI 
+ qualifiedName:(NSString *)qName {
+  if (_variadicMethod && [elementName isEqualToString:@"method"]) {
+    [_variadicMethod release];
+    _variadicMethod = nil;
+  }
+}
+
+- (void)parseMethodWithSelector:(NSString*)selector variadic:(NSString*)variadic
+{
+  if ([variadic isEqualToString:@"true"]) {
+    _variadicMethod = [selector retain];
+  }
+}
+
+- (void)parseArgWithIndex:(NSString*)index printf:(NSString*)printf
+{
+  if (_variadicMethod && [printf isEqualToString:@"true"]) {
+    rb_objc_register_method_arg_from_objc([_variadicMethod cString], [index intValue], true);
+  }
 }
 
 - (void)parseStructWithName:(NSString*)name type:(NSString*)type

@@ -88,6 +88,9 @@ static NSMapTable *knownObjects = 0;
 // Hash table that maps known ObjC structs to Ruby struct VALUE
 static NSMapTable *knownStructs = 0;
 
+// Hash table that maps known variadic Objc selectors to printf arg indexes
+static NSMapTable *knownFormatStrings = 0;
+
 // Hash table that contains loaded Framework bundleIdentifiers
 static NSHashTable *knownFrameworks = 0;
 
@@ -122,6 +125,18 @@ rb_objc_mark(VALUE rb_object)
     NSDebugLog(@"Call to ObjC marking on 0x%lx",rb_object);
 }
 
+unsigned long
+rb_objc_hash(const char* value)
+{
+  char keyChar;
+  unsigned long hash = HASH_SEED;
+  
+  while (keyChar = *value++) {
+    hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
+  }
+
+  return hash;
+}
 
 /* 
     Normally new method has no arg in objective C. 
@@ -820,11 +835,10 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     VALUE rb_retval;
     int i;
     int nbArgs;
+    int nbArgsExtra;
     void *data;
     BOOL okydoky;
-    const char idType[] = {_C_ID,'\0'};
-        
-        
+                
     /* determine the receiver type - Class or instance ? */
     switch (TYPE(rb_self)) {
     case T_DATA:
@@ -843,7 +857,6 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
       return Qnil;
       break;
     }
-  
       
     // Find the method signature 
     // FIXME: do not know what happens here if several method have the same
@@ -855,33 +868,103 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
         return Qnil;
     }
 
-
     // Check that we have the right number of arguments
     nbArgs = [signature numberOfArguments];
-    if (rigs_argc < nbArgs-2) {
+    nbArgsExtra = rigs_argc - (nbArgs-2);
+    if (nbArgsExtra < 0) {
         rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs-2);
         return Qnil;
     }
 
-    if (rigs_argc > nbArgs-2) {
+    if (nbArgsExtra > 0) {
       char objcTypes[128];
       int objcTypesIndex = 0;
-      int j;
+      int formatStringIndex;
+      int formatStringLength;
+      const char* formatString;
+
       type = [signature methodReturnType];
-      for (j=0; j<strlen(type); j++) {
-        objcTypes[objcTypesIndex++] = type[j];
+      while (*type) {
+        objcTypes[objcTypesIndex++] = *type++;
       }
+
       for(i=0; i<nbArgs; i++) {
         type = [signature getArgumentTypeAtIndex:i];
-        for (j=0; j<strlen(type); j++) {
-          objcTypes[objcTypesIndex++] = type[j];
+        while (*type) {
+          objcTypes[objcTypesIndex++] = *type++;
         }
       }
-      // TODO: check for a printf
-      for(i=0; i<rigs_argc-(nbArgs-2); i++) {
+
+      formatStringIndex = NSCountMapTable(knownFormatStrings) > 0 ? NSMapGet(knownFormatStrings, rb_objc_hash(sel_getName(sel))) : 0;
+      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {
+        formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);
+        formatStringLength = strlen(formatString);
+      }
+      else {
+        formatString = NULL;
+        formatStringLength = 0;
+      }
+      i=0;
+      while (i < formatStringLength) {
+        if (formatString[i++] != '%') continue;
+        if (i < formatStringLength && formatString[i] == '%') {
+          i++;
+          continue;
+        }
+        objcTypes[objcTypesIndex] = '\0';
+        while (i < formatStringLength) {
+          switch (formatString[i++]) {
+          case 'd':
+          case 'i':
+          case 'o':
+          case 'u':
+          case 'x':
+          case 'X':
+          case 'c':
+          case 'C':            
+            objcTypes[objcTypesIndex] = _C_INT;
+            break;
+          case 'D':
+          case 'O':
+          case 'U':
+            objcTypes[objcTypesIndex] = _C_LNG;
+            break;
+          case 'f':       
+          case 'F':
+          case 'e':       
+          case 'E':
+          case 'g':       
+          case 'G':
+          case 'a':
+          case 'A':
+            objcTypes[objcTypesIndex] = _C_DBL;
+            break;
+          case 's':
+          case 'S':
+            objcTypes[objcTypesIndex] = _C_CHARPTR;
+            break;
+          case 'p':
+            objcTypes[objcTypesIndex] = _C_PTR;
+            break;
+          case '@':
+            objcTypes[objcTypesIndex] = _C_ID;
+            break;            
+          }
+          if (objcTypes[objcTypesIndex] != '\0') {
+            objcTypesIndex++;
+            if (--nbArgsExtra < 0) {
+              rb_raise(rb_eArgError, "Too many tokens in the format string '%s' for the given %d argument(s)", formatString, rigs_argc - (nbArgs-2));
+            }
+            break;
+          }
+        }
+      }
+      
+      while (nbArgsExtra-- > 0) {
         objcTypes[objcTypesIndex++] = _C_ID;
       }
       objcTypes[objcTypesIndex++] = '\0';
+      
       signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
       nbArgs = [signature numberOfArguments];
     }
@@ -1075,16 +1158,25 @@ rb_objc_register_integer_from_objc(const char *name, long long value)
 }
 
 void
+rb_objc_register_method_arg_from_objc(const char *selector, int index, BOOL formatString)
+{
+  unsigned long hash = rb_objc_hash(selector);
+
+  if (!formatString || NSMapGet(knownFormatStrings, hash)) {
+    return;
+  }
+
+  NSMapInsertKnownAbsent(knownFormatStrings, hash, index + 2);
+}
+
+
+void
 rb_objc_register_struct_from_objc(const char *key, const char *name, const char *args[], int argCount)
 {
   VALUE rb_struct;
   char keyChar;
-  unsigned long hash = HASH_SEED;
-
-  while (keyChar = *key++) {
-    hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
-  }
-
+  unsigned long hash = rb_objc_hash(key);
+  
   if (NSMapGet(knownStructs, hash)) {
     return;
   }
@@ -1387,6 +1479,8 @@ Init_obj_ext()
                                     NSNonOwnedPointerMapValueCallBacks,
                                     0);
     knownFrameworks = NSCreateHashTable(NSIntegerHashCallBacks, 0);
+
+    knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     
     // Create 2 ruby class methods under the ObjC Ruby module
     // - ObjRuby.class("className") : registers ObjC class with Ruby

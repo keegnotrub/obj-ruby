@@ -31,7 +31,7 @@ describe ObjRuby do
     it "loads Objective-C enums of a given framework into Ruby's namespace" do
       described_class.require_framework("Foundation")
 
-      expect(described_class.const_get(:NSNotFound)).to eq 2**63-1
+      expect(described_class.const_get(:NSNotFound)).to eq 2**63 - 1
       expect(described_class.const_get(:NSOrderedSame)).to eq 0
       expect(described_class.const_get(:NSASCIIStringEncoding)).to eq 1
     end
@@ -39,7 +39,7 @@ describe ObjRuby do
     it "loads Objective-C constants of a given framework into Ruby's namespace" do
       described_class.require_framework("Foundation")
 
-      expect(described_class.const_get(:NSZeroPoint)).to eq ObjRuby::NSPoint.new(0,0)
+      expect(described_class.const_get(:NSZeroPoint)).to eq ObjRuby::NSPoint.new(0, 0)
       expect(described_class.const_get(:NSWeekDayNameArray)).to eq "NSWeekDayNameArray"
       expect(described_class.const_get(:NSKeepAllocationStatistics)).to eq true
       expect(described_class.const_get(:NSZombieEnabled)).to eq false

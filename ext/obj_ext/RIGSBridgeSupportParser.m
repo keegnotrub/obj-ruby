@@ -40,6 +40,10 @@ didStartElement:(NSString *)elementName
     [self parseStructWithName:[attributeDict objectForKey:@"name"]
                          type:[attributeDict objectForKey:@"type64"]];
   }
+  else if ([elementName isEqualToString:@"constant"]) {
+    [self parseConstantWithName:[attributeDict objectForKey:@"name"]
+                           type:[attributeDict objectForKey:@"type64"]];
+  }
   else if ([elementName isEqualToString:@"enum"]) {
     [self parseEnumWithName:[attributeDict objectForKey:@"name"]
                       value:[attributeDict objectForKey:@"value64"]];
@@ -110,6 +114,11 @@ didStartElement:(NSString *)elementName
   rb_objc_register_struct_from_objc([structKey cString], [name cString], args, argCount);
 
   free(args);
+}
+
+- (void)parseConstantWithName:(NSString*)name type:(NSString*)type
+{
+  rb_objc_register_constant_from_objc([name cString], [type cString]);
 }
 
 - (void)parseEnumWithName:(NSString*)name value:(NSString*)value

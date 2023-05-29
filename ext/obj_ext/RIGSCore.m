@@ -32,6 +32,7 @@
 */
 
 #include <objc/objc-class.h>
+#include <dlfcn.h>
 
 #define HASH_SEED 5381
 #define HASH_BITSHIFT 5
@@ -325,7 +326,15 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                 ret = NO;
             }
             break;
- 
+
+        case _C_BOOL:
+            if (TYPE(rb_val) == T_TRUE)
+              *(BOOL*)where = YES;
+            else if (TYPE(rb_val) == T_FALSE)
+              *(BOOL*)where = NO;
+            else
+              ret = NO;
+            break;
 
         case _C_CHR:
             if ((TYPE(rb_val) == T_FIXNUM) || (TYPE(rb_val) == T_STRING)) 
@@ -644,6 +653,15 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             rb_val = LL2NUM((long long) where);
           }
           break;
+
+        case _C_BOOL:
+            if ( *(BOOL *)where == YES)
+              rb_val = Qtrue;
+            else if ( *(BOOL *)where == NO)
+              rb_val = Qfalse;
+            else
+              rb_val = Qnil;
+            break;
 
         case _C_CHR:
             // Assume that if YES or NO then it's a BOOLean
@@ -1136,6 +1154,22 @@ int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
     return cmth_cnt;
 }
 
+void
+rb_objc_register_constant_from_objc(const char *name, const char *type)
+{
+  void *data;
+  BOOL okydoky;
+  VALUE rb_retval;
+  
+  data = dlsym(RTLD_DEFAULT, name);
+
+  if (data != NULL) {
+    okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, YES);
+    if (okydoky) {
+      rb_define_const(rb_mRigs, name, rb_retval);
+    }
+  }
+}
 
 void
 rb_objc_register_float_from_objc(const char *name, double value)

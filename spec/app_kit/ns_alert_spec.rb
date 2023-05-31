@@ -1,5 +1,4 @@
 require "spec_helper"
-require "obj_ruby/foundation"
 require "obj_ruby/app_kit"
 
 describe ObjRuby::NSAlert do

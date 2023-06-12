@@ -33,6 +33,7 @@
 
 #include <objc/objc-class.h>
 #include <dlfcn.h>
+#include <ffi/ffi.h>
 
 #define HASH_SEED 5381
 #define HASH_BITSHIFT 5
@@ -88,6 +89,9 @@ static NSMapTable *knownObjects = 0;
 
 // Hash table that maps known ObjC structs to Ruby struct VALUE
 static NSMapTable *knownStructs = 0;
+
+// Hash table that maps known ObjC functions to objcTypes encoding
+static NSMapTable *knownFunctions = 0;
 
 // Hash table that maps known variadic Objc selectors to printf arg indexes
 static NSMapTable *knownFormatStrings = 0;
@@ -841,6 +845,97 @@ rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     }
 }
 
+NSMethodSignature*
+rb_objc_signature_with_format_string(NSMethodSignature *signature, const char * formatString, int nbArgsExtra)
+{
+  char objcTypes[128];
+  int objcTypesIndex;
+  int formatStringLength;
+  char *type;
+  int nbArgs;
+  int i;
+
+  nbArgs = [signature numberOfArguments];
+  objcTypesIndex = 0;
+  
+  type = [signature methodReturnType];  
+  while (*type) {
+    objcTypes[objcTypesIndex++] = *type++;
+  }
+
+  for(i=0; i<nbArgs; i++) {
+    type = [signature getArgumentTypeAtIndex:i];
+    while (*type) {
+      objcTypes[objcTypesIndex++] = *type++;
+    }
+  }
+
+  formatStringLength = strlen(formatString);
+  i = 0;
+  
+  while (i < formatStringLength) {
+    if (formatString[i++] != '%') continue;
+    if (i < formatStringLength && formatString[i] == '%') {
+      i++;
+      continue;
+    }
+    objcTypes[objcTypesIndex] = '\0';
+    while (i < formatStringLength) {
+      switch (formatString[i++]) {
+      case 'd':
+      case 'i':
+      case 'o':
+      case 'u':
+      case 'x':
+      case 'X':
+      case 'c':
+      case 'C':
+        objcTypes[objcTypesIndex] = _C_INT;
+        break;
+      case 'D':
+      case 'O':
+      case 'U':
+        objcTypes[objcTypesIndex] = _C_LNG;
+        break;
+      case 'f':       
+      case 'F':
+      case 'e':       
+      case 'E':
+      case 'g':       
+      case 'G':
+      case 'a':
+      case 'A':
+        objcTypes[objcTypesIndex] = _C_DBL;
+        break;
+      case 's':
+      case 'S':
+        objcTypes[objcTypesIndex] = _C_CHARPTR;
+        break;
+      case 'p':
+        objcTypes[objcTypesIndex] = _C_PTR;
+        break;
+      case '@':
+        objcTypes[objcTypesIndex] = _C_ID;
+        break;            
+      }
+      if (objcTypes[objcTypesIndex] != '\0') {
+        objcTypesIndex++;
+        if (--nbArgsExtra < 0) {
+          rb_raise(rb_eArgError, "Too many tokens in the format string '%s' for the given argument(s)", formatString);
+        }
+        break;
+      }
+    }
+  }
+
+  while (nbArgsExtra-- > 0) {
+    objcTypes[objcTypesIndex++] = _C_ID;
+  }
+  objcTypes[objcTypesIndex] = '\0';
+
+  return [NSMethodSignature signatureWithObjCTypes:objcTypes];
+}
+
 
 VALUE
 rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
@@ -895,95 +990,19 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     }
 
     if (nbArgsExtra > 0) {
-      char objcTypes[128];
-      int objcTypesIndex = 0;
+      unsigned long hash = rb_objc_hash(sel_getName(sel));
       int formatStringIndex;
-      int formatStringLength;
       const char* formatString;
 
-      type = [signature methodReturnType];
-      while (*type) {
-        objcTypes[objcTypesIndex++] = *type++;
-      }
-
-      for(i=0; i<nbArgs; i++) {
-        type = [signature getArgumentTypeAtIndex:i];
-        while (*type) {
-          objcTypes[objcTypesIndex++] = *type++;
-        }
-      }
-
-      formatStringIndex = NSCountMapTable(knownFormatStrings) > 0 ? NSMapGet(knownFormatStrings, rb_objc_hash(sel_getName(sel))) : 0;
-      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {
+      formatStringIndex = NSMapGet(knownFormatStrings, hash);
+      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {        
         formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);
-        formatStringLength = strlen(formatString);
       }
       else {
-        formatString = NULL;
-        formatStringLength = 0;
+        formatString = "";
       }
-      i=0;
-      while (i < formatStringLength) {
-        if (formatString[i++] != '%') continue;
-        if (i < formatStringLength && formatString[i] == '%') {
-          i++;
-          continue;
-        }
-        objcTypes[objcTypesIndex] = '\0';
-        while (i < formatStringLength) {
-          switch (formatString[i++]) {
-          case 'd':
-          case 'i':
-          case 'o':
-          case 'u':
-          case 'x':
-          case 'X':
-          case 'c':
-          case 'C':            
-            objcTypes[objcTypesIndex] = _C_INT;
-            break;
-          case 'D':
-          case 'O':
-          case 'U':
-            objcTypes[objcTypesIndex] = _C_LNG;
-            break;
-          case 'f':       
-          case 'F':
-          case 'e':       
-          case 'E':
-          case 'g':       
-          case 'G':
-          case 'a':
-          case 'A':
-            objcTypes[objcTypesIndex] = _C_DBL;
-            break;
-          case 's':
-          case 'S':
-            objcTypes[objcTypesIndex] = _C_CHARPTR;
-            break;
-          case 'p':
-            objcTypes[objcTypesIndex] = _C_PTR;
-            break;
-          case '@':
-            objcTypes[objcTypesIndex] = _C_ID;
-            break;            
-          }
-          if (objcTypes[objcTypesIndex] != '\0') {
-            objcTypesIndex++;
-            if (--nbArgsExtra < 0) {
-              rb_raise(rb_eArgError, "Too many tokens in the format string '%s' for the given %d argument(s)", formatString, rigs_argc - (nbArgs-2));
-            }
-            break;
-          }
-        }
-      }
-      
-      while (nbArgsExtra-- > 0) {
-        objcTypes[objcTypesIndex++] = _C_ID;
-      }
-      objcTypes[objcTypesIndex++] = '\0';
-      
-      signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
+
+      signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
       nbArgs = [signature numberOfArguments];
     }
     
@@ -1041,6 +1060,170 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     
     return rb_retval;
     }
+}
+
+
+ffi_type*
+rb_objc_ffi_type_for_type(const char *type)
+{
+  ffi_type *inStruct = NULL;
+  unsigned long inStructHash;
+  int inStructIndex = 0;
+  int inStructCount = 0;
+
+  type = objc_skip_type_qualifiers (type);
+
+  if (*type == _C_STRUCT_B) {
+    inStructHash = HASH_SEED;
+    while (*type != _C_STRUCT_E && *type++ != '=') {
+      if (*type == '=') continue;
+      inStructHash = ((inStructHash << HASH_BITSHIFT) + inStructHash) + (*type);
+    }
+    inStructCount = RARRAY_LEN(rb_struct_s_members(NSMapGet(knownStructs, inStructHash)));
+                               
+    inStruct = (ffi_type *)malloc(sizeof(ffi_type));
+    inStruct->size = 0;
+    inStruct->alignment = 0;
+    inStruct->type = FFI_TYPE_STRUCT;
+    inStruct->elements = malloc((inStructCount + 1) * sizeof(ffi_type *));
+    
+    while (*type != _C_STRUCT_E) {
+      inStruct->elements[inStructIndex++] = rb_objc_ffi_type_for_type(type);
+      type = objc_skip_typespec(type);
+    }
+    inStruct->elements[inStructIndex] = NULL;
+
+    return inStruct;
+  }
+
+  switch (*type) {
+  case _C_ID:
+  case _C_CLASS:
+  case _C_SEL:
+  case _C_CHARPTR:
+  case _C_PTR:    
+    return &ffi_type_pointer;
+  case _C_BOOL:
+  case _C_UCHR:
+    return &ffi_type_uchar;
+  case _C_CHR:
+    return &ffi_type_schar;
+  case _C_SHT:
+    return &ffi_type_sshort;
+  case _C_USHT:
+    return &ffi_type_ushort;
+  case _C_INT:
+    return &ffi_type_sint;
+  case _C_UINT:
+    return &ffi_type_uint;
+  case _C_LNG:
+    return &ffi_type_slong;
+  case _C_LNG_LNG: 
+    return &ffi_type_sint64;
+  case _C_ULNG:
+    return &ffi_type_ulong;
+  case _C_ULNG_LNG: 
+    return &ffi_type_uint64;    
+  case _C_FLT:
+    return &ffi_type_float;
+  case _C_DBL:
+    return &ffi_type_double;
+  case _C_VOID:
+    return &ffi_type_void;      
+  default:
+    return NULL;
+  }
+}
+
+VALUE
+rb_objc_dispatch(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+  @autoreleasepool {
+  const char *name = rb_id2name(rb_frame_this_func());
+  unsigned long hash = rb_objc_hash(name);
+  const char *objcTypes;
+  const char *objcTypesExtra;
+  NSMethodSignature	*signature;
+  int nbArgs;
+  int nbArgsExtra;
+  int i;
+  char *type;
+  void *data;
+  void **args;
+  BOOL okydoky;
+  VALUE rb_retval;
+
+  objcTypes = NSMapGet(knownFunctions, hash);
+  rb_retval = Qnil;
+
+  if (objcTypes != NULL) {
+    signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
+    nbArgs = [signature numberOfArguments];
+
+    nbArgsExtra = rigs_argc - nbArgs;
+    if (nbArgsExtra < 0) {
+      rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs);
+      return Qnil;
+    }
+
+    if (nbArgsExtra > 0) {
+      int formatStringIndex;
+      const char *formatString;
+      
+      formatStringIndex = NSMapGet(knownFormatStrings, hash);
+      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {
+        formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);        
+      }
+      else {
+        formatString = "";
+      }
+      signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
+      nbArgs = [signature numberOfArguments];
+    }
+    
+
+    ffi_cif cif;
+    ffi_type **arg_types;
+    ffi_type *ret_type;
+
+    args = alloca(sizeof(void*) * nbArgs);
+    arg_types = alloca(sizeof(ffi_type*) * nbArgs);
+
+    memset(args, 0, sizeof(void*) * nbArgs);
+    memset(arg_types, 0, sizeof(ffi_type*) * nbArgs);
+
+    for (i=0;i<nbArgs;i++) {
+      type = [signature getArgumentTypeAtIndex:i];
+      NSUInteger tsize;
+      NSGetSizeAndAlignment(type, &tsize, NULL);
+      data = alloca(tsize);
+      okydoky = rb_objc_convert_to_objc(rigs_argv[i], data, 0, type);
+      args[i] = data;
+      arg_types[i] = rb_objc_ffi_type_for_type(type);
+    }
+
+    type = [signature methodReturnType];
+
+    ret_type = rb_objc_ffi_type_for_type(type);
+    if (ret_type != &ffi_type_void) {
+      size_t ret_len = MAX(sizeof(long), [signature methodReturnLength]);
+      data = alloca(ret_len);
+    }
+
+    void *sym = dlsym(RTLD_DEFAULT, name);
+    
+    if (sym != NULL) {
+      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types) == FFI_OK) {
+        ffi_call(&cif, FFI_FN(sym), (ffi_arg *)data, args);
+        if (ret_type != &ffi_type_void) {
+          okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
+        }
+      }
+    }
+  }
+  
+  return rb_retval;
+  }
 }
 
 VALUE 
@@ -1153,6 +1336,20 @@ int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 
     return cmth_cnt;
 }
+
+void
+rb_objc_register_function_from_objc(const char *name, const char *objcTypes, int formatStringIndex)
+{
+  unsigned long hash = rb_objc_hash(name);
+
+  if (formatStringIndex != -1) {
+    NSMapInsertKnownAbsent(knownFormatStrings, hash, formatStringIndex + 2);
+  }
+  NSMapInsertKnownAbsent(knownFunctions, hash, objcTypes);
+
+  rb_define_module_function(rb_mRigs, name, rb_objc_dispatch, -1);
+}
+
 
 void
 rb_objc_register_constant_from_objc(const char *name, const char *type)
@@ -1343,9 +1540,14 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
     return Qfalse;
   }
 
+  path = [NSString stringWithFormat:@"BridgeSupport/%s.dylib", cname];
+  url = [[bundle resourceURL] URLByAppendingPathComponent:path];
+
+  dlopen([url fileSystemRepresentation], RTLD_LAZY);
+
   path = [NSString stringWithFormat:@"BridgeSupport/%s.bridgesupport", cname];
   url = [[bundle resourceURL] URLByAppendingPathComponent:path];
-  
+
   NSXMLParser *parser = [[NSXMLParser alloc] initWithContentsOfURL:url];
   RIGSBridgeSupportParser *delegate = [[RIGSBridgeSupportParser alloc] init];
 
@@ -1512,18 +1714,24 @@ Init_obj_ext()
     knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks,
                                     NSNonOwnedPointerMapValueCallBacks,
                                     0);
+    knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks,
+                                      NSNonOwnedPointerMapValueCallBacks,
+                                      0);
+    knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks,
+                                          NSIntegerMapValueCallBacks,
+                                          0);
+    
     knownFrameworks = NSCreateHashTable(NSIntegerHashCallBacks, 0);
 
-    knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     
     // Create 2 ruby class methods under the ObjC Ruby module
     // - ObjRuby.class("className") : registers ObjC class with Ruby
     // - ObjRuby.register(class): register Ruby class with Objective C
 
     rb_mRigs = rb_define_module("ObjRuby");
-    rb_define_singleton_method(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
-    rb_define_singleton_method(rb_mRigs, "register", _RIGS_register_ruby_class_from_ruby, 1);
-    rb_define_singleton_method(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
+    rb_define_module_function(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
+    rb_define_module_function(rb_mRigs, "register", _RIGS_register_ruby_class_from_ruby, 1);
+    rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
 
     // Initialize Process Info and Main Bundle
     rigs_argv = rb_gv_get("$*");

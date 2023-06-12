@@ -30,7 +30,11 @@
 
 @interface RIGSBridgeSupportParser : NSObject<NSXMLParserDelegate>
 {
-  NSString *_variadicMethod;
+  NSString *_methodName;
+  NSString *_functionName;
+  NSMutableString *_objcTypes;
+  NSInteger _formatStringIndex;
+  NSInteger _argIndex;
 }
 
 @end

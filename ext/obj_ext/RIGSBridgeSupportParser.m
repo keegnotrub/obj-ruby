@@ -55,9 +55,25 @@ didStartElement:(NSString *)elementName
     [self parseMethodWithSelector:[attributeDict objectForKey:@"selector"]
                          variadic:[attributeDict objectForKey:@"variadic"]];
   }
+  else if ([elementName isEqualToString:@"function"]) {
+    [self parseFunctionWithName:[attributeDict objectForKey:@"name"]];
+  }
+  else if ([elementName isEqualToString:@"retval"]) {
+    [self parseArgWithIndex:-1
+                       type:[attributeDict objectForKey:@"type64"]
+                     printf:nil];
+  }
   else if ([elementName isEqualToString:@"arg"]) {
-    [self parseArgWithIndex:[attributeDict objectForKey:@"index"]
-                     printf:[attributeDict objectForKey:@"printf_format"]];
+    if (_methodName) {
+      [self parseArgWithIndex:[[attributeDict objectForKey:@"index"] intValue]
+                         type:[attributeDict objectForKey:@"type64"]
+                       printf:[attributeDict objectForKey:@"printf_format"]];
+    }
+    else if (_functionName) {
+      [self parseArgWithIndex:_argIndex++
+                         type:[attributeDict objectForKey:@"type64"]
+                       printf:[attributeDict objectForKey:@"printf_format"]];
+    }
   }
 }
 
@@ -65,23 +81,62 @@ didStartElement:(NSString *)elementName
  didEndElement:(NSString *)elementName 
   namespaceURI:(NSString *)namespaceURI 
  qualifiedName:(NSString *)qName {
-  if (_variadicMethod && [elementName isEqualToString:@"method"]) {
-    [_variadicMethod release];
-    _variadicMethod = nil;
+  if (_methodName && [elementName isEqualToString:@"method"]) {
+    [self finalizeMethod];
   }
+  else if (_functionName && [elementName isEqualToString:@"function"]) {
+    [self finalizeFunction];
+  }
+}
+
+- (void)finalizeFunction
+{
+  rb_objc_register_function_from_objc([_functionName cString], [_objcTypes cString], _formatStringIndex);
+
+  [_objcTypes release];
+  _objcTypes = nil;
+  [_functionName release];
+  _functionName = nil;
+}
+
+- (void)finalizeMethod
+{
+  [_methodName release];
+  _methodName = nil;
+}
+
+- (void)parseFunctionWithName:(NSString*)name
+{
+  _functionName = [name retain];
+  _objcTypes = [[NSMutableString string] retain];
+  _formatStringIndex = -1;
+  _argIndex = 0;
 }
 
 - (void)parseMethodWithSelector:(NSString*)selector variadic:(NSString*)variadic
 {
   if ([variadic isEqualToString:@"true"]) {
-    _variadicMethod = [selector retain];
+    _methodName = [selector retain];
   }
 }
 
-- (void)parseArgWithIndex:(NSString*)index printf:(NSString*)printf
+- (void)parseArgWithIndex:(NSInteger)index type:(NSString*)type printf:(NSString*)printf
 {
-  if (_variadicMethod && [printf isEqualToString:@"true"]) {
-    rb_objc_register_method_arg_from_objc([_variadicMethod cString], [index intValue], true);
+  if (_methodName) {
+    if ([printf isEqualToString:@"true"]) {
+      rb_objc_register_method_arg_from_objc([_methodName cString], index, YES);
+    }
+  }
+  else if (_functionName) {
+    if ([printf isEqualToString:@"true"]) {
+      _formatStringIndex = index;
+    }
+    if (index == -1) {
+      [_objcTypes insertString:type atIndex:0];
+    }
+    else {
+      [_objcTypes appendString:type];
+    }
   }
 }
 

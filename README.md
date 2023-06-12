@@ -54,7 +54,6 @@ alert.runModal
 
 ## Future
 
-- Support variable argument lists in Objective-C such as `NSString#stringWithFormat`, `NSArray#arrayWithObjects` and `NSLog`.
 - Using Ruby's procs to bridge to Objective-C blocks
 
 ## Credit

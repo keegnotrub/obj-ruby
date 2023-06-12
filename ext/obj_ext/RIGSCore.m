@@ -1340,12 +1340,17 @@ int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 void
 rb_objc_register_function_from_objc(const char *name, const char *objcTypes, int formatStringIndex)
 {
+  char *data;
   unsigned long hash = rb_objc_hash(name);
 
   if (formatStringIndex != -1) {
     NSMapInsertKnownAbsent(knownFormatStrings, hash, formatStringIndex + 2);
   }
-  NSMapInsertKnownAbsent(knownFunctions, hash, objcTypes);
+
+  data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
+  strcpy(data, objcTypes);
+  
+  NSMapInsertKnownAbsent(knownFunctions, hash, data);
 
   rb_define_module_function(rb_mRigs, name, rb_objc_dispatch, -1);
 }

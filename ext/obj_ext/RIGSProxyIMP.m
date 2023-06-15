@@ -35,7 +35,7 @@
 #include "RIGSProxyIMP.h"
 #include "RIGSProxySetup.h"
 #include "RIGSWrapObject.h"
-#include "RIGSSelectorMapping.h"
+#include "RIGSSelector.h"
 
 #define COMMON_VAR_DECLARATION \
   const char *type; \

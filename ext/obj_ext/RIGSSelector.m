@@ -1,4 +1,4 @@
-/* RIGSSelectorMapping.m - Managing mapping between Objective-C method 
+/* RIGSSelector.m - Managing mapping between Objective-C method 
    names and Rubyones
 
    $Id$
@@ -32,29 +32,29 @@
 
 #include "RIGS.h"
 #include "RIGSWrapObject.h"
-#include "RIGSSelectorMapping.h"
+#include "RIGSSelector.h"
 
 
-@implementation NSSelector : NSObject
+@implementation RIGSSelector : NSObject
 
 + (id) selectorWithCString: (char *) selCString
 {
-  return [[NSSelector alloc] initSelectorWithCString: selCString];
+  return [[RIGSSelector alloc] initSelectorWithCString: selCString];
 }
 
 + (id) selectorWithString: (NSString*) selString
 {
-  return [[NSSelector alloc] initSelectorWithString: selString];
+  return [[RIGSSelector alloc] initSelectorWithString: selString];
 }
 
 + (id) selectorWithSEL: (SEL) sel
 {
-  return [[NSSelector alloc] initSelectorWithSEL: sel];
+  return [[RIGSSelector alloc] initSelectorWithSEL: sel];
 }
 
 + (id) selectorWithRubyString: (VALUE) rbString
 {
-  return [[NSSelector alloc] initWithRubyString: rbString];
+  return [[RIGSSelector alloc] initWithRubyString: rbString];
 }
 
 - (id) initSelectorWithCString: (char *) selCString
@@ -106,13 +106,13 @@
 
 - (VALUE) getRubyString
 {
-  return rb_str_new_cstr([NSStringFromSelector(_sel) cString]);
+  return rb_str_new_cstr(sel_getName(_sel));
 }
 
 @end
 
 // Some conversion functions from Ruby names to ObjC selectors (SEL)
-// They are not really realted to the NSSelector class but they fit well
+// They are not really realted to the RIGSSelector class but they fit well
 // in there
 
 

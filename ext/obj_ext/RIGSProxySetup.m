@@ -52,7 +52,7 @@
 #include "RIGSCore.h"
 #include "RIGSProxyIMP.h"
 #include "RIGSProxySetup.h"
-#include "RIGSSelectorMapping.h"
+#include "RIGSSelector.h"
 
 /* gets Ruby method arity (number of arguments) */
 int _RIGS_ruby_method_arity(const char *rb_class_name, const char *rb_mth_name) 

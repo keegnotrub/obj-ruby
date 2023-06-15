@@ -42,7 +42,7 @@
 #include "RIGS.h"
 #include "RIGSCore.h"
 #include "RIGSWrapObject.h"
-#include "RIGSSelectorMapping.h"
+#include "RIGSSelector.h"
 
 static NSMutableDictionary *_rodict = NULL;
 

@@ -67,7 +67,7 @@
 #include "RIGSCore.h"
 #include "ObjcRuntimeUtilities.h"
 #include "RIGSWrapObject.h"
-#include "RIGSSelectorMapping.h"
+#include "RIGSSelector.h"
 #include "RIGSProxySetup.h"
 #include "RIGSNSApplication.h"
 #include "RIGSNSDictionary.h"
@@ -147,7 +147,7 @@ rb_objc_hash(const char* value)
 /* 
     Normally new method has no arg in objective C. 
     If you want it to have arguments when using new from Ruby then
-    override the new method from Ruby.  See NSSelector.rb for an example
+    override the new method from Ruby.
 */
 VALUE
 rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
@@ -311,15 +311,15 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         case _C_SEL:
             if (TYPE(rb_val) == T_STRING) {
             
-                *(SEL*)where = [[NSSelector selectorWithRubyString:rb_val] getSEL];
+                *(SEL*)where = [[RIGSSelector selectorWithRubyString:rb_val] getSEL];
             
             } else if (TYPE(rb_val) == T_DATA) {
 
-                // This is in case the selector is passed as an instance of NSSelector
+                // This is in case the selector is passed as an instance of RIGSSelector
                 // which is a class the we have created
                 id object;
                 Data_Get_Struct(rb_val,id,object);
-                if ([object isKindOfClass: [NSSelector class]]) {
+                if ([object isKindOfClass: [RIGSSelector class]]) {
                     *(SEL*)where = [object getSEL];
                 } else {
                     ret = NO;
@@ -542,7 +542,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
     BOOL ret = YES;
     VALUE rb_class;
     double dbl_value;
-    NSSelector *selObj;
+    RIGSSelector *selObj;
     BOOL inStruct = NO;
     unsigned long inStructHash;
     VALUE end = Qnil;
@@ -755,16 +755,16 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             SEL val = *(SEL*)where;
             
             NSDebugLog(@"ObjC Selector = 0x%lx", val);
-            // ObjC selectors can either be returned as an instance of class NSSelector
+            // ObjC selectors can either be returned as an instance of class RIGSSelector
               
-            // Before instantiating NSSelector make sure it is known to
+            // Before instantiating RIGSSelector make sure it is known to
             // Ruby
-            rb_class = (VALUE) NSMapGet(knownClasses, (void *)[NSSelector class]);
+            rb_class = (VALUE) NSMapGet(knownClasses, (void *)[RIGSSelector class]);
 
             if (rb_class == Qfalse) {
-                rb_class = rb_objc_register_class_from_objc([NSSelector class]);
+                rb_class = rb_objc_register_class_from_objc([RIGSSelector class]);
             }
-            selObj = [[NSSelector selectorWithSEL: (SEL)val] retain];
+            selObj = [[RIGSSelector selectorWithSEL: (SEL)val] retain];
             rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,selObj);
           }
           break;

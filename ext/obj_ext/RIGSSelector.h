@@ -1,4 +1,4 @@
-/* RIGSSelectorMapping.m - Managing mapping between Objective-C method 
+/* RIGSSelector.m - Managing mapping between Objective-C method 
    names and Rubyones
 
    $Id$
@@ -25,8 +25,8 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-#ifndef __RIGSSelectorMapping_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSSelectorMapping_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSSelector_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSSelector_h_GNUSTEP_RUBY_INCLUDE
 
 #include <ruby.h>
 #undef _
@@ -36,12 +36,12 @@
 //#include <Foundation/NSDebug.h>
 
 
-@interface NSSelector : NSObject
+@interface RIGSSelector : NSObject
 {
   SEL _sel; /* ObjC selector */
 }
 
-// NSSelector methods
+// RIGSSelector methods
 + (id) selectorWithCString: (char *) selCString;
 + (id) selectorWithString: (NSString*) selString;
 + (id) selectorWithSEL: (SEL) sel;
@@ -56,11 +56,11 @@
 @end
 
 // Some conversion methods from Ruby names to ObjC selectors (SEL)
-// They are not really realted to the NSSelector class but they fit well
+// They are not really realted to the RIGSSelector class but they fit well
 // in there
 NSString* SelectorStringFromRubyName (char *name, int numArgs);
 SEL SelectorFromRubyName (char *name, int numArgs);
 NSString* RubyNameFromSelector(SEL sel);
 NSString* RubyNameFromSelectorString(NSString *name);
 
-#endif /* __RIGSSelectorMapping_h_GNUSTEP_RUBY_INCLUDE */
+#endif /* __RIGSSelector_h_GNUSTEP_RUBY_INCLUDE */

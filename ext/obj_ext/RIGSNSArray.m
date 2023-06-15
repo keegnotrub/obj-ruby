@@ -86,10 +86,10 @@
 
 - (id) to_a
 {
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyArray]];
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
-- (VALUE) getRubyArray
+- (VALUE) getRubyObject
 {
   const char idType[] = {_C_ID,'\0'};
   VALUE rb_array;

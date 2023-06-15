@@ -74,6 +74,7 @@
 #include "RIGSNSArray.h"
 #include "RIGSNSString.h"
 #include "RIGSNSNumber.h"
+#include "RIGSNSDate.h"
 #include "RIGSBridgeSupportParser.h"
 
 // Our own argc and argv rebuilt  from Ruby ARGV ($*)
@@ -247,14 +248,12 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
             switch (TYPE(rb_val))
                 {
                 case T_DATA:
-                    Data_Get_Struct(rb_val,id,* (id*)where);
-          
-                    /* Automatic conversion from string -- see below _C_SEL case
-                       if ([ret class] == [NSSelector class]) {
-                       ret = [ret getSEL];
-                       NSDebugLog(@"Extracting ObjC SEL (0x%lx) from NSSelector object", ret);
-                       } */
-          
+                    if (rb_obj_is_kind_of(rb_val, rb_cTime) == Qtrue) {
+                      *(NSDate**)where = [NSDate dateWithRubyTime:rb_val];
+                    }
+                    else {
+                      Data_Get_Struct(rb_val,id,* (id*)where);
+                    }
                     break;
 
                 case T_SYMBOL:
@@ -607,13 +606,15 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   rb_val = [val getRubyObject];
 
               } else if ( autoconvert && [val isKindOfClass:[NSString class]] ) {
-                  rb_val = [[val to_s] getRubyObject];
+                  rb_val = [val getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSNumber class]] ) {
                   rb_val = [val getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSArray class]] ) {
-                  rb_val = [[val to_a] getRubyObject];
+                  rb_val = [val getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSDictionary class]] ) {
-                  rb_val = [[val to_h] getRubyObject];
+                  rb_val = [val getRubyObject];
+              } else if ( autoconvert && [val isKindOfClass:[NSDate class]] ) {
+                  rb_val = [val getRubyObject];
               } else {
                   
                 /* Retain the value otherwise GNUstep releases it and Ruby crashes

@@ -122,7 +122,7 @@ SelectorStringFromRubyName (char *name, int numArgs)
 	id selname  = [NSString stringWithCString: name];
 
   // Allow Ruby-ish conversion to pass (to_s, to_i, to_f, to_a, to_h, etc)
-  if (numArgs == 0 && [selname length] == 4 && [selname hasPrefix:@"to_"])
+  if (numArgs == 0 && [selname hasPrefix:@"to_"])
     return selname;
         
 	selname = [[selname componentsSeparatedByString: @"_"]

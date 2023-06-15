@@ -107,10 +107,10 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
 
 - (id) to_h
 {
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyHash]];
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
-- (VALUE) getRubyHash
+- (VALUE) getRubyObject
 {
   const char idType[] = {_C_ID,'\0'};
   VALUE rb_hash;

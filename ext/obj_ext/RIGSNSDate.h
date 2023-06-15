@@ -1,12 +1,12 @@
-/* RIGSNSNumber.h - Some additional to properly wrap the
-   NSNumber class in Ruby and provide some new methods
+/* RIGSNSDate.h - Some additional to properly wrap the
+   NSDate class in Ruby and provide some new methods
 
    $Id$
 
    Copyright (C) 2023 thoughtbot, Inc.
    
    Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
-   Date: April 2023
+   Date: June 2023
    
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -23,27 +23,23 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-#ifndef __RIGSNSNumber_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSNumber_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSNSDate_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSNSDate_h_GNUSTEP_RUBY_INCLUDE
 
 
 #include <ruby.h>
 #undef _
 
-#include <Foundation/NSValue.h>
+#include <Foundation/NSDate.h>
 
 
-// Extend NSNumber with a couple of new methods
-@interface NSNumber ( RIGSNSNumber )
+// Extend NSDate with a couple of new methods
+@interface NSDate ( RIGSNSDate )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class;
-+ (id) numberWithRubyBignum: (VALUE) rb_bignum;
-+ (id) numberWithRubyFixnum: (VALUE) rb_fixnum;
-+ (id) numberWithRubyFloat: (VALUE) rb_float;
-+ (id) numberWithRubyBool: (VALUE) rb_bool;
++ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
++ (id) dateWithRubyTime: (VALUE) ruby_time;
 
-- (id) to_i;
-- (id) to_f;
+- (id) to_time;
 - (VALUE) getRubyObject;
 
 @end

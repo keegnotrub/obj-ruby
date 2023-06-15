@@ -70,10 +70,10 @@
 
 - (id) to_s
 {
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyString]];
+  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
-- (VALUE) getRubyString
+- (VALUE) getRubyObject
 {
   return rb_str_new_cstr([self cString]);
 }

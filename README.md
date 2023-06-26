@@ -54,7 +54,7 @@ alert.runModal
 
 ## Future
 
-- Using Ruby's procs to bridge to Objective-C blocks
+- [Using Ruby's procs to bridge to Objective-C blocks](https://github.com/keegnotrub/obj-ruby/pull/1)
 
 ## Credit
 

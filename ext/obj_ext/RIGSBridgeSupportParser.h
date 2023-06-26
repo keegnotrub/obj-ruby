@@ -34,9 +34,10 @@
   NSString *_functionName;
   NSMutableString *_objcTypes;
   NSInteger _formatStringIndex;
+  NSInteger _blockIndex;
   NSInteger _argIndex;
+  NSInteger _argDepth;
 }
-
 @end
 
 #endif

@@ -94,7 +94,10 @@ static NSMapTable *knownStructs = 0;
 // Hash table that maps known ObjC functions to objcTypes encoding
 static NSMapTable *knownFunctions = 0;
 
-// Hash table that maps known variadic Objc selectors to printf arg indexes
+// Hash table that maps known ObjC selectors to block objcTypes encoding
+static NSMapTable *knownBlocks = 0;
+
+// Hash table that maps known ObjC selectors to printf arg indexes
 static NSMapTable *knownFormatStrings = 0;
 
 // Hash table that contains loaded Framework bundleIdentifiers
@@ -102,6 +105,21 @@ static NSHashTable *knownFrameworks = 0;
 
 // Rigs Ruby module
 static VALUE rb_mRigs;
+
+// https://clang.llvm.org/docs/Block-ABI-Apple.html
+struct BlockDescriptor
+{
+  unsigned long reserved;
+  unsigned long size;
+  const char *signature; 
+};
+struct Block {
+  void *isa;
+  int flags;
+  int reserved;
+  void *invoke;
+  struct BlockDescriptor *descriptor;
+};
 
 void
 rb_objc_release(id objc_object) 
@@ -847,7 +865,7 @@ rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 }
 
 NSMethodSignature*
-rb_objc_signature_with_format_string(NSMethodSignature *signature, const char * formatString, int nbArgsExtra)
+rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *formatString, int nbArgsExtra)
 {
   char objcTypes[128];
   int objcTypesIndex;
@@ -937,133 +955,6 @@ rb_objc_signature_with_format_string(NSMethodSignature *signature, const char * 
   return [NSMethodSignature signatureWithObjCTypes:objcTypes];
 }
 
-
-VALUE
-rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
-{
-    @autoreleasepool {
-    id rcv;
-    NSInvocation *invocation;
-    NSMethodSignature	*signature;
-    const char *type;
-    VALUE rb_retval;
-    int i;
-    int nbArgs;
-    int nbArgsExtra;
-    void *data;
-    BOOL okydoky;
-                
-    /* determine the receiver type - Class or instance ? */
-    switch (TYPE(rb_self)) {
-    case T_DATA:
-        NSDebugLog(@"Self Ruby value is 0x%lx (ObjC is at 0x%lx)",rb_self,DATA_PTR(rb_self));
-        Data_Get_Struct(rb_self,id,rcv);
-        NSDebugLog(@"Self is an object of Class %@ (description is '%@')",NSStringFromClass([rcv classForCoder]),rcv);
-      break;
-    case T_CLASS:
-        rcv = (Class) NUM2LL(rb_iv_get(rb_self, "@objc_class"));
-        NSDebugLog(@"Self is Class: %@", NSStringFromClass(rcv));
-      break;
-    default:
-      /* raise exception */
-      NSDebugLog(@"Don't know how to handle self Ruby object of type 0x%02x",TYPE(rb_self));
-      rb_raise(rb_eTypeError, "not valid self value");
-      return Qnil;
-      break;
-    }
-      
-    // Find the method signature 
-    // FIXME: do not know what happens here if several method have the same
-    // selector and different return types (see gg_id.m / gstep_send_fn ??)
-    signature = [rcv methodSignatureForSelector: sel];
-    if (signature == nil) {
-        NSLog(@"Did not find signature for selector '%@' ..", 
-              NSStringFromSelector(sel));
-        return Qnil;
-    }
-
-    // Check that we have the right number of arguments
-    nbArgs = [signature numberOfArguments];
-    nbArgsExtra = rigs_argc - (nbArgs-2);
-    if (nbArgsExtra < 0) {
-        rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs-2);
-        return Qnil;
-    }
-
-    if (nbArgsExtra > 0) {
-      unsigned long hash = rb_objc_hash(sel_getName(sel));
-      int formatStringIndex;
-      const char* formatString;
-
-      formatStringIndex = NSMapGet(knownFormatStrings, hash);
-      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {        
-        formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);
-      }
-      else {
-        formatString = "";
-      }
-
-      signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
-      nbArgs = [signature numberOfArguments];
-    }
-    
-    NSDebugLog(@"Number of arguments = %d on %@", nbArgs-2, NSStringFromSelector(sel));
-    for (i = 2; i < [signature numberOfArguments]; i++) {
-        NSDebugLog (@"%ld -> %s", i-2, [signature getArgumentTypeAtIndex: i]);
-    }
-    NSDebugLog (@"returning %s", [signature methodReturnType]);
-    
-    invocation = [NSInvocation invocationWithMethodSignature: signature];
-
-    [invocation setTarget: rcv];
-    [invocation setSelector: sel];
-	
-    // Convert arguments from Ruby VALUE to ObjC types
-    for(i=2; i < nbArgs; i++) {
-      type = [signature getArgumentTypeAtIndex:i];
-      NSUInteger tsize;
-      NSGetSizeAndAlignment(type, &tsize, NULL);
-      data = alloca(tsize);
-      okydoky = rb_objc_convert_to_objc(rigs_argv[i-2], data, 0, type);
-      [invocation setArgument:data atIndex:i];
-    }
-
-    // Really invoke the Obj C method now
-    [invocation invoke];
-
-    // Examine the return value now and pass it by to Ruby
-    // after conversion
-    if([signature methodReturnLength]) {
-      
-      type = [signature methodReturnType];
-            
-      NSDebugLog(@"Return Length = %d", [signature methodReturnLength]);
-      NSDebugLog(@"Return Type = %s", type);
-        
-      data = alloca([signature methodReturnLength]);
-      [invocation getReturnValue: data];
-
-      // Won't work if return length > sizeof(int)  but we do not care
-      // (e.g. double on 32 bits architecture)
-      NSDebugLog(@"ObjC return value = 0x%lx",data);
-
-      okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
-
-    } else {
-      // This is a method with no return value (void). Must return something
-      // in any case in ruby. So return Qnil.
-      NSDebugLog(@"No ObjC return value (void) - returning Qnil",data);
-      rb_retval = Qnil;
-    }      
-        
-    NSDebugLog(@">>>>> VALUE returned to Ruby = 0x%lx (class %s)",
-               rb_retval, rb_class2name(CLASS_OF(rb_retval)));
-    
-    return rb_retval;
-    }
-}
-
-
 ffi_type*
 rb_objc_ffi_type_for_type(const char *type)
 {
@@ -1073,6 +964,10 @@ rb_objc_ffi_type_for_type(const char *type)
   int inStructCount = 0;
 
   type = objc_skip_type_qualifiers (type);
+
+  if (strcmp(type, "@?") == 0) {
+    return &ffi_type_pointer;
+  }
 
   if (*type == _C_STRUCT_B) {
     inStructHash = HASH_SEED;
@@ -1134,6 +1029,220 @@ rb_objc_ffi_type_for_type(const char *type)
   default:
     return NULL;
   }
+}
+
+void
+rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
+  struct Block *block;
+  const char *objcTypes;
+  NSMethodSignature *signature;
+  int nbArgs;
+  char *type;
+  int i;
+  void *data;
+  VALUE rb_array;
+  VALUE rb_arg;
+  BOOL okydoky;
+  VALUE rb_proc;
+  VALUE rb_ret;
+
+  block = *(struct Block **)args[0];
+  objcTypes = block->descriptor->signature;
+  signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
+  nbArgs = [signature numberOfArguments];
+  rb_array = rb_ary_new_capa(nbArgs - 1);
+
+  for (i=1;i<nbArgs;i++) {
+    type = [signature getArgumentTypeAtIndex:i];
+    okydoky = rb_objc_convert_to_rb(args[i], 0, type, &rb_arg, NO);
+    rb_ary_push(rb_array, rb_arg);
+  }
+
+  rb_proc = *(VALUE*)user_data;
+  rb_ret = rb_proc_call(rb_proc, rb_array);  
+
+  if([signature methodReturnLength]) {
+    type = [signature methodReturnType];
+    data = alloca([signature methodReturnLength]);
+
+    rb_objc_convert_to_objc(rb_ret, data, 0, type);
+
+    *(ffi_arg*)ret = *(ffi_arg*)data;
+  }
+}
+
+VALUE
+rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+    @autoreleasepool {
+    id rcv;
+    NSInvocation *invocation;
+    NSMethodSignature	*signature;
+    const char *type;
+    VALUE rb_retval;
+    int i;
+    int j;
+    int nbArgs;
+    int nbArgsExtra;
+    void *data;
+    BOOL okydoky;
+    int blockIndex;
+    unsigned long hash;
+                
+    /* determine the receiver type - Class or instance ? */
+    switch (TYPE(rb_self)) {
+    case T_DATA:
+        NSDebugLog(@"Self Ruby value is 0x%lx (ObjC is at 0x%lx)",rb_self,DATA_PTR(rb_self));
+        Data_Get_Struct(rb_self,id,rcv);
+        NSDebugLog(@"Self is an object of Class %@ (description is '%@')",NSStringFromClass([rcv classForCoder]),rcv);
+      break;
+    case T_CLASS:
+        rcv = (Class) NUM2LL(rb_iv_get(rb_self, "@objc_class"));
+        NSDebugLog(@"Self is Class: %@", NSStringFromClass(rcv));
+      break;
+    default:
+      /* raise exception */
+      NSDebugLog(@"Don't know how to handle self Ruby object of type 0x%02x",TYPE(rb_self));
+      rb_raise(rb_eTypeError, "not valid self value");
+      return Qnil;
+      break;
+    }
+      
+    // Find the method signature 
+    // FIXME: do not know what happens here if several method have the same
+    // selector and different return types (see gg_id.m / gstep_send_fn ??)
+    signature = [rcv methodSignatureForSelector: sel];
+    if (signature == nil) {
+        NSLog(@"Did not find signature for selector '%@' ..", 
+              NSStringFromSelector(sel));
+        return Qnil;
+    }
+
+    // Check that we have the right number of arguments
+    nbArgs = [signature numberOfArguments];
+    nbArgsExtra = rigs_argc - (nbArgs-2);
+
+    hash = rb_objc_hash(sel_getName(sel));
+
+    if (nbArgsExtra < 0) {
+      rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs-2);
+      return Qnil;
+    }
+
+    if (nbArgsExtra > 0) {
+      int formatStringIndex;
+      const char* formatString;
+
+      formatStringIndex = NSMapGet(knownFormatStrings, hash);
+      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {        
+        formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);
+      }
+      else {
+        formatString = "";
+      }
+
+      signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
+      nbArgs = [signature numberOfArguments];
+    }
+    
+    NSDebugLog(@"Number of arguments = %d on %@", nbArgs-2, NSStringFromSelector(sel));
+    for (i = 2; i < [signature numberOfArguments]; i++) {
+        NSDebugLog (@"%ld -> %s", i-2, [signature getArgumentTypeAtIndex: i]);
+    }
+    NSDebugLog (@"returning %s", [signature methodReturnType]);
+    
+    invocation = [NSInvocation invocationWithMethodSignature: signature];
+
+    [invocation setTarget: rcv];
+    [invocation setSelector: sel];
+	
+    // Convert arguments from Ruby VALUE to ObjC types
+    for(i=2; i < nbArgs; i++) {
+      type = [signature getArgumentTypeAtIndex:i];
+      if (strcmp(type, "@?") == 0) {
+        const char* blockObjcTypes = NSMapGet(knownBlocks, hash + i-2);
+        NSMethodSignature *blockSignature = [NSMethodSignature signatureWithObjCTypes:blockObjcTypes];
+        int nbBlockArgs = [blockSignature numberOfArguments];
+
+        ffi_cif *cif;
+        ffi_type **arg_types;
+        ffi_type *ret_type;
+        ffi_closure *closure;
+        void *closurePtr = NULL;
+
+        cif = malloc(sizeof(ffi_cif));
+        arg_types = alloca(sizeof(ffi_type*) * nbBlockArgs);
+        memset(arg_types, 0, sizeof(ffi_type*) * nbBlockArgs);
+
+        for (j=0;j<nbBlockArgs;j++) {
+          type = [blockSignature getArgumentTypeAtIndex:j];
+          arg_types[j] = rb_objc_ffi_type_for_type(type);
+        }
+        
+        type = [blockSignature methodReturnType];
+        ret_type = rb_objc_ffi_type_for_type(type);
+
+        if (ffi_prep_cif(cif, FFI_DEFAULT_ABI, nbBlockArgs, ret_type, arg_types) == FFI_OK) {
+          closure = ffi_closure_alloc(sizeof(ffi_closure), &closurePtr);
+          if (ffi_prep_closure_loc(closure, cif, rb_objc_block_handler, &rigs_argv[i-2], closurePtr) == FFI_OK) {
+            struct Block *block;
+            block = (struct Block*)malloc(sizeof(struct Block));
+            block->isa = &_NSConcreteStackBlock;
+            block->flags = 1 << 30; // BLOCK_HAS_SIGNATURE
+            block->reserved = 0;
+            block->invoke = closurePtr;
+            block->descriptor = (struct BlockDescriptor*)malloc(sizeof(struct BlockDescriptor));
+            block->descriptor->reserved = 0;
+            block->descriptor->size = sizeof(struct Block);
+            block->descriptor->signature = blockObjcTypes;
+
+            [invocation setArgument:&block atIndex:i];
+          }
+          // ffi_closure_free(closure);
+        }
+      }
+      else {
+        NSUInteger tsize;
+        NSGetSizeAndAlignment(type, &tsize, NULL);
+        data = alloca(tsize);
+        okydoky = rb_objc_convert_to_objc(rigs_argv[i-2], data, 0, type);
+        [invocation setArgument:data atIndex:i];        
+      }
+    }
+
+    // Really invoke the Obj C method now
+    [invocation invoke];
+
+    // Examine the return value now and pass it by to Ruby
+    // after conversion
+    if([signature methodReturnLength]) {
+      
+      type = [signature methodReturnType];
+            
+      NSDebugLog(@"Return Length = %d", [signature methodReturnLength]);
+      NSDebugLog(@"Return Type = %s", type);
+        
+      data = alloca([signature methodReturnLength]);
+      [invocation getReturnValue: data];
+
+      // Won't work if return length > sizeof(int)  but we do not care
+      // (e.g. double on 32 bits architecture)
+      NSDebugLog(@"ObjC return value = 0x%lx",data);
+
+      okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
+
+    } else {
+      // This is a method with no return value (void). Must return something
+      // in any case in ruby. So return Qnil.
+      NSDebugLog(@"No ObjC return value (void) - returning Qnil",data);
+      rb_retval = Qnil;
+    }      
+        
+    NSDebugLog(@">>>>> VALUE returned to Ruby = 0x%lx (class %s)",
+               rb_retval, rb_class2name(CLASS_OF(rb_retval)));
+    
+    return rb_retval;
+    }
 }
 
 VALUE
@@ -1229,8 +1338,19 @@ rb_objc_dispatch(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 
 VALUE 
 rb_objc_handler(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
-{    
-	return rb_objc_send(rb_id2name(rb_frame_this_func()), rigs_argc, rigs_argv, rb_self);
+{
+  VALUE *our_argv = rigs_argv;
+  int our_argc = rigs_argc;
+  
+  if (rb_block_given_p()) {
+    our_argc = rigs_argc + 1;
+    our_argv = alloca(our_argc * sizeof(VALUE));
+    for (int i=0;i<rigs_argc;i++) {
+      our_argv[i] = rigs_argv[i];
+    }
+    our_argv[our_argc-1] = rb_block_proc();
+  }
+	return rb_objc_send(rb_id2name(rb_frame_this_func()), our_argc, our_argv, rb_self);
 }
 
 VALUE
@@ -1339,14 +1459,10 @@ int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 }
 
 void
-rb_objc_register_function_from_objc(const char *name, const char *objcTypes, int formatStringIndex)
+rb_objc_register_function_from_objc(const char *name, const char *objcTypes)
 {
   char *data;
   unsigned long hash = rb_objc_hash(name);
-
-  if (formatStringIndex != -1) {
-    NSMapInsertKnownAbsent(knownFormatStrings, hash, formatStringIndex + 2);
-  }
 
   data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
   strcpy(data, objcTypes);
@@ -1395,15 +1511,35 @@ rb_objc_register_integer_from_objc(const char *name, long long value)
 }
 
 void
-rb_objc_register_method_arg_from_objc(const char *selector, int index, BOOL formatString)
+rb_objc_register_block_from_objc(const char *selector, int index, const char *objcTypes)
 {
-  unsigned long hash = rb_objc_hash(selector);
+  unsigned long hash;
+  char *data;
 
-  if (!formatString || NSMapGet(knownFormatStrings, hash)) {
-    return;
+  if (index == -1) return;
+
+  hash = rb_objc_hash(selector) + index;
+
+  if (!NSMapGet(knownBlocks, hash)) {
+    data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
+    strcpy(data, objcTypes);
+    NSMapInsertKnownAbsent(knownBlocks, hash, data);
   }
+}
 
-  NSMapInsertKnownAbsent(knownFormatStrings, hash, index + 2);
+void
+rb_objc_register_format_string_from_objc(const char *selector, int index)
+{
+  unsigned long hash;
+  char *data;
+
+  if (index == -1) return;
+
+  hash = rb_objc_hash(selector);
+
+  if (!NSMapGet(knownFormatStrings, hash)) {
+    NSMapInsertKnownAbsent(knownFormatStrings, hash, index + 2);
+  }
 }
 
 
@@ -1723,6 +1859,9 @@ Init_obj_ext()
     knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks,
                                       NSNonOwnedPointerMapValueCallBacks,
                                       0);
+    knownBlocks = NSCreateMapTable(NSIntegerMapKeyCallBacks,
+                                   NSNonOwnedPointerMapValueCallBacks,
+                                   0);
     knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks,
                                           NSIntegerMapValueCallBacks,
                                           0);

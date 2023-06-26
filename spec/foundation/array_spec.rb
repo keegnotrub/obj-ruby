@@ -49,7 +49,7 @@ describe ObjRuby::NSArray do
       sum += x.to_i
     end
 
-    expect(sum).to eq (1+2+3+4+5)
+    expect(sum).to eq(1 + 2 + 3 + 4 + 5)
   end
 
   it "can use a block return method" do

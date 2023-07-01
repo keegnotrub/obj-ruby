@@ -1063,13 +1063,42 @@ rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
 
   if([signature methodReturnLength]) {
     type = [signature methodReturnType];
-    data = alloca([signature methodReturnLength]);
+    size_t ret_len = MAX(sizeof(long), [signature methodReturnLength]);
+    data = alloca(ret_len);
 
     rb_objc_convert_to_objc(rb_ret, data, 0, type);
 
     *(ffi_arg*)ret = *(ffi_arg*)data;
   }
 }
+
+ffi_status
+rb_objc_build_closure_cif(ffi_cif *cif, const char *objcTypes)
+{
+  NSMethodSignature *signature;
+  int nbArgs;
+  char *type;
+  ffi_type **arg_types;
+  ffi_type *ret_type;
+  int i;
+  
+  signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
+  nbArgs = [signature numberOfArguments];
+
+  arg_types = malloc(sizeof(ffi_type*) * nbArgs);
+  memset(arg_types, 0, sizeof(ffi_type*) * nbArgs);
+
+  for (i=0;i<nbArgs;i++) {
+    type = [signature getArgumentTypeAtIndex:i];
+    arg_types[i] = rb_objc_ffi_type_for_type(type);
+  }
+        
+  type = [signature methodReturnType];
+  ret_type = rb_objc_ffi_type_for_type(type);
+
+  return ffi_prep_cif(cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types);
+}
+  
 
 VALUE
 rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
@@ -1081,12 +1110,10 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     const char *type;
     VALUE rb_retval;
     int i;
-    int j;
     int nbArgs;
     int nbArgsExtra;
     void *data;
     BOOL okydoky;
-    int blockIndex;
     unsigned long hash;
                 
     /* determine the receiver type - Class or instance ? */
@@ -1161,31 +1188,14 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
       type = [signature getArgumentTypeAtIndex:i];
       if (strcmp(type, "@?") == 0) {
         const char* blockObjcTypes = NSMapGet(knownBlocks, hash + i-2);
-        NSMethodSignature *blockSignature = [NSMethodSignature signatureWithObjCTypes:blockObjcTypes];
-        int nbBlockArgs = [blockSignature numberOfArguments];
-
-        ffi_cif *cif;
-        ffi_type **arg_types;
-        ffi_type *ret_type;
-        ffi_closure *closure;
         void *closurePtr = NULL;
+        struct Block *block = NULL;
+        ffi_closure *closure = NULL;
+        ffi_cif cif;
 
-        cif = malloc(sizeof(ffi_cif));
-        arg_types = alloca(sizeof(ffi_type*) * nbBlockArgs);
-        memset(arg_types, 0, sizeof(ffi_type*) * nbBlockArgs);
-
-        for (j=0;j<nbBlockArgs;j++) {
-          type = [blockSignature getArgumentTypeAtIndex:j];
-          arg_types[j] = rb_objc_ffi_type_for_type(type);
-        }
-        
-        type = [blockSignature methodReturnType];
-        ret_type = rb_objc_ffi_type_for_type(type);
-
-        if (ffi_prep_cif(cif, FFI_DEFAULT_ABI, nbBlockArgs, ret_type, arg_types) == FFI_OK) {
+        if (blockObjcTypes && rb_objc_build_closure_cif(&cif, blockObjcTypes) == FFI_OK) {
           closure = ffi_closure_alloc(sizeof(ffi_closure), &closurePtr);
-          if (ffi_prep_closure_loc(closure, cif, rb_objc_block_handler, &rigs_argv[i-2], closurePtr) == FFI_OK) {
-            struct Block *block;
+          if (ffi_prep_closure_loc(closure, &cif, rb_objc_block_handler, &rigs_argv[i-2], closurePtr) == FFI_OK) {
             block = (struct Block*)malloc(sizeof(struct Block));
             block->isa = &_NSConcreteStackBlock;
             block->flags = 1 << 30; // BLOCK_HAS_SIGNATURE
@@ -1195,10 +1205,13 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
             block->descriptor->reserved = 0;
             block->descriptor->size = sizeof(struct Block);
             block->descriptor->signature = blockObjcTypes;
-
-            [invocation setArgument:&block atIndex:i];
           }
-          // ffi_closure_free(closure);
+        }
+
+        [invocation setArgument:&block atIndex:i];
+        
+        if (closure) {
+          ffi_closure_free(closure);
         }
       }
       else {
@@ -1240,7 +1253,7 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
         
     NSDebugLog(@">>>>> VALUE returned to Ruby = 0x%lx (class %s)",
                rb_retval, rb_class2name(CLASS_OF(rb_retval)));
-    
+
     return rb_retval;
     }
 }

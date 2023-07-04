@@ -1149,11 +1149,13 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     nbArgs = [signature numberOfArguments];
     nbArgsExtra = rigs_argc - (nbArgs-2);
 
-    hash = rb_objc_hash(sel_getName(sel));
-
     if (nbArgsExtra < 0) {
       rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs-2);
       return Qnil;
+    }
+
+    if (nbArgs > 2) {
+      hash = rb_objc_hash(sel_getName(sel));
     }
 
     if (nbArgsExtra > 0) {
@@ -1171,12 +1173,6 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
       signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
       nbArgs = [signature numberOfArguments];
     }
-    
-    NSDebugLog(@"Number of arguments = %d on %@", nbArgs-2, NSStringFromSelector(sel));
-    for (i = 2; i < [signature numberOfArguments]; i++) {
-        NSDebugLog (@"%ld -> %s", i-2, [signature getArgumentTypeAtIndex: i]);
-    }
-    NSDebugLog (@"returning %s", [signature methodReturnType]);
     
     invocation = [NSInvocation invocationWithMethodSignature: signature];
 

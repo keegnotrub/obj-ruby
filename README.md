@@ -26,7 +26,7 @@ ObjRuby imports Objective-C classes dynamically at runtime. As an example, here 
 ``` ruby
 ObjRuby.import("NSDate")
 
-date = NSDate.dateWithTimeIntervalSince1970(42424242)
+date = ObjRuby::NSDate.dateWithTimeIntervalSince1970(42424242)
 other_date = date.addTimeInterval(1000)
 earlier_date = date.earlierDate(other_date)
 ```
@@ -36,18 +36,18 @@ Oftentimes you'll want to import all of a particular framework like [Foundation]
 ``` ruby
 require "obj_ruby/foundation"
 
-dict = NSMutableDictionary.new
+dict = ObjRuby::NSMutableDictionary.new
 dict.setObject_forKey(NSDate.new, "Hello!")
 ```
 
 ``` ruby
 require "obj_ruby/app_kit"
 
-app = NSApplication.sharedApplication
-app.setActivationPolicy NSApplicationActivationPolicyRegular
+app = ObjRuby::NSApplication.sharedApplication
+app.setActivationPolicy ObjRuby::NSApplicationActivationPolicyRegular
 app.activateIgnoringOtherApps(true)
 
-alert = NSAlert.new
+alert = ObjRuby::NSAlert.new
 alert.setMessageText("Hello world!")
 alert.runModal
 ```

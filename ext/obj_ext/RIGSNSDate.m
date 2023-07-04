@@ -31,9 +31,15 @@
 
 + (id) dateWithRubyTime: (VALUE) ruby_time
 {
-  NSTimeInterval seconds;
-  seconds = NUM2DBL(rb_funcall(ruby_time, rb_intern("to_f"), 0));
-  return [NSDate dateWithTimeIntervalSince1970:seconds]; 
+  struct timespec ts;
+  uint64_t nsecs;
+  NSTimeInterval interval;
+  
+  ts = rb_time_timespec(ruby_time);
+  nsecs = ts.tv_sec * 1000000000ull + ts.tv_nsec;
+  interval = nsecs / 1E9;
+
+  return [NSDate dateWithTimeIntervalSince1970:interval];
 }
 
 - (id) to_time
@@ -43,13 +49,15 @@
 
 - (VALUE) getRubyObject
 {
-  NSTimeInterval interval = [self timeIntervalSince1970];
+  NSTimeInterval interval;
   NSTimeInterval secs;
-  NSTimeInterval usecs;
+  long nsecs;
 
-  usecs = modf(interval, &secs);
+  interval = [self timeIntervalSince1970];
 
-  return rb_time_nano_new(secs, (long)floor(usecs * 1000000000.0));
+  nsecs = modf(interval, &secs) * 1000000000l;
+
+  return rb_time_nano_new((time_t)secs, nsecs);
 }
 
 

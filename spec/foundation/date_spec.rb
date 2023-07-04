@@ -29,11 +29,11 @@ describe ObjRuby::NSDate do
   end
 
   it "can be transformed into a Ruby time" do
-    date = described_class.new
+    date = described_class.date
 
-    result = date.to_time
+    time = date.to_time
 
-    expect(result).to be_a Time
-    expect(result.to_f).to eq date.timeIntervalSince1970
+    expect(time).to be_a Time
+    expect(time.to_f).to eq date.timeIntervalSince1970
   end
 end

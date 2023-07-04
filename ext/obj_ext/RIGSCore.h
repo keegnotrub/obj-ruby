@@ -63,9 +63,10 @@ VALUE rb_objc_get_ruby_value_from_string(char * classname);
 void rb_objc_register_float_from_objc(const char *name, double value);
 void rb_objc_register_integer_from_objc(const char *name, long long value);
 void rb_objc_register_struct_from_objc(const char *key, const char *name, const char *args[], int argCount);
-void rb_objc_register_method_arg_from_objc(const char *selector, int index, BOOL formatString);
+void rb_objc_register_format_string_from_objc(const char *selector, int index);
+void rb_objc_register_block_from_objc(const char *selector, int index, const char *objcTypes);
 void rb_objc_register_constant_from_objc(const char *name, const char *type);
-void rb_objc_register_function_from_objc(const char *name, const char *objcTypes, int formatStringIndex);
+void rb_objc_register_function_from_objc(const char *name, const char *objcTypes);
 
 VALUE rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name);
 

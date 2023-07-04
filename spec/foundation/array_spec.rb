@@ -40,4 +40,28 @@ describe ObjRuby::NSArray do
     expect(result.first).to eq 1
     expect(result.last).to eq 5
   end
+
+  it "can use a block method" do
+    array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+
+    sum = 0
+    array.enumerateObjectsUsingBlock do |x|
+      sum += x.to_i
+    end
+
+    expect(sum).to eq(1 + 2 + 3 + 4 + 5)
+  end
+
+  it "can use a block return method" do
+    array1 = described_class.arrayWithArray([1, 2, 3, 4, 5])
+    array2 = described_class.arrayWithArray([1, 2, 3, 7, 9])
+
+    result = array1.differenceFromArray_withOptions_usingEquivalenceTest(array2, 0) do |x, y|
+      x == y
+    end
+
+    expect(result.hasChanges).to be true
+    expect(result.insertions.count).to be 2
+    expect(result.removals.count).to be 2
+  end
 end

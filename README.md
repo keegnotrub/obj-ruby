@@ -52,10 +52,6 @@ alert.setMessageText("Hello world!")
 alert.runModal
 ```
 
-## Future
-
-- [Using Ruby's procs to bridge to Objective-C blocks](https://github.com/keegnotrub/obj-ruby/pull/1)
-
 ## Credit
 
 ObjRuby is a fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), which according to it's author/maintainer [Laurent Julliard](https://github.com/ljulliar):

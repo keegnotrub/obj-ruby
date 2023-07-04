@@ -52,8 +52,7 @@ didStartElement:(NSString *)elementName
     [self parseClassWithName:[attributeDict objectForKey:@"name"]];
   }
   else if ([elementName isEqualToString:@"method"]) {
-    [self parseMethodWithSelector:[attributeDict objectForKey:@"selector"]
-                         variadic:[attributeDict objectForKey:@"variadic"]];
+    [self parseMethodWithName:[attributeDict objectForKey:@"selector"]];
   }
   else if ([elementName isEqualToString:@"function"]) {
     [self parseFunctionWithName:[attributeDict objectForKey:@"name"]];
@@ -61,18 +60,21 @@ didStartElement:(NSString *)elementName
   else if ([elementName isEqualToString:@"retval"]) {
     [self parseArgWithIndex:-1
                        type:[attributeDict objectForKey:@"type64"]
-                     printf:nil];
+                     printf:nil
+                      block:nil];
   }
   else if ([elementName isEqualToString:@"arg"]) {
     if (_methodName) {
-      [self parseArgWithIndex:[[attributeDict objectForKey:@"index"] intValue]
+      [self parseArgWithIndex:[attributeDict objectForKey:@"index"] ? [[attributeDict objectForKey:@"index"] intValue] : _argIndex++
                          type:[attributeDict objectForKey:@"type64"]
-                       printf:[attributeDict objectForKey:@"printf_format"]];
+                       printf:[attributeDict objectForKey:@"printf_format"]
+                        block:[attributeDict objectForKey:@"function_pointer"]];
     }
     else if (_functionName) {
       [self parseArgWithIndex:_argIndex++
                          type:[attributeDict objectForKey:@"type64"]
-                       printf:[attributeDict objectForKey:@"printf_format"]];
+                       printf:[attributeDict objectForKey:@"printf_format"]
+                        block:nil];
     }
   }
 }
@@ -81,18 +83,48 @@ didStartElement:(NSString *)elementName
  didEndElement:(NSString *)elementName 
   namespaceURI:(NSString *)namespaceURI 
  qualifiedName:(NSString *)qName {
-  if (_methodName && [elementName isEqualToString:@"method"]) {
+  if ([elementName isEqualToString:@"method"]) {
     [self finalizeMethod];
   }
-  else if (_functionName && [elementName isEqualToString:@"function"]) {
+  else if ([elementName isEqualToString:@"function"]) {
     [self finalizeFunction];
+  }
+  else if ([elementName isEqualToString:@"arg"] || [elementName isEqualToString:@"retval"]) {
+    [self finalizeArg];
+  }
+}
+
+- (void)finalizeArg
+{
+  _argDepth--;
+
+  if (_argDepth > 0) return;
+  
+  if (_blockIndex != -1) {
+    if (_methodName) {
+      rb_objc_register_block_from_objc([_methodName cString], _blockIndex, [_objcTypes cString]);
+    }
+
+    _blockIndex = -1;
+    [_objcTypes release];
+    _objcTypes = nil;
+  }
+
+  if (_formatStringIndex != -1) {
+    if (_methodName) {
+      rb_objc_register_format_string_from_objc([_methodName cString], _formatStringIndex);
+    }
+    else if (_functionName) {
+      rb_objc_register_format_string_from_objc([_functionName cString], _formatStringIndex);
+    }
+    _formatStringIndex = -1;
   }
 }
 
 - (void)finalizeFunction
 {
-  rb_objc_register_function_from_objc([_functionName cString], [_objcTypes cString], _formatStringIndex);
-
+  rb_objc_register_function_from_objc([_functionName cString], [_objcTypes cString]);
+  
   [_objcTypes release];
   _objcTypes = nil;
   [_functionName release];
@@ -110,21 +142,39 @@ didStartElement:(NSString *)elementName
   _functionName = [name retain];
   _objcTypes = [[NSMutableString string] retain];
   _formatStringIndex = -1;
+  _blockIndex = -1;
   _argIndex = 0;
+  _argDepth = 0;
 }
 
-- (void)parseMethodWithSelector:(NSString*)selector variadic:(NSString*)variadic
+- (void)parseMethodWithName:(NSString*)selector
 {
-  if ([variadic isEqualToString:@"true"]) {
-    _methodName = [selector retain];
-  }
+  _methodName = [selector retain];
+  _formatStringIndex = -1;
+  _blockIndex = -1;
+  _argIndex = 0;
+  _argDepth = 0;
 }
 
-- (void)parseArgWithIndex:(NSInteger)index type:(NSString*)type printf:(NSString*)printf
+- (void)parseArgWithIndex:(NSInteger)index type:(NSString*)type printf:(NSString*)printf block:(NSString*)block
 {
+  _argDepth++;
+  
   if (_methodName) {
     if ([printf isEqualToString:@"true"]) {
-      rb_objc_register_method_arg_from_objc([_methodName cString], index, YES);
+      _formatStringIndex = index;
+    }
+    if ([block isEqualToString:@"true"] && [type isEqualToString:@"@?"]) {
+      _blockIndex = index;
+      _objcTypes = [[NSMutableString string] retain];
+    }
+    if (_objcTypes) {
+      if (index == -1) {
+        [_objcTypes insertString:type atIndex:0];
+      }
+      else {
+        [_objcTypes appendString:type];
+      }
     }
   }
   else if (_functionName) {

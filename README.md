@@ -37,7 +37,7 @@ Oftentimes you'll want to import all of a particular framework like [Foundation]
 require "obj_ruby/foundation"
 
 dict = ObjRuby::NSMutableDictionary.new
-dict.setObject_forKey(NSDate.new, "Hello!")
+dict.setObject_forKey(ObjRuby::NSDate.new, "Hello!")
 ```
 
 ``` ruby

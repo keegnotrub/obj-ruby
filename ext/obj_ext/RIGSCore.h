@@ -27,13 +27,11 @@
 #ifndef __RIGSCore_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSCore_h_GNUSTEP_RUBY_INCLUDE
 
-#include <Foundation/NSException.h>
-
-// After inclusion of ruby.h undefine the "_" macro because 
-// it is also defined in Foundation/NSBundle.h
+#import <Cocoa/Cocoa.h>
+#include <objc/runtime.h>
 #include <ruby.h>
-#undef _
-#undef __
+#include <dlfcn.h>
+#include <ffi/ffi.h>
 
 extern char **ourargv;
 extern int ourargc;
@@ -67,6 +65,7 @@ void rb_objc_register_format_string_from_objc(const char *selector, int index);
 void rb_objc_register_block_from_objc(const char *selector, int index, const char *objcTypes);
 void rb_objc_register_constant_from_objc(const char *name, const char *type);
 void rb_objc_register_function_from_objc(const char *name, const char *objcTypes);
+void rb_objc_register_protocol_from_objc(const char *protocolName);
 
 VALUE rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name);
 

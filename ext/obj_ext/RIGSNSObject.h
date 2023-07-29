@@ -26,14 +26,11 @@
 #ifndef __RIGSNSObject_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSObject_h_GNUSTEP_RUBY_INCLUDE
 
-
-#import <Foundation/NSObject.h>
+#import <Foundation/Foundation.h>
 #include <ruby.h>
 
 // Extend NSObject with a couple of new methods
 @interface NSObject ( RIGSNSObject )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class;
 
 - (id) to_s;
 - (id) inspect;

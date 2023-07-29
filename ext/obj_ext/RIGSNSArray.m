@@ -25,24 +25,11 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#include <ruby.h>
-#undef _
-
-#include <objc/runtime.h>
-
-#include "RIGS.h"
-#include "RIGSCore.h"
-#include "RIGSProxyIMP.h"
-#include "RIGSWrapObject.h"
 #import "RIGSNSArray.h"
+#import "RIGSCore.h"
+#import "RIGSWrapObject.h"
 
 @implementation NSArray ( RIGSNSArray )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class
-{
-  // Nothing to do for the moment
-  return YES;
-}
 
 + (id) arrayWithRubyArray: (VALUE) ruby_array
 {

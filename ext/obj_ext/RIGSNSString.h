@@ -25,17 +25,15 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-#ifndef __RIGSNSApplication_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSApplication_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
 
-#include <Foundation/NSString.h>
+#import <Foundation/Foundation.h>
 #include <ruby.h>
 
 // Extend NSApplication with some finishing registration code
 @interface NSString ( RIGSNSString )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class;
-+ (id) availableStringEncodingsAsRubyArray;
 + (id) stringWithRubyString: (VALUE)rb_string;
 + (id) stringWithRubySymbol: (VALUE)rb_symbol;
 

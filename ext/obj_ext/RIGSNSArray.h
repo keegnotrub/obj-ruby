@@ -28,17 +28,13 @@
 #ifndef __RIGSNSArray_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSArray_h_GNUSTEP_RUBY_INCLUDE
 
-
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _
-
-#include <Foundation/NSArray.h>
-
+#include <objc/runtime.h>
 
 // Extend NSArray with a couple of new methods
 @interface NSArray ( RIGSNSArray )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
 + (id) arrayWithRubyArray: (VALUE) ruby_array;
 
 - (id) to_a;

@@ -25,15 +25,8 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-#include <Foundation/NSObject.h>
-#include <Foundation/NSString.h>
-#include <Foundation/NSArray.h>
-
-
-#include "RIGS.h"
-#include "RIGSWrapObject.h"
-#include "RIGSSelector.h"
-
+#import "RIGSSelector.h"
+#import "RIGSWrapObject.h"
 
 @implementation RIGSSelector : NSObject
 
@@ -61,7 +54,6 @@
 {
   self = [self init];
   
-  NSDebugLog(@"Creating a new Selector for C string SEL %s",selCString);
   _sel = NSSelectorFromString([NSString stringWithCString: selCString]);
   return self;
 }
@@ -70,7 +62,6 @@
 {
   self = [self init];
   
-  NSDebugLog(@"Creating a new Selector for NSString SEL %@",selString);
   _sel = NSSelectorFromString(selString);
   return self;
 }
@@ -79,7 +70,6 @@
 {
   self = [self init];
   
-  NSDebugLog(@"Creating a new Selector for SEL %@",NSStringFromSelector(sel));
   _sel = sel;
   return self;
 }
@@ -89,7 +79,6 @@
   self = [self init];
 
   NSString *selString = [NSString stringWithCString: rb_string_value_cstr(&rbString)];
-  NSDebugLog(@"Creating a new Selector for Ruby string SEL %@",selString);
   _sel = NSSelectorFromString(selString);
   return self;
 }

@@ -1,4 +1,4 @@
-/* ObjcRuntimeUtilities.m - Utilities to add classes and methods 
+/* RIGSUtilities.m - Utilities to add classes and methods 
    in the Objective-C runtime, at runtime.
 
    Copyright (C) 2000 Free Software Foundation, Inc.
@@ -34,9 +34,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-
-#include "ObjcRuntimeUtilities.h"
-#include <string.h>
+#import "RIGSUtilities.h"
 
 /* For macOS 11 - objc/runtime.h doesn't define these */
 #define _C_CONST       'r'
@@ -47,26 +45,20 @@
 #define _C_BYREF       'R'
 #define _C_ONEWAY      'V'
 
-const char *
-objc_build_runtime_signature (const char *types)
+
+unsigned long
+rb_objc_hash(const char* value)
 {
-  NSMethodSignature *sig;
+  char keyChar;
+  unsigned long hash = HASH_SEED;
   
-  sig = [NSMethodSignature signatureWithObjCTypes: types];
-  
-  NSMutableString	*str;
-  NSUInteger		count;
-  NSUInteger		index;
-  
-  str = [NSMutableString stringWithCapacity: 128];
-  [str appendFormat: @"%s", [sig methodReturnType]];
-  count = [sig numberOfArguments];
-  for (index = 0; index < count; index++)
-    {
-      [str appendFormat: @"%s", [sig getArgumentTypeAtIndex: index]];
-    }
-  return [str UTF8String];  
+  while (keyChar = *value++) {
+    hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
+  }
+
+  return hash;
 }
+
 
 inline const char *
 objc_skip_type_qualifiers (const char *type)

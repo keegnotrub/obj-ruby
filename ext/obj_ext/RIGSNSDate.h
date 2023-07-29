@@ -26,17 +26,14 @@
 #ifndef __RIGSNSDate_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSDate_h_GNUSTEP_RUBY_INCLUDE
 
-
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _
-
-#include <Foundation/NSDate.h>
-
+#include <objc/runtime.h>
+#include <math.h>
 
 // Extend NSDate with a couple of new methods
 @interface NSDate ( RIGSNSDate )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
 + (id) dateWithRubyTime: (VALUE) ruby_time;
 
 - (id) to_time;

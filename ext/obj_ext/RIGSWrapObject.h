@@ -24,10 +24,9 @@
 #ifndef __RIGSWrapObject_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSWrapObject_h_GNUSTEP_RUBY_INCLUDE
 
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _ /* must do it to avoid conflict with the following include */
-
-#import <Foundation/NSObject.h>
+#include <objc/runtime.h>
 
 @interface RIGSWrapObject : NSObject
 {
@@ -41,12 +40,6 @@
 - (NSString *) description;
 - (NSString *) debugDescription;
 - (id) initWithRubyObject: (VALUE)rubyObject;
-- (void) forwardInvocation: (NSInvocation *)anInvocation;
-- (BOOL) respondsToSelector: (SEL)aSelector;
-
-- (id) performSelector: (SEL)aSelector;
-- (id) performSelector: (SEL)aSelector withObject: anObject;
-- (id) performSelector: (SEL)aSelector withObject: object1 withObject: object2;
 
 @end
 

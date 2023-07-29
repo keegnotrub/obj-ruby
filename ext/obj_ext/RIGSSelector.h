@@ -28,13 +28,8 @@
 #ifndef __RIGSSelector_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSSelector_h_GNUSTEP_RUBY_INCLUDE
 
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _
-
-#include <Foundation/Foundation.h>
-//#include <Foundation/NSString.h>
-//#include <Foundation/NSDebug.h>
-
 
 @interface RIGSSelector : NSObject
 {

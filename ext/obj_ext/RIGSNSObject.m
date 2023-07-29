@@ -23,16 +23,10 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#import "RIGSWrapObject.h"
 #import "RIGSNSObject.h"
+#import "RIGSWrapObject.h"
 
 @implementation NSObject ( RIGSNSObject )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class
-{
-  // Nothing to do for the moment
-  return YES;
-}
 
 - (id) to_s
 {
@@ -40,10 +34,12 @@
   NSString *str;
   
   str = [self description];
+
   rb_val = rb_str_new_cstr([str cString]);
-  
+
   return [RIGSWrapObject objectWithRubyObject:rb_val];
 }
+
 
 - (id) inspect
 {

@@ -23,17 +23,9 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#include <ruby.h>
-#undef _
-
-#include <objc/runtime.h>
-
-#include "RIGS.h"
-#include "RIGSCore.h"
-#include "RIGSProxyIMP.h"
-#include "RIGSWrapObject.h"
-
 #import "RIGSNSDictionary.h"
+#import "RIGSCore.h"
+#import "RIGSWrapObject.h"
 
 static int rigs_ary_keys_i(VALUE key, VALUE value, VALUE ary) {
   rb_ary_push(ary, key);
@@ -46,12 +38,6 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
 }
 
 @implementation NSDictionary ( RIGSNSDictionary )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class
-{
-  // Nothing to do for the moment
-  return YES;
-}
 
 + (id) dictionaryWithRubyHash: (VALUE) ruby_hash
 {

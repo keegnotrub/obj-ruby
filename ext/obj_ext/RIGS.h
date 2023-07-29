@@ -1,5 +1,4 @@
-/* RIGS.h - This file is included in all ObjC file of RIGS
-    It contains all common definitions
+/* RIGS.h - Contains all common definitions
 
    $Id$
 

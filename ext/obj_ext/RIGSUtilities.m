@@ -1,23 +1,17 @@
 /* RIGSUtilities.m - Utilities to add classes and methods 
    in the Objective-C runtime, at runtime.
 
-   Copyright (C) 2000 Free Software Foundation, Inc.
+   Copyright (C) 2023 thoughtbot, Inc.
    
-   Written by:  Nicola Pero <nicola@brainstorm.co.uk>
-   Date: June 2000
+   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Date: July 2023
    
-   This file is part of the GNUstep Java Interface Library.
-
-   It was partially derived by: 
-
-   --
-   gg_class.m - interface between guile and GNUstep
-   Copyright (C) 1998 Free Software Foundation, Inc.
-
-   Written by:  Richard Frith-Macdonald <richard@brainstorm.co.uk>
-   Date: September 1998
-
-   This file is part of the GNUstep-Guile Library.
+   It was partially derived by: encoding.c
+   Encoding of types for Objective C.
+   Copyright (C) 1993, 1995, 1996, 1997, 1998, 2000, 2002
+   Free Software Foundation, Inc.
+   Contributed by Kresten Krab Thorup
+   Bitfield support by Ovidiu Predescu
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public

@@ -8,7 +8,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public

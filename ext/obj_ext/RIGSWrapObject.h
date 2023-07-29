@@ -1,10 +1,10 @@
-/* RIGSWrapObject.h - Wrapping Ruby Objects into GNUstep-like objects
+/* RIGSWrapObject.h - Wrapping Ruby Objects into Objective-C objects
    Copyright (C) 2001 Free Software Foundation, Inc.
    
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public

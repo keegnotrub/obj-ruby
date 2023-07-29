@@ -1,13 +1,11 @@
 /* RIGSUtilities.h - Utilities to add classes and methods 
    in the Objective-C runtime, at runtime.
 
-   Copyright (C) 2000 Free Software Foundation, Inc.
+   Copyright (C) 2023 thoughtbot, Inc.
    
-   Written by:  Nicola Pero <nicola@brainstorm.co.uk>
-   Date: June 2000
+   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Date: July 2023
    
-   This file is part of the GNUstep Java Interface Library.
-
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
    License as published by the Free Software Foundation; either

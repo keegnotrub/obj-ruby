@@ -1,4 +1,4 @@
-/* RIGSWrapObject.m - Wrapping Ruby Objects into GNUstep-like objects
+/* RIGSWrapObject.m - Wrapping Ruby Objects into Objective-C objects
    Copyright (C) 2001 Free Software Foundation, Inc.
 
    $Id$

@@ -1,4 +1,4 @@
-/* RIGS.m - Ruby Interface to GNUstep
+/* RIGSCore.m - Ruby Interface to Objective-C
 
    $Id$
 
@@ -7,7 +7,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: Aug 2001
    
-   This file is part of the GNUstep Ruby  Interface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -918,10 +918,9 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   rb_val = [val getRubyObject];
               } else {
                   
-                /* Retain the value otherwise GNUstep releases it and Ruby crashes
-                                It's Ruby garbage collector job to indirectly release the ObjC 
-                                object by calling rb_objc_release()
-                            */
+                /* Retain the value otherwise ObjC releases it and Ruby crashes
+                   It's Ruby garbage collector job to indirectly release the ObjC 
+                   object by calling rb_objc_release() */
                   if ([val respondsToSelector: @selector(retain)]) {
                       [val retain];
                   }
@@ -2057,7 +2056,7 @@ Init_obj_ext()
 {
     VALUE rigs_argv, rigs_argc;
 
-    // Catch all GNUstep raised exceptions and direct them to Ruby
+    // Catch all Objective-C raised exceptions and direct them to Ruby
     NSSetUncaughtExceptionHandler(rb_objc_raise_exception);
 
     // Initialize hash tables of known Objects and Classes
@@ -2105,9 +2104,9 @@ Init_obj_ext()
     @protocol(NSTokenFieldCellDelegate);
     @protocol(NSTokenFieldDelegate);
 
-    // Create 2 ruby class methods under the ObjC Ruby module
-    // - ObjRuby.class("className") : registers ObjC class with Ruby
-    // - ObjRuby.register(class): register Ruby class with Objective C
+    // Ruby class methods under the ObjC Ruby module
+    // - ObjRuby.class("NSDate") : registers ObjC class with Ruby
+    // - ObjRuby.require_framework("Foundation"): registers ObjC framework with Ruby
 
     rb_mRigs = rb_define_module("ObjRuby");
     rb_define_module_function(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);

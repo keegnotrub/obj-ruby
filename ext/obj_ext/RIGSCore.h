@@ -48,12 +48,8 @@ VALUE rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE
 VALUE rb_objc_handler(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 
-NSArray* class_method_selectors_for_class(Class class, BOOL use_super);
-NSArray* instance_method_selectors_for_class(Class class, BOOL use_super);
-NSArray* method_selectors_for_class(Class class, BOOL use_super);
-
-int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
-int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
+unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
+unsigned int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
 VALUE rb_objc_register_class_from_objc (Class objc_class);
 VALUE rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name);
 VALUE rb_objc_get_ruby_value_from_string(char * classname);

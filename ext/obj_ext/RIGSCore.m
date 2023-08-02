@@ -35,7 +35,6 @@
 #import "RIGSUtilities.h"
 #import "RIGS.h"
 #import "RIGSWrapObject.h"
-#import "RIGSSelector.h"
 #import "RIGSNSDictionary.h"
 #import "RIGSNSArray.h"
 #import "RIGSNSString.h"
@@ -306,7 +305,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   sel = *(SEL*)args[1];
   signature = [NSMethodSignature signatureWithObjCTypes:(const char*)user_data];
 
-  rubyMethodName = RubyNameFromSelector(sel);
+  rubyMethodName = rb_objc_sel_to_method(sel);
   rubyObject = [val getRubyObject];
   rubyArgs = malloc((cif->nargs - 2) * sizeof(VALUE));
 
@@ -315,7 +314,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
     okydoky = rb_objc_convert_to_rb(args[i], 0, type, &rubyArgs[i-2], NO);
   }
 
-  rubyRetVal = rb_funcallv(rubyObject, rb_intern([rubyMethodName cString]), cif->nargs - 2, rubyArgs);
+  rubyRetVal = rb_funcallv(rubyObject, rb_intern(rubyMethodName), cif->nargs - 2, rubyArgs);
 
   if ([signature methodReturnLength]) {
     type = [signature methodReturnType];
@@ -328,6 +327,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   }
   
   free(rubyArgs);
+  free(rubyMethodName);
   }
 }
 
@@ -372,7 +372,6 @@ rb_objc_register_ruby_class(VALUE rb_class) {
   Class superClass;
   Class class;
   char *rb_mth_name;
-  NSString *objcMthName;
   SEL objcMthSEL;
   const char *signature;
   const char *objcTypes;
@@ -426,8 +425,7 @@ rb_objc_register_ruby_class(VALUE rb_class) {
     if (nbArgs < 0) continue;
 
     rb_mth_name = rb_id2name(entry);
-    objcMthName = SelectorStringFromRubyName(rb_mth_name, nbArgs);
-    objcMthSEL = sel_registerName([objcMthName cString]);
+    objcMthSEL = rb_objc_method_to_sel(rb_mth_name, nbArgs);
 
     objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
 
@@ -587,21 +585,10 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
 
         case _C_SEL:
             if (TYPE(rb_val) == T_STRING) {
-            
-                *(SEL*)where = [[RIGSSelector selectorWithRubyString:rb_val] getSEL];
-            
-            } else if (TYPE(rb_val) == T_DATA) {
-
-                // This is in case the selector is passed as an instance of RIGSSelector
-                // which is a class the we have created
-                id object;
-                Data_Get_Struct(rb_val,id,object);
-                if ([object isKindOfClass: [RIGSSelector class]]) {
-                    *(SEL*)where = [object getSEL];
-                } else {
-                    ret = NO;
-                }
-
+                *(SEL*)where = sel_getUid(rb_string_value_cstr(&rb_val));
+            } else if (TYPE(rb_val) == T_SYMBOL) {
+                VALUE rb_string = rb_sym_to_s(rb_val);
+                *(SEL*)where = sel_getUid(rb_string_value_cstr(&rb_string));
             } else {
                 ret = NO;
             }
@@ -843,7 +830,6 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
     BOOL ret = YES;
     VALUE rb_class;
     double dbl_value;
-    RIGSSelector *selObj;
     BOOL inStruct = NO;
     unsigned long inStructHash;
     VALUE end = Qnil;
@@ -946,7 +932,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             // Convert char * to ruby String
             char *val = *(char **)where;
             if (val)
-              rb_val = rb_str_new2(val);
+              rb_val = rb_str_new_cstr(val);
             else 
               rb_val = Qnil;
           }
@@ -1055,17 +1041,8 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             SEL val = *(SEL*)where;
             
             NSDebugLog(@"ObjC Selector = 0x%lx", val);
-            // ObjC selectors can either be returned as an instance of class RIGSSelector
-              
-            // Before instantiating RIGSSelector make sure it is known to
-            // Ruby
-            rb_class = (VALUE) NSMapGet(knownClasses, (void *)[RIGSSelector class]);
 
-            if (rb_class == Qfalse) {
-                rb_class = rb_objc_register_class_from_objc([RIGSSelector class]);
-            }
-            selObj = [[RIGSSelector selectorWithSEL: (SEL)val] retain];
-            rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,selObj);
+            rb_val = rb_str_new_cstr(sel_getName(val));
           }
           break;
 
@@ -1141,7 +1118,7 @@ rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 
     NSDebugLog(@"<<<< Invoking method %s with %d argument(s) on Ruby VALUE 0x%lx (Objc id 0x%lx)",method, rigs_argc, rb_self);
 
-    sel = SelectorFromRubyName(method, rigs_argc);
+    sel = rb_objc_method_to_sel(method, rigs_argc);
     return rb_objc_send_with_selector(sel, rigs_argc, rigs_argv, rb_self);
     }
 }
@@ -1548,95 +1525,58 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 	return rb_objc_send(method, rigs_argc-1, rigs_argv+1, rb_self);
 }
 
-NSArray* 
-class_method_selectors_for_class(Class class, BOOL use_super)
-{    
-  Class meta_class = objc_getMetaClass([NSStringFromClass(class) cString]);
-  return(method_selectors_for_class(meta_class, use_super));
-}
-
-NSArray* 
-instance_method_selectors_for_class(Class class, BOOL use_super)
+unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
-  return(method_selectors_for_class(class, use_super));
-}
-
-NSArray* 
-method_selectors_for_class(Class class, BOOL use_super)
-{
-  NSMutableSet *methodSet = [NSMutableSet new];
-  int i;
-  int unsigned numMethods;
-
-  while(class) {
-
-    Method *methods = class_copyMethodList(class, &numMethods);
-    for (i = 0; i < numMethods; i++) {
-        SEL sel = method_getName(methods[i]);
-        [methodSet addObject: NSStringFromSelector(sel)];
-    }
-    free(methods);
-    
-    if(use_super)
-      class = class_getSuperclass(class);
-    else
-      class = NULL;
-  }
-
-  return [methodSet allObjects];
-}
-
-int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
-{
-    NSArray *allMthSels;
-    NSEnumerator *mthEnum;
-    NSString *mthSel;
-    NSString *mthRubyName;
-    int imth_cnt = 0;
+    SEL mthSel;
+    const char *mthRubyName;
+    unsigned int imth_cnt;
+    unsigned int i;
+    Method *methods;
 
     //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
     rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)objc_class));
     
     /* Define all Ruby Instance methods for this Class */
-    allMthSels = method_selectors_for_class(objc_class, NO);
-    mthEnum = [allMthSels objectEnumerator];
-    
-    while ( (mthSel = [mthEnum nextObject]) ) {
-       
-        mthRubyName = RubyNameFromSelectorString(mthSel);
-        //NSDebugLog(@"Registering Objc method %@ under Ruby name %@)", mthSel,mthRubyName);
+    methods = class_copyMethodList(objc_class, &imth_cnt);
 
-        rb_define_method(rb_class, [mthRubyName cString], rb_objc_handler, -1);
-        imth_cnt++;
+    for (i=0;i<imth_cnt;i++) {
+      mthSel = method_getName(methods[i]);
+      mthRubyName = rb_objc_sel_to_method(mthSel);
+      
+      rb_define_method(rb_class, mthRubyName, rb_objc_handler, -1);
+
+      free(mthRubyName);
     }
 
-    return imth_cnt;
-    
+    free(methods);
+
+    return imth_cnt;    
 }
 
-int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
+unsigned int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 {
-    NSArray *allMthSels;
-    NSEnumerator *mthEnum;
-    NSString *mthSel;
-    NSString *mthRubyName;
-    Class objc_meta_class = objc_getMetaClass([NSStringFromClass(objc_class) cString]);
-    
-    int cmth_cnt = 0;
+    SEL mthSel;
+    const char *mthRubyName;
+    Class objc_meta_class;
+    unsigned int cmth_cnt;
+    unsigned int i;
+    Method *methods;
 
+    objc_meta_class = objc_getMetaClass(class_getName(objc_class));
     
     /* Define all Ruby Class (singleton) methods for this Class */
-    allMthSels = method_selectors_for_class(objc_meta_class, NO);
-    mthEnum = [allMthSels objectEnumerator];
-    
-    while ( (mthSel = [mthEnum nextObject]) ) {
-       
-        mthRubyName = RubyNameFromSelectorString(mthSel);
-        //NSDebugLog(@"Registering Objc class method %@ under Ruby name %@)", mthSel,mthRubyName);
+    methods = class_copyMethodList(objc_meta_class, &cmth_cnt);
 
-        rb_define_singleton_method(rb_class, [mthRubyName cString], rb_objc_handler, -1);
-        cmth_cnt++;
-     }
+    for (i=0;i<cmth_cnt;i++) {
+      mthSel = method_getName(methods[i]);
+      mthRubyName = rb_objc_sel_to_method(mthSel);
+      
+      rb_define_singleton_method(rb_class, mthRubyName, rb_objc_handler, -1);
+
+      free(mthRubyName);
+    }
+
+    free(methods);
 
     // Redefine the new method to point to our special rb_objc_new function
     rb_undef_method(CLASS_OF(rb_class),"new");
@@ -1807,14 +1747,14 @@ rb_objc_register_class_from_objc (Class objc_class)
 {
 
     @autoreleasepool {
-    const char *cname = [NSStringFromClass(objc_class) cString];
+    const char *cname = class_getName(objc_class);
 
     Class objc_super_class = class_getSuperclass(objc_class);
     VALUE rb_class;
     VALUE rb_super_class = Qnil;
     //    NSNumber *rb_class_value;
-    int imth_cnt;
-    int cmth_cnt;
+    unsigned int imth_cnt;
+    unsigned int cmth_cnt;
 
     NSDebugLog(@"Request to register ObjC Class %s (ObjC id = 0x%lx)",cname,objc_class);
 
@@ -1856,7 +1796,7 @@ rb_objc_register_class_from_objc (Class objc_class)
     // any additional Ruby code for this class
     NSDebugLog(@"Calling ObjRuby.extend_class(%s) from Objc", cname);
     
-    rb_funcall(rb_mRigs, rb_intern("extend_class"), 1,rb_str_new2(cname));
+    rb_funcall(rb_mRigs, rb_intern("extend_class"), 1,rb_str_new_cstr(cname));
     
     return rb_class;
     }

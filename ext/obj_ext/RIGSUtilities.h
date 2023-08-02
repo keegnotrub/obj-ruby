@@ -34,6 +34,9 @@
   ({ typeof(V) __v=(V); typeof(A) __a=(A); \
      __a*((__v+__a-1)/__a); })
 
+SEL rb_objc_method_to_sel(const char* name, int argc);
+const char *rb_objc_sel_to_method(SEL sel);
+
 unsigned long rb_objc_hash(const char* value);
 const char *objc_skip_type_qualifiers (const char *type);
 const char *objc_skip_typespec (const char *type);

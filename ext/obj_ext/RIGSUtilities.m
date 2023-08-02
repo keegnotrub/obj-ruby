@@ -40,6 +40,68 @@
 #define _C_ONEWAY      'V'
 
 
+SEL
+rb_objc_method_to_sel(const char* name, int argc)
+{
+  char *selName;
+  int nbArgs;
+  size_t i;
+  size_t length;
+  
+  if (argc == 0 && strstr(name, "to_") == name) {
+    return sel_getUid(name);
+  }
+
+  length = strlen(name);
+  selName = alloca(length + 2);
+  nbArgs = 0;
+  
+  for (i=0;i<length;i++) {
+    if (name[i] == '_') {
+      selName[i] = ':';
+      nbArgs++;
+    }
+    else {
+      selName[i] = name[i];
+    }
+  }
+
+  if (argc > nbArgs) {
+    selName[i++] = ':';
+  }
+  selName[i++] = '\0';
+
+  return sel_getUid(selName);
+}
+
+const char *
+rb_objc_sel_to_method(SEL sel)
+{
+  const char *selName;
+  char *name;
+  size_t i;
+  size_t length;
+
+  selName = sel_getName(sel);
+  length = strlen(selName);
+  name = malloc(length + 1);
+
+  for (i=0;i<length;i++) {
+    if (selName[i] == ':') {
+      if (i == length - 1) break;
+      name[i] = '_';
+    }
+    else {
+      name[i] = selName[i];
+    }
+  }
+  
+  name[i++] = '\0';
+  
+  return name;
+}
+
+
 unsigned long
 rb_objc_hash(const char* value)
 {

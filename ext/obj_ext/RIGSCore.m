@@ -42,11 +42,6 @@
 #import "RIGSNSDate.h"
 #import "RIGSBridgeSupportParser.h"
 
-// Our own argc and argv rebuilt  from Ruby ARGV ($*)
-char **ourargv;
-int ourargc;
-extern char** environ;
-
 // Hash table  that maps known ObjC class to Ruby class VALUE
 static NSMapTable *knownClasses = 0;
 
@@ -112,13 +107,6 @@ rb_objc_release(id objc_object)
  
 }
 
-
-void
-rb_objc_mark(VALUE rb_object) 
-{
-    // Doing nothing for the moment
-    NSDebugLog(@"Call to ObjC marking on 0x%lx",rb_object);
-}
 
 const char *
 rb_objc_sanitize_objc_types(const char *objcTypes)
@@ -818,6 +806,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
         NSDebugLog(msg);
         rb_raise(rb_eTypeError, [msg cString]);
     }
+
 
     return ret;
   
@@ -1902,100 +1891,10 @@ rb_objc_raise_exception(NSException *exception)
 
 
 
-/* Rebuild ObjC argc and argv from the Ruby context */
-void
-_rb_objc_rebuild_argc_argv(VALUE rigs_argc, VALUE rigs_argv)
-{
-    int i;
-    VALUE entry;
-    VALUE tmp;
-
-    // +1 in arcg for the script name that is not in ARGV in Ruby
-    ourargc = FIX2INT(rigs_argc)+1;
-    
-    ourargv = malloc(sizeof(char *) * ourargc);
-    tmp = rb_gv_get("$0");
-    ourargv[0] = rb_string_value_cstr(&tmp);
-
-    NSDebugLog(@"Argc=%d\n",ourargc);
-    NSDebugLog(@"Argv[0]=%s\n",ourargv[0]);
-     
-    for (i=1;i<ourargc; i++) {
-        entry = rb_ary_entry(rigs_argv,(long)(i-1));
-        ourargv[i] = rb_string_value_cstr(&entry);     
-        NSDebugLog(@"Argv[%d]=%s\n",i,ourargv[i]);
-    }
-    
-}
-
-
-/*  Now try and ask process info. If an exception is raised then it means
-    we are on a platform where NSProcessInfo +initializeWithArguments
-    was not automaitcally called at run time. In this case we must call it
-    ourself.
-    If it doesn't raise an exception then we need to patch the main Bundle
-    to reflect the real location of the Tool/Application otherwise it simply
-    says /usr/loca/bin (where Ruby) is and none of the Tool/Application
-    resources are visible
-
-    The goal of this function is twofold:
-
-    1) Update the NSProcessInfo information with real argc, argv and env
-        (argv needs to be modified so that argv[0] reflects the ruby script
-        path as a process name instead of simply "ruby"
-
-    2) Modify the Main NSBundle to reflect the ruby script executable path of
-        because otherwise the executable path always says /usr/local/bin/ruby
-        and NSBundle never finds the application Resources (plist files, etc...)
-*/
-void _rb_objc_initialize_process_context(VALUE rigs_argc, VALUE rigs_argv)
-{
-    NSProcessInfo *pi = nil;
-    NSString *topProgram;
-    @autoreleasepool {
-        
-    // rebuild our own argc and argv from what Ruby gives us
-    _rb_objc_rebuild_argc_argv(rigs_argc, rigs_argv);
-
-     pi = [NSProcessInfo processInfo];
-
-    // Process Info still null ? It shouldn't...
-    if (pi == nil) {
-        [NSException raise:NSInternalInconsistencyException
-                     format:@"Process Info still un-initialized !!"];
-    }
-
-    NSDebugLog(@"Arguments in NSProcessInfo before rebuild: %@",[[NSProcessInfo processInfo] arguments]);
-    
-    // If the top level program being executed is not the ruby interpreter then
-    // we are probably executing Ruby scripts from within an embedded Scripts
-    // In this case do not rework the process context.
-    // FIXME: Find a better way to determine that ruby was not the top level 
-    // program but that a ObjC program - embedding a Ruby script - is
-    topProgram = [[[NSProcessInfo processInfo] arguments] objectAtIndex: 0];
-    if ( ![topProgram hasSuffix: @"ruby"] ) {
-      // We are not executing from a top level Ruby interpreter
-      NSDebugLog(@"Top level program (%@) not a ruby interpreter. Process context untouched", topProgram);
-      return;
-      
-    }
-    
-    NSDebugLog(@"Arguments in NSProcessInfo after rebuild: %@",[[NSProcessInfo processInfo] arguments]);
-    
-    NSDebugLog(@"New Main Bundle path: %@", [[NSBundle mainBundle] bundlePath]);
-
-    }
-    
-}
-
-
-
 /* Called when require 'obj_ext' is executed in Ruby */
 void
 Init_obj_ext()
 {
-    VALUE rigs_argv, rigs_argc;
-
     // Catch all Objective-C raised exceptions and direct them to Ruby
     NSSetUncaughtExceptionHandler(rb_objc_raise_exception);
 
@@ -2051,10 +1950,4 @@ Init_obj_ext()
     rb_mRigs = rb_define_module("ObjRuby");
     rb_define_module_function(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
     rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
-
-    // Initialize Process Info and Main Bundle
-    rigs_argv = rb_gv_get("$*");
-    rigs_argc = INT2FIX(RARRAY_LEN(RARRAY(rigs_argv)));
-
-    _rb_objc_initialize_process_context(rigs_argc, rigs_argv);
 }

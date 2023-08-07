@@ -1,17 +1,23 @@
 class AppDelegate
   def initialize
+    @window = ObjRuby::NSWindow.alloc
   end
-  
+
   def applicationWillFinishLaunching(notification)
+	  rect = ObjRuby::NSMakeRect(0, 0, 400, 200)
+	  styleMask = ObjRuby::NSTitledWindowMask | ObjRuby::NSClosableWindowMask |
+	              ObjRuby::NSMiniaturizableWindowMask | ObjRuby::NSResizableWindowMask
+
+	  @window.initWithContentRect_styleMask_backing_defer(rect, styleMask, ObjRuby::NSBackingStoreRetained, false)
+	  @window.setTitle("ObjRuby")
   end
 
   def applicationDidFinishLaunching(notification)
-    ObjRuby::NSLog("im a here about to term")
-    ObjRuby::NSApplication.sharedApplication.terminate(self)
+    @window.center()
+	  @window.makeKeyAndOrderFront(self)
   end
 
-  def applicationShouldTerminate(sender)
-    ObjRuby::NSLog("im a here and asking if I should")
+  def applicationShouldTerminateAfterLastWindowClosed(application)
     true
   end
 end

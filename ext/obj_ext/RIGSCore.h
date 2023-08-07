@@ -33,11 +33,7 @@
 #include <dlfcn.h>
 #include <ffi/ffi.h>
 
-extern char **ourargv;
-extern int ourargc;
-
 void  rb_objc_release(id objc_object);
-void  rb_objc_mark(VALUE rb_object);
 VALUE rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
 
 BOOL rb_objc_convert_to_objc(VALUE rb_val, void *data, int offset, const char *type);
@@ -66,9 +62,6 @@ void rb_objc_register_protocol_from_objc(const char *protocolName);
 VALUE rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name);
 
 void rb_objc_raise_exception(NSException *exception);
-
-void _rb_objc_rebuild_argc_argv(VALUE rigs_argc, VALUE rigs_argv);
-void _rb_objc_initialize_process_context(VALUE rigs_argc, VALUE rigs_argv);
 
 void Init_obj_ext();
 

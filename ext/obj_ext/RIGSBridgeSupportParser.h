@@ -25,8 +25,7 @@
 #ifndef __RIGSBridgeSupportParser_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSBridgeSupportParser_h_GNUSTEP_RUBY_INCLUDE
 
-#import <Foundation/NSObject.h>
-#import <Foundation/NSXMLParser.h>
+#import <Foundation/Foundation.h>
 
 @interface RIGSBridgeSupportParser : NSObject<NSXMLParserDelegate>
 {

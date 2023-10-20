@@ -1,23 +1,17 @@
-/* ObjcRuntimeUtilities.m - Utilities to add classes and methods 
+/* RIGSUtilities.m - Utilities to add classes and methods 
    in the Objective-C runtime, at runtime.
 
-   Copyright (C) 2000 Free Software Foundation, Inc.
+   Copyright (C) 2023 thoughtbot, Inc.
    
-   Written by:  Nicola Pero <nicola@brainstorm.co.uk>
-   Date: June 2000
+   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Date: July 2023
    
-   This file is part of the GNUstep Java Interface Library.
-
-   It was partially derived by: 
-
-   --
-   gg_class.m - interface between guile and GNUstep
-   Copyright (C) 1998 Free Software Foundation, Inc.
-
-   Written by:  Richard Frith-Macdonald <richard@brainstorm.co.uk>
-   Date: September 1998
-
-   This file is part of the GNUstep-Guile Library.
+   It was partially derived by: encoding.c
+   Encoding of types for Objective C.
+   Copyright (C) 1993, 1995, 1996, 1997, 1998, 2000, 2002
+   Free Software Foundation, Inc.
+   Contributed by Kresten Krab Thorup
+   Bitfield support by Ovidiu Predescu
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -34,9 +28,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-
-#include "ObjcRuntimeUtilities.h"
-#include <string.h>
+#import "RIGSUtilities.h"
 
 /* For macOS 11 - objc/runtime.h doesn't define these */
 #define _C_CONST       'r'
@@ -47,26 +39,82 @@
 #define _C_BYREF       'R'
 #define _C_ONEWAY      'V'
 
-const char *
-objc_build_runtime_signature (const char *types)
+
+SEL
+rb_objc_method_to_sel(const char* name, int argc)
 {
-  NSMethodSignature *sig;
+  char *selName;
+  int nbArgs;
+  size_t i;
+  size_t length;
   
-  sig = [NSMethodSignature signatureWithObjCTypes: types];
+  if (argc == 0 && strstr(name, "to_") == name) {
+    return sel_getUid(name);
+  }
+
+  length = strlen(name);
+  selName = alloca(length + 2);
+  nbArgs = 0;
   
-  NSMutableString	*str;
-  NSUInteger		count;
-  NSUInteger		index;
-  
-  str = [NSMutableString stringWithCapacity: 128];
-  [str appendFormat: @"%s", [sig methodReturnType]];
-  count = [sig numberOfArguments];
-  for (index = 0; index < count; index++)
-    {
-      [str appendFormat: @"%s", [sig getArgumentTypeAtIndex: index]];
+  for (i=0;i<length;i++) {
+    if (name[i] == '_') {
+      selName[i] = ':';
+      nbArgs++;
     }
-  return [str UTF8String];  
+    else {
+      selName[i] = name[i];
+    }
+  }
+
+  if (argc > nbArgs) {
+    selName[i++] = ':';
+  }
+  selName[i++] = '\0';
+
+  return sel_getUid(selName);
 }
+
+const char *
+rb_objc_sel_to_method(SEL sel)
+{
+  const char *selName;
+  char *name;
+  size_t i;
+  size_t length;
+
+  selName = sel_getName(sel);
+  length = strlen(selName);
+  name = malloc(length + 1);
+
+  for (i=0;i<length;i++) {
+    if (selName[i] == ':') {
+      if (i == length - 1) break;
+      name[i] = '_';
+    }
+    else {
+      name[i] = selName[i];
+    }
+  }
+  
+  name[i++] = '\0';
+  
+  return name;
+}
+
+
+unsigned long
+rb_objc_hash(const char* value)
+{
+  char keyChar;
+  unsigned long hash = HASH_SEED;
+  
+  while (keyChar = *value++) {
+    hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
+  }
+
+  return hash;
+}
+
 
 inline const char *
 objc_skip_type_qualifiers (const char *type)

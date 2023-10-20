@@ -22,12 +22,8 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#import <Foundation/NSString.h>
-#import <Foundation/NSDictionary.h>
-#import <Foundation/NSScanner.h>
-#import <Foundation/NSCharacterSet.h>
 #import "RIGSBridgeSupportParser.h"
-#include "RIGSCore.h"
+#import "RIGSCore.h"
 
 @implementation RIGSBridgeSupportParser
 
@@ -50,6 +46,9 @@ didStartElement:(NSString *)elementName
   }
   else if ([elementName isEqualToString:@"class"]) {
     [self parseClassWithName:[attributeDict objectForKey:@"name"]];
+  }
+  else if ([elementName isEqualToString:@"informal_protocol"]) {
+    [self parseProtocolWithName:[attributeDict objectForKey:@"name"]];
   }
   else if ([elementName isEqualToString:@"method"]) {
     [self parseMethodWithName:[attributeDict objectForKey:@"selector"]];
@@ -135,6 +134,11 @@ didStartElement:(NSString *)elementName
 {
   [_methodName release];
   _methodName = nil;
+}
+
+- (void)parseProtocolWithName:(NSString*)name
+{
+  rb_objc_register_protocol_from_objc([name cString]);
 }
 
 - (void)parseFunctionWithName:(NSString*)name

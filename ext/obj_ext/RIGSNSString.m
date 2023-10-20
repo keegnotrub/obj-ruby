@@ -8,7 +8,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: August 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -25,38 +25,11 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#include <Foundation/NSString.h>
-
-#include "RIGS.h"
-#include "RIGSCore.h"
-#include "RIGSWrapObject.h"
 #import "RIGSNSString.h"
-
-
+#import "RIGSCore.h"
+#import "RIGSWrapObject.h"
 
 @implementation NSString ( RIGSNSString )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class
-{
-
-  // Nothing specific for the moment
-  return YES;
-
-}
-
-+ (id) availableStringEncodingsAsRubyArray
-{
-  NSStringEncoding enc;
-  NSStringEncoding * enc_ptr = [NSString availableStringEncodings];
-  VALUE rb_ary = rb_ary_new();
-
-  while ( (enc = *enc_ptr++) ) {
-    rb_ary_push(rb_ary,INT2FIX((int)enc));
-  }
-  
-  return [RIGSWrapObject objectWithRubyObject:rb_ary];
-  
-}
 
 + (id) stringWithRubyString:(VALUE)rb_string
 {

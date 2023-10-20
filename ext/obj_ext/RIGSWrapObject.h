@@ -1,10 +1,10 @@
-/* RIGSWrapObject.h - Wrapping Ruby Objects into GNUstep-like objects
+/* RIGSWrapObject.h - Wrapping Ruby Objects into Objective-C objects
    Copyright (C) 2001 Free Software Foundation, Inc.
    
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -24,10 +24,9 @@
 #ifndef __RIGSWrapObject_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSWrapObject_h_GNUSTEP_RUBY_INCLUDE
 
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _ /* must do it to avoid conflict with the following include */
-
-#import <Foundation/NSObject.h>
+#include <objc/runtime.h>
 
 @interface RIGSWrapObject : NSObject
 {
@@ -41,12 +40,6 @@
 - (NSString *) description;
 - (NSString *) debugDescription;
 - (id) initWithRubyObject: (VALUE)rubyObject;
-- (void) forwardInvocation: (NSInvocation *)anInvocation;
-- (BOOL) respondsToSelector: (SEL)aSelector;
-
-- (id) performSelector: (SEL)aSelector;
-- (id) performSelector: (SEL)aSelector withObject: anObject;
-- (id) performSelector: (SEL)aSelector withObject: object1 withObject: object2;
 
 @end
 

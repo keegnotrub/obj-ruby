@@ -1,12 +1,10 @@
-/* RIGSNSDate.h - Some additional to properly wrap the
-   NSDate class in Ruby and provide some new methods
-
-   $Id$
+/* RIGSUtilities.h - Utilities to add classes and methods 
+   in the Objective-C runtime, at runtime.
 
    Copyright (C) 2023 thoughtbot, Inc.
    
    Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
-   Date: June 2023
+   Date: July 2023
    
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -21,24 +19,30 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */ 
+   */
 
-#ifndef __RIGSNSDate_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSDate_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSUtilities_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSUtilities_h_GNUSTEP_RUBY_INCLUDE
 
-#import <Foundation/Foundation.h>
-#include <ruby.h>
 #include <objc/runtime.h>
-#include <math.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
 
-// Extend NSDate with a couple of new methods
-@interface NSDate ( RIGSNSDate )
+#define HASH_SEED 5381
+#define HASH_BITSHIFT 5
+#define ROUND(V, A)                        \
+  ({ typeof(V) __v=(V); typeof(A) __a=(A); \
+     __a*((__v+__a-1)/__a); })
 
-+ (id) dateWithRubyTime: (VALUE) ruby_time;
+SEL rb_objc_method_to_sel(const char* name, int argc);
+const char *rb_objc_sel_to_method(SEL sel);
 
-- (id) to_time;
-- (VALUE) getRubyObject;
+unsigned long rb_objc_hash(const char* value);
+const char *objc_skip_type_qualifiers (const char *type);
+const char *objc_skip_typespec (const char *type);
+const char *objc_skip_offset (const char *type);
+const char *objc_skip_argspec (const char *type);
 
-@end
 
-#endif
+#endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

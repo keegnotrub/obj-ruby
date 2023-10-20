@@ -26,17 +26,13 @@
 #ifndef __RIGSNSNumber_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSNumber_h_GNUSTEP_RUBY_INCLUDE
 
-
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _
-
-#include <Foundation/NSValue.h>
-
+#include <objc/runtime.h>
 
 // Extend NSNumber with a couple of new methods
 @interface NSNumber ( RIGSNSNumber )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class;
 + (id) numberWithRubyBignum: (VALUE) rb_bignum;
 + (id) numberWithRubyFixnum: (VALUE) rb_fixnum;
 + (id) numberWithRubyFloat: (VALUE) rb_float;

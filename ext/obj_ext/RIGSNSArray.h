@@ -8,7 +8,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -28,17 +28,13 @@
 #ifndef __RIGSNSArray_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSArray_h_GNUSTEP_RUBY_INCLUDE
 
-
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _
-
-#include <Foundation/NSArray.h>
-
+#include <objc/runtime.h>
 
 // Extend NSArray with a couple of new methods
 @interface NSArray ( RIGSNSArray )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
 + (id) arrayWithRubyArray: (VALUE) ruby_array;
 
 - (id) to_a;

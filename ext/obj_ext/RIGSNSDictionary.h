@@ -26,17 +26,13 @@
 #ifndef __RIGSNSDictionary_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSDictionary_h_GNUSTEP_RUBY_INCLUDE
 
-
+#import <Foundation/Foundation.h>
 #include <ruby.h>
-#undef _
-
-#include <Foundation/NSDictionary.h>
-
+#include <objc/runtime.h>
 
 // Extend NSDictionary with a couple of new methods
 @interface NSDictionary ( RIGSNSDictionary )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class;
 + (id) dictionaryWithRubyHash: (VALUE) ruby_hash;
 
 - (id) to_h;

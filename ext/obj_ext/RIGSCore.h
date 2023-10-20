@@ -1,4 +1,4 @@
-/* RIGSCore.h - Ruby Interface to GNUstep - main module
+/* RIGSCore.h - Ruby Interface to Objective-C - main module
 
    $Id$
 
@@ -7,7 +7,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -27,19 +27,13 @@
 #ifndef __RIGSCore_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSCore_h_GNUSTEP_RUBY_INCLUDE
 
-#include <Foundation/NSException.h>
-
-// After inclusion of ruby.h undefine the "_" macro because 
-// it is also defined in Foundation/NSBundle.h
+#import <Cocoa/Cocoa.h>
+#include <objc/runtime.h>
 #include <ruby.h>
-#undef _
-#undef __
-
-extern char **ourargv;
-extern int ourargc;
+#include <dlfcn.h>
+#include <ffi/ffi.h>
 
 void  rb_objc_release(id objc_object);
-void  rb_objc_mark(VALUE rb_object);
 VALUE rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
 
 BOOL rb_objc_convert_to_objc(VALUE rb_val, void *data, int offset, const char *type);
@@ -50,12 +44,8 @@ VALUE rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE
 VALUE rb_objc_handler(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 
-NSArray* class_method_selectors_for_class(Class class, BOOL use_super);
-NSArray* instance_method_selectors_for_class(Class class, BOOL use_super);
-NSArray* method_selectors_for_class(Class class, BOOL use_super);
-
-int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
-int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
+unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
+unsigned int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
 VALUE rb_objc_register_class_from_objc (Class objc_class);
 VALUE rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name);
 VALUE rb_objc_get_ruby_value_from_string(char * classname);
@@ -67,13 +57,11 @@ void rb_objc_register_format_string_from_objc(const char *selector, int index);
 void rb_objc_register_block_from_objc(const char *selector, int index, const char *objcTypes);
 void rb_objc_register_constant_from_objc(const char *name, const char *type);
 void rb_objc_register_function_from_objc(const char *name, const char *objcTypes);
+void rb_objc_register_protocol_from_objc(const char *protocolName);
 
 VALUE rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name);
 
 void rb_objc_raise_exception(NSException *exception);
-
-void _rb_objc_rebuild_argc_argv(VALUE rigs_argc, VALUE rigs_argv);
-void _rb_objc_initialize_process_context(VALUE rigs_argc, VALUE rigs_argv);
 
 void Init_obj_ext();
 

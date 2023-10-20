@@ -23,25 +23,11 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#include <ruby.h>
-#undef _
-
-#include <objc/runtime.h>
-#include <math.h>
-
-#include "RIGS.h"
-#include "RIGSCore.h"
-#include "RIGSProxyIMP.h"
-#include "RIGSWrapObject.h"
 #import "RIGSNSDate.h"
+#import "RIGSCore.h"
+#import "RIGSWrapObject.h"
 
 @implementation NSDate ( RIGSNSDate )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class
-{
-  // Nothing to do for the moment
-  return YES;
-}
 
 + (id) dateWithRubyTime: (VALUE) ruby_time
 {

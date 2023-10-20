@@ -8,7 +8,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -25,17 +25,15 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */ 
 
-#ifndef __RIGSNSApplication_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSApplication_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
 
-#include <Foundation/NSString.h>
+#import <Foundation/Foundation.h>
 #include <ruby.h>
 
 // Extend NSApplication with some finishing registration code
 @interface NSString ( RIGSNSString )
 
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class;
-+ (id) availableStringEncodingsAsRubyArray;
 + (id) stringWithRubyString: (VALUE)rb_string;
 + (id) stringWithRubySymbol: (VALUE)rb_symbol;
 

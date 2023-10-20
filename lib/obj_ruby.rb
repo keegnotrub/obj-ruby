@@ -29,10 +29,19 @@
 #
 
 require "obj_ext"
-
 require "obj_ruby/version"
+require "zeitwerk"
 
 module ObjRuby
+  def self.initialize!(dir)
+    loader = Zeitwerk::Loader.new
+    loader.push_dir(dir)
+    loader.on_load do |cpath, value|
+      register(value)
+    end
+    loader.setup
+  end
+
   def self.import(class_name)
     if const_defined?(class_name)
       const_get(class_name)

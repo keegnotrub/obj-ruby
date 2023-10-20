@@ -8,7 +8,7 @@
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: August 2001
    
-   This file is part of the GNUstep RubyInterface Library.
+   This file is part of the GNUstep Ruby Interface Library.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -25,24 +25,11 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#include <ruby.h>
-#undef _
-
-#include <objc/runtime.h>
-
-#include "RIGS.h"
-#include "RIGSCore.h"
-#include "RIGSProxyIMP.h"
-#include "RIGSWrapObject.h"
 #import "RIGSNSArray.h"
+#import "RIGSCore.h"
+#import "RIGSWrapObject.h"
 
 @implementation NSArray ( RIGSNSArray )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) ruby_class
-{
-  // Nothing to do for the moment
-  return YES;
-}
 
 + (id) arrayWithRubyArray: (VALUE) ruby_array
 {

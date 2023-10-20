@@ -23,25 +23,11 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
    */
 
-#include <ruby.h>
-#undef _
-
-#include <objc/runtime.h>
-
-#include "RIGS.h"
-#include "RIGSCore.h"
-#include "RIGSProxyIMP.h"
-#include "RIGSWrapObject.h"
-
 #import "RIGSNSNumber.h"
+#import "RIGSCore.h"
+#import "RIGSWrapObject.h"
 
 @implementation NSNumber ( RIGSNSNumber )
-
-+ (BOOL) finishRegistrationOfRubyClass: (VALUE) rb_class
-{
-  // Nothing to do for the moment
-  return YES;
-}
 
 + (id) numberWithRubyBignum: (VALUE) rb_bignum
 {
@@ -64,7 +50,7 @@
 }
 
 - (id) to_i
-{  
+{
   return [RIGSWrapObject objectWithRubyObject:[self getRubyInteger]];
 }
 

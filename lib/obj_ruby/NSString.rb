@@ -1,4 +1,4 @@
-# NSString.rb - Add a couple of things to the Objective C NSString class
+# NSString.rb - Add a couple of things to the NSString class
 #
 #  $Id$
 #

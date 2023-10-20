@@ -27,6 +27,7 @@
 #include <objc/runtime.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define HASH_SEED 5381
 #define HASH_BITSHIFT 5

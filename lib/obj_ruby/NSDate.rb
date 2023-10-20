@@ -1,4 +1,4 @@
-# NSDate.rb - Add a couple of things to the NSArray class
+# NSDate.rb - Add a couple of things to the NSDate class
 #
 #  $Id$
 #

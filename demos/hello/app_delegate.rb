@@ -1,20 +1,10 @@
-class AppDelegate
-  def initialize
-    @window = ObjRuby::NSWindow.alloc
-  end
-
+class AppDelegate < ObjRuby::NSObject
   def applicationWillFinishLaunching(notification)
-	  rect = ObjRuby::NSMakeRect(0, 0, 400, 200)
-	  styleMask = ObjRuby::NSTitledWindowMask | ObjRuby::NSClosableWindowMask |
-	              ObjRuby::NSMiniaturizableWindowMask | ObjRuby::NSResizableWindowMask
-
-	  @window.initWithContentRect_styleMask_backing_defer(rect, styleMask, ObjRuby::NSBackingStoreRetained, false)
-	  @window.setTitle("ObjRuby")
+    @window_controller = WindowController.alloc.init
   end
 
   def applicationDidFinishLaunching(notification)
-    @window.center()
-	  @window.makeKeyAndOrderFront(self)
+    @window_controller.showWindow(self)
   end
 
   def applicationShouldTerminateAfterLastWindowClosed(application)

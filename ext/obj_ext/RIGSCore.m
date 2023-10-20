@@ -294,7 +294,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   signature = [NSMethodSignature signatureWithObjCTypes:(const char*)user_data];
 
   rubyMethodName = rb_objc_sel_to_method(sel);
-  rubyObject = [val getRubyObject];
+  rubyObject = (VALUE) NSMapGet(knownObjects,(void *)val);
   rubyArgs = malloc((cif->nargs - 2) * sizeof(VALUE));
 
   for (i=2;i<cif->nargs;i++) {
@@ -357,6 +357,7 @@ rb_objc_register_ruby_class(VALUE rb_class) {
   VALUE listOption;
   int nbArgs;
   VALUE rb_mth_ary;
+  VALUE rb_super_class;
   Class superClass;
   Class class;
   char *rb_mth_name;
@@ -389,9 +390,19 @@ rb_objc_register_ruby_class(VALUE rb_class) {
   }
   
   // Create the Objective-C proxy class. 
-  // Make things simple for the moment and inherit from NSObject
-  // TODO: this should respect what Ruby is telling us for inheritance
-  superClass = NSClassFromString(@"RIGSWrapObject");
+  rb_super_class = rb_class_superclass(rb_class);
+  if (rb_super_class == rb_cObject || rb_super_class == rb_cBasicObject) {
+    superClass = [NSObject class];
+  }
+  else {
+    // TODO: possible this class isn't registered yet
+    // Could be something that hasn't been imported yet
+    // Or could be something that hasn't been registered yet
+    // rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
+    
+    superClass = (Class) NUM2LL(rb_iv_get(rb_super_class, "@objc_class"));
+  }
+  
   class = objc_allocateClassPair (superClass, rb_class_name, 0);
   if (class == nil) {
       NSLog(@"Could not allocate class pair with ObjC: %s",rb_class_name);
@@ -442,6 +453,17 @@ rb_objc_register_ruby_class(VALUE rb_class) {
   }
   
   objc_registerClassPair(class);
+
+  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
+  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)class));
+
+  // Remember that this class is defined in Ruby
+  NSMapInsertKnownAbsent(knownClasses, (void*)class, (void*)rb_class);
+
+  // Redefine the new method to point to our special rb_objc_new function
+  rb_undef_alloc_func(rb_class);
+  rb_undef_method(CLASS_OF(rb_class),"new");
+  rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
 
   return class;
   
@@ -527,15 +549,17 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
                     *(NSString**)where = [NSString stringWithRubyString:rb_val];
                     break;
           
-                case T_OBJECT:
                 case T_CLASS:
+                    *(Class**)where = (Class) NUM2LL(rb_iv_get(rb_val, "@objc_class"));
+                    break;
+                case T_OBJECT:
                     /* Ruby sends a Ruby class or a ruby object. Automatically register
                                       an ObjC proxy class. It is very likely that we'll need it in the future
                                       (e.g. typical for setDelegate method call) */
                     rb_class_val = (TYPE(rb_val) == T_CLASS ? rb_val : CLASS_OF(rb_val));
                     NSDebugLog(@"Converting object of Ruby class: %s", rb_class2name(rb_class_val));
-                    objcClass = rb_objc_register_ruby_class(rb_class_val);
-                    *(id*)where = (id)[objcClass objectWithRubyObject:rb_val];
+
+                    Data_Get_Struct(rb_val,id,* (id*)where);
                     NSDebugLog(@"Wrapping Ruby Object of type: 0x%02x (ObjC object at 0x%lx)",TYPE(rb_val), *(id*)where);
                     break;
           
@@ -766,7 +790,12 @@ rb_objc_convert_to_objc(VALUE rb_thing,void *data, int offset, const char *type)
             } else if (TYPE(rb_val) == T_DATA) {
                 // I guess this is the right thing to do. Pass the
                 // embedded ObjC as a blob
+              if (strncmp(type, "^{", 2) == 0) {
+                Data_Get_Struct(rb_val,id,* (id*)where);
+              }
+              else {
                 Data_Get_Struct(rb_val,void* ,*(void**)where);
+              }
             } else {
                 ret = NO;
             }
@@ -912,6 +941,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                       rb_class = rb_objc_register_class_from_objc(retClass);
                   }
                   rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,val);
+                  NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rb_val);
               }
           }
           break;
@@ -929,8 +959,33 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
 
         case _C_PTR:
           {
-            // A void * pointer is simply returned as its integer value
-            rb_val = LL2NUM((long long) where);
+            // TODO: check for NSCFType ex: ^{CGColor=}, if so then
+            // load as NSCFType?
+
+            if (strncmp(type, "^{", 2) == 0) {
+              id val = *(id*)where;
+              if ([val respondsToSelector: @selector(retain)]) {
+                [val retain];
+              }
+
+              Class retClass = [val classForCoder] ?: [val class];
+                  
+              NSDebugLog(@"Class of arg transmitted to Ruby = %@",NSStringFromClass(retClass));
+
+              rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
+                  
+                  // if the class of the returned object is unknown to Ruby
+                  // then register the new class with Ruby first
+              if (rb_class == Qfalse) {
+                rb_class = rb_objc_register_class_from_objc(retClass);
+              }
+              rb_val = Data_Wrap_Struct(rb_class,0,rb_objc_release,val);
+              NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rb_val);
+            }
+            else {
+              // A void * pointer is simply returned as its integer value
+              rb_val = LL2NUM((long long) where);
+            }
           }
           break;
 
@@ -1741,7 +1796,6 @@ rb_objc_register_class_from_objc (Class objc_class)
     Class objc_super_class = class_getSuperclass(objc_class);
     VALUE rb_class;
     VALUE rb_super_class = Qnil;
-    //    NSNumber *rb_class_value;
     unsigned int imth_cnt;
     unsigned int cmth_cnt;
 
@@ -1792,13 +1846,21 @@ rb_objc_register_class_from_objc (Class objc_class)
 }
 
 VALUE
+rb_objc_register_ruby_class_from_ruby(VALUE rb_self, VALUE rb_name)
+{
+  @autoreleasepool {
+    return rb_objc_register_ruby_class(rb_name);
+  }
+}
+
+VALUE
 rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name)
 {
     @autoreleasepool {
     char *cname = rb_string_value_cstr(&rb_name);
     VALUE rb_class = Qnil;
 
-    Class objc_class = NSClassFromString([NSString stringWithCString: cname]);
+    Class objc_class = objc_getClass(cname);
     
     if(objc_class)
         rb_class = rb_objc_register_class_from_objc(objc_class);
@@ -1945,9 +2007,11 @@ Init_obj_ext()
 
     // Ruby class methods under the ObjC Ruby module
     // - ObjRuby.class("NSDate") : registers ObjC class with Ruby
+    // - ObjRuby.register("app_delegate"): registers Ruby class with ObjC
     // - ObjRuby.require_framework("Foundation"): registers ObjC framework with Ruby
 
     rb_mRigs = rb_define_module("ObjRuby");
     rb_define_module_function(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
+    rb_define_module_function(rb_mRigs, "register", rb_objc_register_ruby_class_from_ruby, 1);
     rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
 }

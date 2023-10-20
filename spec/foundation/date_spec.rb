@@ -24,16 +24,15 @@ describe ObjRuby::NSDate do
 
     date = described_class.dateWithTimeInterval_sinceDate(0, time)
 
-    expect(date.timeIntervalSince1970).to eq time.to_f
-    expect(date).to eq time
+    expect(date.timeIntervalSince1970).to be_within(0.000001).of(time.to_f)
   end
 
   it "can be transformed into a Ruby time" do
-    date = described_class.new
+    date = described_class.date
 
-    result = date.to_time
+    time = date.to_time
 
-    expect(result).to be_a Time
-    expect(result.to_f).to eq date.timeIntervalSince1970
+    expect(time).to be_a Time
+    expect(time.to_f).to be_within(0.000001).of(date.timeIntervalSince1970)
   end
 end

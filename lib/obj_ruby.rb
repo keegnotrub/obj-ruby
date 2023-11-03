@@ -33,9 +33,15 @@ require "obj_ruby/version"
 require "zeitwerk"
 
 module ObjRuby
-  def self.initialize!(dir)
+  def self.initialize!
+    return unless ENV["OBJR_ROOT"]
+
     loader = Zeitwerk::Loader.new
-    loader.push_dir(dir)
+
+    Dir.glob("*/", base: File.join(ENV["OBJR_ROOT"], "app")).each do |dir|
+      loader.push_dir(File.join(ENV["OBJR_ROOT"], "app", dir))
+    end
+
     loader.on_load do |cpath, value|
       register(value)
     end

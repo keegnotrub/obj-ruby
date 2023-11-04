@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+ENV["OBJR_ROOT"] ||= File.expand_path("..", __dir__)
+
+require "obj_ruby/commands"
+
+ObjRuby::Commands.start

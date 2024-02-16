@@ -23,17 +23,38 @@
 
 module ObjRuby
   class NSMenu
-    def self.standard
-      menu_bar = new
+    def self.shared
+      @shared ||= new
+    end
 
-      app_menu = new
-      app_menu.addItem(NSMenuItem.alloc.initWithTitle_action_keyEquivalent("Quit", "terminate:", "q"))
+    def draw(&block)
+      removeAllItems
+      instance_exec(&block)
+      
+      self
+    end
 
-      app_menu_item = NSMenuItem.new
-      app_menu_item.setSubmenu(app_menu)
+    def menu(title = "", &block)
+      submenu = self.class.alloc.initWithTitle(title)
+      submenu.draw(&block)
 
-      menu_bar.addItem(app_menu_item)
-      menu_bar
+      wrapper = NSMenuItem.new
+      wrapper.setSubmenu(submenu)
+      addItem(wrapper)
+
+      self
+    end
+
+    def item(title = "", action = nil, key = "")
+      addItem(NSMenuItem.alloc.initWithTitle_action_keyEquivalent(title, action, key))
+
+      self
+    end
+
+    def separator
+      addItem(NSMenuItem.separatorItem)
+
+      self
     end
   end
 end

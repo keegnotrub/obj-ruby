@@ -1,6 +1,6 @@
 require "spec_helper"
 
-describe ObjRuby do
+RSpec.describe ObjRuby do
   describe "#import" do
     it "loads the Objective-C class into Ruby's namespace" do
       described_class.import("NSObject")

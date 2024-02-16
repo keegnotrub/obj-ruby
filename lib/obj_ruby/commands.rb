@@ -39,6 +39,7 @@ module ObjRuby
         chmod("bin/objr", "+x")
         directory("config")
         create_file("lib/.keep")
+        create_file("pkg/.keep")
         copy_file("gitignore", ".gitignore")
         template("ruby-version", ".ruby-version")
 
@@ -79,13 +80,19 @@ module ObjRuby
       source_paths << File.expand_path("../../templates/mac-app", __dir__)
 
       in_root do
+        app_files = `git ls-files`.split("\n")
+
+        if app_files.empty?
+          error("Please check files into git by running `git add --all` prior to running `objr package`")
+        end
+        
         remove_dir(resources_dir)
         directory("pkg")
         inside macos_dir do
           chmod(app_slug, "+x")
         end
         source_paths << ENV["OBJR_ROOT"]
-        `git ls-files`.split("\n").each do |file|
+        app_files.each do |file|
           copy_file(file, File.expand_path(file, resources_dir))
         end
         inside resources_dir do

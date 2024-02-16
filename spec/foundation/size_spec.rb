@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSSize do
+RSpec.describe ObjRuby::NSSize do
   it "can create an instance" do
     size1 = described_class.new(100, 200)
     size2 = ObjRuby::NSMakeSize(10, 20)

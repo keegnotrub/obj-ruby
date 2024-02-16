@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSArray do
+RSpec.describe ObjRuby::NSArray do
   it "can create an instance" do
     array = described_class.new
 

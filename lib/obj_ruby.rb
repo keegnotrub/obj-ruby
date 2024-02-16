@@ -46,6 +46,8 @@ module ObjRuby
       register(value)
     end
     loader.setup
+
+    load File.join(ENV["OBJR_ROOT"], "config", "menu.rb")
   end
 
   def self.import(class_name)

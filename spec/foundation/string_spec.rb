@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSString do
+RSpec.describe ObjRuby::NSString do
   it "can create an instance" do
     string = described_class.new
 

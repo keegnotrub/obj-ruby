@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe "ObjRuby::NSLog" do
+RSpec.describe "ObjRuby::NSLog" do
   it "can output to stderr" do
     expect {
       ObjRuby::NSLog("hello world")

@@ -196,6 +196,8 @@ didStartElement:(NSString *)elementName
 
 - (void)parseStructWithName:(NSString*)name type:(NSString*)type
 {
+  NSDebugLog(@"Parsing struct with name %@ and type %@", name, type);
+  
   NSScanner *scanner = [NSScanner scannerWithString:type];
   NSString *structKey;
   NSString *arg;

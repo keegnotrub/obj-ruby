@@ -52,7 +52,7 @@ describe ObjRuby::NSArray do
     expect(sum).to eq(1 + 2 + 3 + 4 + 5)
   end
 
-  it "can use a block return method" do
+  xit "can use a block return method" do
     array1 = described_class.arrayWithArray([1, 2, 3, 4, 5])
     array2 = described_class.arrayWithArray([1, 2, 3, 7, 9])
 

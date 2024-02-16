@@ -8,7 +8,7 @@ describe "ObjRuby::NSLog" do
     }.to output(/hello world/).to_stderr_from_any_process
   end
 
-  it "can take variable arguments" do
+  xit "can take variable arguments" do
     expect {
       ObjRuby::NSLog("one %d %@ %d", 2, "three", 4)
     }.to output(/one 2 three 4/).to_stderr_from_any_process

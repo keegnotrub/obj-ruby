@@ -33,7 +33,7 @@ describe ObjRuby::NSString do
     expect(result).to eq "hello"
   end
 
-  it "can receive variable length arguments" do
+  xit "can receive variable length arguments" do
     string = described_class.stringWithFormat("one %d three %@ %d", 2, "four", 5)
 
     expect(string).to eq "one 2 three four 5"

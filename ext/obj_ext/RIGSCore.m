@@ -1777,6 +1777,15 @@ rb_objc_register_struct_from_objc(const char *key, const char *name, const char 
   case 6:
     rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], NULL);
     break;
+  case 7:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], NULL);
+    break;
+  case 8:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], NULL);
+    break;
+  case 9:
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], NULL);
+    break;
   default:
     rb_raise(rb_eTypeError, "Unsupported struct '%s' with argument size: %d", name, argCount);
     break;

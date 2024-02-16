@@ -1787,7 +1787,7 @@ rb_objc_register_struct_from_objc(const char *key, const char *name, const char 
     rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], NULL);
     break;
   case 10:
-    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[8], NULL);
+    rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], NULL);
     break;
   case 11:
     rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], NULL);

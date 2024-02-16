@@ -22,7 +22,7 @@ describe ObjRuby::NSArray do
   it "can receive a Ruby array" do
     array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
-    manual_array = described_class.arrayWithObjects(1, 2, 3, 4, 5, nil)
+    manual_array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
     expect(array.count).to eq 5
     expect(array.indexOfObject(1)).to eq 0

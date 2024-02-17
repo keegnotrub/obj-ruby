@@ -28,6 +28,6 @@
 #ifndef __RIGS_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGS_h_GNUSTEP_RUBY_INCLUDE
 
-#define NSDebugLog NSLog
+#define NSDebugLog
 
 #endif

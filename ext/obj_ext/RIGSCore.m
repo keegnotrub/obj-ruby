@@ -1503,6 +1503,7 @@ rb_objc_dispatch(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     ffi_cif cif;
     ffi_type **arg_types;
     ffi_type *ret_type;
+    ffi_status status;
 
     args = alloca(sizeof(void*) * nbArgs);
     arg_types = alloca(sizeof(ffi_type*) * nbArgs);
@@ -1531,7 +1532,11 @@ rb_objc_dispatch(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     void *sym = dlsym(RTLD_DEFAULT, name);
     
     if (sym != NULL) {
-      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types) == FFI_OK) {
+      status = nbArgsExtra > 0 ?
+        ffi_prep_cif_var(&cif, FFI_DEFAULT_ABI, nbArgs - nbArgsExtra, nbArgs, ret_type, arg_types) :
+        ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types);
+      
+      if (status == FFI_OK) {
         ffi_call(&cif, FFI_FN(sym), (ffi_arg *)data, args);
         if (ret_type != &ffi_type_void) {
           okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);

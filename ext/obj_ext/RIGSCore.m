@@ -1379,13 +1379,13 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
     [invocation setSelector: sel];
 	
     // Convert arguments from Ruby VALUE to ObjC types
+    ffi_closure *closure = NULL;
     for(i=2; i < nbArgs; i++) {
       type = [signature getArgumentTypeAtIndex:i];
       if (strcmp(type, "@?") == 0) {
         const char* blockObjcTypes = NSMapGet(knownBlocks, hash + i-2);
         void *closurePtr = NULL;
         struct Block *block = NULL;
-        ffi_closure *closure = NULL;
         ffi_cif cif;
 
         if (blockObjcTypes && rb_objc_build_closure_cif(&cif, blockObjcTypes) == FFI_OK) {
@@ -1403,11 +1403,7 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
           }
         }
 
-        [invocation setArgument:&block atIndex:i];
-        
-        if (closure) {
-          ffi_closure_free(closure);
-        }
+        [invocation setArgument:&block atIndex:i];        
       }
       else {
         NSUInteger tsize;
@@ -1420,6 +1416,11 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
 
     // Really invoke the Obj C method now
     [invocation invoke];
+
+    // TODO: this only frees the last closure
+    if (closure) {
+      ffi_closure_free(closure);
+    }
 
     // Examine the return value now and pass it by to Ruby
     // after conversion

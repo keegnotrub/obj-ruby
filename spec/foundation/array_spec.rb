@@ -45,7 +45,7 @@ describe ObjRuby::NSArray do
     expect(result.last).to eq 5
   end
 
-  xit "can use a block method" do
+  it "can use a block method" do
     array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
     sum = 0

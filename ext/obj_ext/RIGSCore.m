@@ -1153,20 +1153,6 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
 
 }
 
-
-VALUE
-rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
-{
-    SEL sel;
-    @autoreleasepool {
-
-    NSDebugLog(@"<<<< Invoking method %s with %d argument(s) on Ruby VALUE 0x%lx (Objc id 0x%lx)",method, rigs_argc, rb_self);
-
-    sel = rb_objc_method_to_sel(method, rigs_argc);
-    return rb_objc_send_with_selector(sel, rigs_argc, rigs_argv, rb_self);
-    }
-}
-
 NSMethodSignature*
 rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *formatString, int nbArgsExtra)
 {
@@ -1300,6 +1286,209 @@ rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
 }
 
 VALUE
+rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int rigs_argc, VALUE *rigs_argv)
+{
+  @autoreleasepool {
+  void *sym;
+  unsigned long hash;
+  int nbArgs;
+  int nbArgsExtra;
+  int nbArgsAdjust;
+  int i;
+  char *type;
+  void *data;
+  void **args;
+  BOOL okydoky;
+  VALUE rb_retval;
+  ffi_cif cif;
+  ffi_type **arg_types;
+  ffi_type *ret_type;
+  ffi_closure *closure;
+  ffi_status status;
+
+  if (rcv != nil) {
+    // TODO: check signature.methodReturnType for objc_msgSend_fpret/stret
+    nbArgsAdjust = 2;
+    sym = objc_msgSend;
+  }
+  else {
+    nbArgsAdjust = 0;
+    sym = dlsym(RTLD_DEFAULT, method);
+  }
+
+  if (!sym) {
+    return Qnil;
+  }
+
+  hash = rb_objc_hash(method);
+
+  nbArgs = [signature numberOfArguments];
+  nbArgsExtra = rigs_argc - (nbArgs - nbArgsAdjust);
+  if (nbArgsExtra < 0) {
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs - nbArgsAdjust);
+    return Qnil;
+  }
+  
+  if (nbArgsExtra > 0) {
+    int formatStringIndex;
+    const char *formatString;
+      
+    formatStringIndex = NSMapGet(knownFormatStrings, hash);
+    if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {
+      formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);
+    }
+    else {
+      formatString = "";
+    }
+    signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
+    nbArgs = [signature numberOfArguments];
+  }
+
+  args = alloca(sizeof(void*) * nbArgs);
+  arg_types = alloca(sizeof(ffi_type*) * nbArgs);
+
+  memset(args, 0, sizeof(void*) * nbArgs);
+  memset(arg_types, 0, sizeof(ffi_type*) * nbArgs);
+
+  for (i=0;i<nbArgsAdjust;i++) {
+    type = [signature getArgumentTypeAtIndex:i];
+    NSUInteger tsize;
+    NSGetSizeAndAlignment(type, &tsize, NULL);
+    data = alloca(tsize);
+    switch (i) {
+    case 0:
+      *(id*)data = rcv;
+      break;
+    case 1:
+      *(SEL*)data = sel_getUid(method);
+      break;
+    }
+    args[i] = data;
+    arg_types[i] = rb_objc_ffi_type_for_type(type);
+  }
+
+  void *closurePtr = NULL;
+  struct Block *block = NULL;
+  ffi_cif closureCif;
+  closure = NULL;
+  for (i=nbArgsAdjust;i<nbArgs;i++) {
+    type = [signature getArgumentTypeAtIndex:i];
+    if (strcmp(type, "@?") == 0) {
+      const char* blockObjcTypes = NSMapGet(knownBlocks, hash + i - nbArgsAdjust);
+      if (blockObjcTypes && rb_objc_build_closure_cif(&closureCif, blockObjcTypes) == FFI_OK) {
+        closure = ffi_closure_alloc(sizeof(ffi_closure), &closurePtr);
+        if (ffi_prep_closure_loc(closure, &closureCif, rb_objc_block_handler, &rigs_argv[i-nbArgsAdjust], closurePtr) == FFI_OK) {
+          block = (struct Block*)malloc(sizeof(struct Block));
+          block->isa = &_NSConcreteStackBlock;
+          block->flags = 1 << 30; // BLOCK_HAS_SIGNATURE
+          block->reserved = 0;
+          block->invoke = closurePtr;
+          block->descriptor = (struct BlockDescriptor*)malloc(sizeof(struct BlockDescriptor));
+          block->descriptor->reserved = 0;
+          block->descriptor->size = sizeof(struct Block);
+          block->descriptor->signature = blockObjcTypes;
+        }
+      }
+
+      NSUInteger tsize;
+      NSGetSizeAndAlignment(type, &tsize, NULL);
+      data = alloca(tsize);
+      *(struct Block**)data = block;
+      args[i] = data;
+      arg_types[i] = rb_objc_ffi_type_for_type(type);
+    }
+    else {
+      NSUInteger tsize;
+      NSGetSizeAndAlignment(type, &tsize, NULL);
+      data = alloca(tsize);
+      okydoky = rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], data, 0, type);
+      args[i] = data;
+      arg_types[i] = rb_objc_ffi_type_for_type(type);
+    }
+  }
+
+  type = [signature methodReturnType];
+
+  ret_type = rb_objc_ffi_type_for_type(type);
+  if (ret_type != &ffi_type_void) {
+    size_t ret_len = MAX(sizeof(long), [signature methodReturnLength]);
+    data = alloca(ret_len);
+  }
+  else {
+    data = NULL;
+  }
+
+  status = nbArgsExtra > 0 ?
+    ffi_prep_cif_var(&cif, FFI_DEFAULT_ABI, nbArgs - nbArgsExtra, nbArgs, ret_type, arg_types) :
+    ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types);
+      
+  if (status == FFI_OK) {
+    ffi_call(&cif, FFI_FN(sym), (ffi_arg *)data, args);
+    if (ret_type != &ffi_type_void) {
+      okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
+    }
+  }
+
+  if (closure != NULL) {
+    ffi_closure_free(closure);
+  }
+  
+  return rb_retval;
+  }
+}
+
+VALUE
+rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
+    SEL sel;
+    NSMethodSignature *signature;
+    
+    /* determine the receiver type - Class or instance ? */
+    switch (TYPE(rb_self)) {
+    case T_DATA:
+      NSDebugLog(@"Self Ruby value is 0x%lx (ObjC is at 0x%lx)",rb_self,DATA_PTR(rb_self));
+      Data_Get_Struct(rb_self,id,rcv);
+      NSDebugLog(@"Self is an object of Class %@ (description is '%@')",NSStringFromClass([rcv classForCoder]),rcv);
+      break;
+    case T_CLASS:
+      rcv = (Class) NUM2LL(rb_iv_get(rb_self, "@objc_class"));
+      NSDebugLog(@"Self is Class: %@", NSStringFromClass(rcv));
+      break;
+    default:
+      /* raise exception */
+      NSDebugLog(@"Don't know how to handle self Ruby object of type 0x%02x",TYPE(rb_self));
+      rb_raise(rb_eTypeError, "not valid self value");
+      return Qnil;
+    }
+
+    sel = rb_objc_method_to_sel(method, rigs_argc);
+    signature = [rcv methodSignatureForSelector:sel];
+
+    if (!signature) {
+      return Qnil;
+    }
+
+    return rb_objc_dispatch(rcv, sel_getName(sel), signature, rigs_argc, rigs_argv);
+  }
+}
+
+
+VALUE
+rb_objc_send_old(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+    SEL sel;
+    @autoreleasepool {
+
+    NSDebugLog(@"<<<< Invoking method %s with %d argument(s) on Ruby VALUE 0x%lx (Objc id 0x%lx)",method, rigs_argc, rb_self);
+
+    sel = rb_objc_method_to_sel(method, rigs_argc);
+    return rb_objc_send_with_selector(sel, rigs_argc, rigs_argv, rb_self);
+    }
+}
+
+VALUE
 rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 {
     @autoreleasepool {
@@ -1362,7 +1551,7 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
       const char* formatString;
 
       formatStringIndex = NSMapGet(knownFormatStrings, hash);
-      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {        
+      if (formatStringIndex > 0 && TYPE(rigs_argv[formatStringIndex-2]) == T_STRING) {
         formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex-2]);
       }
       else {
@@ -1455,7 +1644,34 @@ rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_se
 }
 
 VALUE
-rb_objc_dispatch(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+  @autoreleasepool {
+    const char *method;
+    unsigned long hash;
+    const char *objcTypes;
+    NSMethodSignature *signature;
+    
+    method = rb_id2name(rb_frame_this_func());
+    hash = rb_objc_hash(method);
+    objcTypes = NSMapGet(knownFunctions, hash);
+
+    if (!objcTypes) {
+      return Qnil;
+    }
+    
+    signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
+
+    if (!signature) {
+      return Qnil;
+    }
+
+    return rb_objc_dispatch(nil, method, signature, rigs_argc, rigs_argv);
+  }  
+}
+
+VALUE
+rb_objc_invoke_old(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 {
   @autoreleasepool {
   const char *name = rb_id2name(rb_frame_this_func());
@@ -1567,13 +1783,14 @@ rb_objc_handler(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 	return rb_objc_send(rb_id2name(rb_frame_this_func()), our_argc, our_argv, rb_self);
 }
 
-VALUE
-rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
-{
-	char *method = rb_id2name(SYM2ID(rigs_argv[0]));
+// TODO: IS THIS USED?
+// VALUE
+// rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+// {
+// 	char *method = rb_id2name(SYM2ID(rigs_argv[0]));
  
-	return rb_objc_send(method, rigs_argc-1, rigs_argv+1, rb_self);
-}
+// 	return rb_objc_send(method, rigs_argc-1, rigs_argv+1, rb_self);
+// }
 
 unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
@@ -1679,7 +1896,7 @@ rb_objc_register_function_from_objc(const char *name, const char *objcTypes)
   
   NSMapInsertKnownAbsent(knownFunctions, hash, data);
 
-  rb_define_module_function(rb_mRigs, name, rb_objc_dispatch, -1);
+  rb_define_module_function(rb_mRigs, name, rb_objc_invoke, -1);
 }
 
 

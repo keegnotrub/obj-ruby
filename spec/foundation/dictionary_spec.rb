@@ -25,7 +25,7 @@ describe ObjRuby::NSDictionary do
     expect(dict.objectForKey(:not_key)).to be_nil
   end
 
-  xit "can receive a variable argument list" do
+  it "can receive a variable argument list" do
     dict = described_class.dictionaryWithDictionary(key1: "value1", key2: "value2")
     manual_dict = described_class.dictionaryWithObjectsAndKeys("value1", :key1, "value2", :key2, nil)
 

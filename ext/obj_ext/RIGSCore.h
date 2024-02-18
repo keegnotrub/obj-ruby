@@ -29,6 +29,7 @@
 
 #import <Cocoa/Cocoa.h>
 #include <objc/runtime.h>
+#include <objc/message.h>
 #include <ruby.h>
 #include <dlfcn.h>
 #include <ffi/ffi.h>

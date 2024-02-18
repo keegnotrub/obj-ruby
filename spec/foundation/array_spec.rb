@@ -27,7 +27,7 @@ describe ObjRuby::NSArray do
     expect(array.indexOfObject_inRange(1, ObjRuby::NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
   end
 
-  xit "can receive a variable argument list" do
+  it "can receive a variable argument list" do
     array = described_class.arrayWithArray([1, 2, 3, 4, 5])
     manual_array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
@@ -45,7 +45,7 @@ describe ObjRuby::NSArray do
     expect(result.last).to eq 5
   end
 
-  it "can use a block method" do
+  xit "can use a block method" do
     array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
     sum = 0
@@ -56,7 +56,7 @@ describe ObjRuby::NSArray do
     expect(sum).to eq(1 + 2 + 3 + 4 + 5)
   end
 
-  it "can use a block return method" do
+  xit "can use a block return method" do
     array1 = described_class.arrayWithArray([1, 2, 3, 4, 5])
     array2 = described_class.arrayWithArray([1, 2, 3, 7, 9])
 

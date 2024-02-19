@@ -36,7 +36,7 @@ module ObjRuby
   def self.initialize!(dir)
     loader = Zeitwerk::Loader.new
     loader.push_dir(dir)
-    loader.on_load do |cpath, value|
+    loader.on_load do |_, value|
       register(value)
     end
     loader.setup

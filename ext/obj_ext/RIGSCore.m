@@ -1296,6 +1296,7 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
 
   if (rcv != nil) {
     // TODO: check signature.methodReturnType for objc_msgSend_fpret/stret
+    // TODO: perhaps check [rcv methodForSelector:sel] for IMP
     nbArgsAdjust = 2;
     sym = objc_msgSend;
   }
@@ -1418,6 +1419,9 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
 
   if (closure != NULL) {
     ffi_closure_free(closure);
+  }
+  if (block != NULL) {
+    free(block);
   }
   
   return rb_retval;
@@ -1826,7 +1830,11 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
 
   dlopen([url fileSystemRepresentation], RTLD_LAZY);
 
+#ifdef __aarch64__
+  path = [NSString stringWithFormat:@"BridgeSupport/%s.arm64e.bridgesupport", cname];
+#else
   path = [NSString stringWithFormat:@"BridgeSupport/%s.bridgesupport", cname];
+#endif
   url = [[bundle resourceURL] URLByAppendingPathComponent:path];
 
   NSXMLParser *parser = [[NSXMLParser alloc] initWithContentsOfURL:url];

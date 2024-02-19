@@ -28,8 +28,8 @@
 
 #import <Foundation/Foundation.h>
 #include <ruby.h>
-#include <objc/runtime.h>
 #include <math.h>
+#include <time.h>
 
 // Extend NSDate with a couple of new methods
 @interface NSDate ( RIGSNSDate )

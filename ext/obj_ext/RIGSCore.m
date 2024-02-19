@@ -72,21 +72,6 @@ static NSHashTable *knownFrameworks = 0;
 // Rigs Ruby module
 static VALUE rb_mRigs;
 
-// https://clang.llvm.org/docs/Block-ABI-Apple.html
-struct BlockDescriptor
-{
-  unsigned long reserved;
-  unsigned long size;
-  const char *signature; 
-};
-struct Block {
-  void *isa;
-  int flags;
-  int reserved;
-  void *invoke;
-  struct BlockDescriptor *descriptor;
-};
-
 void
 rb_objc_release(id objc_object) 
 {
@@ -1862,43 +1847,19 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
   }
 }
 
-VALUE
-rb_objc_get_ruby_value_from_string(char * classname)
-{
-    char *evalstg;
-    VALUE rbvalue;
-    
-    // Determine the VALUE of a Ruby Class based on its name
-    // Not sure this is the official way of doing it... (FIXME?)
-    evalstg = malloc(strlen(classname)+5);
-    strcpy(evalstg,classname);
-    strcat(evalstg,".id");
-    // FIXME??: test if equivalent to ID2SYM(rb_eval_string(evalstg))
-    rbvalue = rb_eval_string(evalstg) & ~FIXNUM_FLAG;
-    free(evalstg);
 
-    return rbvalue;
-}
-
-
-void
+void __attribute__((noreturn))
 rb_objc_raise_exception(NSException *exception)
 {
-    VALUE rb_rterror_class, rb_exception;
+    VALUE rb_exception;
     
     NSDebugLog(@"Uncaught Objective C Exception raised !");
     NSDebugLog(@"Name:%@  / Reason:%@  /  UserInfo: ?",
                [exception name],[exception reason]);
 
-    // Declare a new Ruby Exception Class on the fly under the RuntimeError
-    // exception class
-    // Rk: the 1st line below  is the only way I have found to get access to
-    // the VALUE of the RuntimeError class. Pretty ugly.... but it works.
-    //    rb_rterror_class = rb_eval_string("RuntimeError.id") & ~FIXNUM_FLAG;
-    rb_rterror_class = rb_objc_get_ruby_value_from_string("RuntimeError");
-    rb_exception = rb_define_class([[exception name] cString], rb_rterror_class);
+   
+    rb_exception = rb_define_class_under(rb_mRigs, [[[exception name] stringByReplacingOccurrencesOfString:@"Exception" withString:@"Error"] cString], rb_eRuntimeError);
     rb_raise(rb_exception, [[exception reason] cString]);
-    
 }
 
 
@@ -1907,9 +1868,6 @@ rb_objc_raise_exception(NSException *exception)
 void
 Init_obj_ext()
 {
-    // Catch all Objective-C raised exceptions and direct them to Ruby
-    NSSetUncaughtExceptionHandler(rb_objc_raise_exception);
-
     // Initialize hash tables of known Objects and Classes
     knownClasses = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
                                     NSNonOwnedPointerMapValueCallBacks,
@@ -1964,4 +1922,7 @@ Init_obj_ext()
     rb_define_module_function(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
     rb_define_module_function(rb_mRigs, "register", rb_objc_register_ruby_class_from_ruby, 1);
     rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
+
+    // Catch all Objective-C raised exceptions and direct them to Ruby
+    NSSetUncaughtExceptionHandler(rb_objc_raise_exception);
 }

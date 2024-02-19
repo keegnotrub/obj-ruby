@@ -11,7 +11,5 @@
 # rspec failure tracking
 .rspec_status
 
-# use obj_ruby.gemspec instead
-Gemfile.lock
-
-.tool-versions
+# force empty directories
+!.keep

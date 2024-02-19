@@ -11,7 +11,8 @@ Gem::Specification.new do |s|
   s.description = "A fork of GNUstep's RIGS, updated for modern verions of macOS and Ruby."
   s.license = "LGPL-2.1"
 
-  s.files = `git ls-files -- {ext,lib}/*`.split("\n")
+  s.executables = `git ls-files -- bin/*`.split("\n").map { |f| File.basename(f) }
+  s.files = `git ls-files -- {ext,lib,templates}/*`.split("\n")
   s.require_paths = ["lib"]
   s.extensions = ["ext/obj_ext/extconf.rb"]
 

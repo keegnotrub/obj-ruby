@@ -1301,13 +1301,11 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
     // TODO: perhaps check [rcv methodForSelector:sel] for IMP
     nbArgsAdjust = 2;
     switch(*(signature.methodReturnType)) {
+#ifndef __aarch64__
     case _C_STRUCT_B:
       sym = objc_msgSend_stret;
       break;
-    case _C_FLT:
-    case _C_DBL:
-      sym = objc_msgSend_fpret;
-      break;
+#endif      
     default:
       sym = objc_msgSend;
       break;

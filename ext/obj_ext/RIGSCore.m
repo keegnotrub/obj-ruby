@@ -915,6 +915,9 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   }
 
                   Class retClass = [val classForCoder] ?: [val class];
+                  if (retClass != [val class] && strncmp(object_getClassName(val), "NSConcrete", 10) == 0) { 
+                    retClass = [val class];
+                  }
                   
                   NSDebugLog(@"Class of arg transmitted to Ruby = %@",NSStringFromClass(retClass));
 
@@ -1295,10 +1298,18 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
   ffi_cif closureCif;
 
   if (rcv != nil) {
-    // TODO: check signature.methodReturnType for objc_msgSend_fpret/stret
     // TODO: perhaps check [rcv methodForSelector:sel] for IMP
     nbArgsAdjust = 2;
-    sym = objc_msgSend;
+    switch(*(signature.methodReturnType)) {
+#ifndef __aarch64__
+    case _C_STRUCT_B:
+      sym = objc_msgSend_stret;
+      break;
+#endif      
+    default:
+      sym = objc_msgSend;
+      break;
+    }
   }
   else {
     nbArgsAdjust = 0;

@@ -5,7 +5,7 @@ class ViewController < ObjRuby::NSViewController
 
   def loadView
     view = ObjRuby::NSView.alloc.initWithFrame(ObjRuby::NSMakeRect(0, 0, 600, 400))
-    
+
     label = ObjRuby::NSTextView.new
     label.setTranslatesAutoresizingMaskIntoConstraints(false)
 
@@ -54,7 +54,7 @@ class ViewController < ObjRuby::NSViewController
         "H:[label(#{rect.size.width})]",
         nil,
         nil,
-        { "label" => label }
+        {"label" => label}
       )
     )
     view.addConstraints(
@@ -62,15 +62,15 @@ class ViewController < ObjRuby::NSViewController
         "V:[label(#{rect.size.height})]",
         nil,
         nil,
-        { "label" => label }
+        {"label" => label}
       )
     )
 
     setView(view)
   end
 
-  #def viewDidLoad
-    #view.setWantsLayer(true)
-    #view.layer.setBackgroundColor(ObjRuby::NSColor.redColor.CGColor)
-  #end
+  # def viewDidLoad
+  # view.setWantsLayer(true)
+  # view.layer.setBackgroundColor(ObjRuby::NSColor.redColor.CGColor)
+  # end
 end

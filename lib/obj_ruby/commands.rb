@@ -85,7 +85,7 @@ module ObjRuby
         if app_files.empty?
           error("Please check files into git by running `git add --all` prior to running `objr package`")
         end
-        
+
         remove_dir(resources_dir)
         directory("pkg")
         inside macos_dir do

@@ -30,7 +30,7 @@ module ObjRuby
     def draw(&block)
       removeAllItems
       instance_exec(&block)
-      
+
       self
     end
 

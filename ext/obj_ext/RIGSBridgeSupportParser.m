@@ -196,9 +196,14 @@ didStartElement:(NSString *)elementName
 
 - (void)parseStructWithName:(NSString*)name type:(NSString*)type
 {
-  NSScanner *scanner = [NSScanner scannerWithString:type];
+  NSScanner *scanner;
   NSString *structKey;
   NSString *arg;
+
+  // skip: "struct (unnamed at ...)"
+  if ([name containsString:@" "]) return;
+  
+  scanner = [NSScanner scannerWithString:type];
 
   [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"{"] intoString:NULL];
   [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"="] intoString:&structKey];

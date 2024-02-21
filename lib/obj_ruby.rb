@@ -42,7 +42,7 @@ module ObjRuby
       loader.push_dir(File.join(ENV["OBJR_ROOT"], "app", dir))
     end
 
-    loader.on_load do |cpath, value|
+    loader.on_load do |_, value|
       register(value)
     end
     loader.setup

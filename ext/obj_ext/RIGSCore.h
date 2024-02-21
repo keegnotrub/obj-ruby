@@ -29,6 +29,7 @@
 
 #import <Cocoa/Cocoa.h>
 #include <objc/runtime.h>
+#include <objc/message.h>
 #include <ruby.h>
 #include <dlfcn.h>
 #include <ffi/ffi.h>
@@ -39,16 +40,13 @@ VALUE rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
 BOOL rb_objc_convert_to_objc(VALUE rb_val, void *data, int offset, const char *type);
 BOOL rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_ptr, BOOL autoconvert);
 
-VALUE rb_objc_send(char *method, int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
-VALUE rb_objc_send_with_selector(SEL sel, int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
-VALUE rb_objc_handler(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
+VALUE rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 
 unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
 unsigned int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
 VALUE rb_objc_register_class_from_objc (Class objc_class);
 VALUE rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name);
-VALUE rb_objc_get_ruby_value_from_string(char * classname);
 
 void rb_objc_register_float_from_objc(const char *name, double value);
 void rb_objc_register_integer_from_objc(const char *name, long long value);

@@ -35,6 +35,21 @@
   ({ typeof(V) __v=(V); typeof(A) __a=(A); \
      __a*((__v+__a-1)/__a); })
 
+// https://clang.llvm.org/docs/Block-ABI-Apple.html
+struct BlockDescriptor
+{
+  unsigned long reserved;
+  unsigned long size;
+  const char *signature; 
+};
+struct Block {
+  void *isa;
+  int flags;
+  int reserved;
+  void *invoke;
+  struct BlockDescriptor *descriptor;
+};
+
 SEL rb_objc_method_to_sel(const char* name, int argc);
 const char *rb_objc_sel_to_method(SEL sel);
 

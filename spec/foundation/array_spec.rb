@@ -22,11 +22,15 @@ describe ObjRuby::NSArray do
   it "can receive a Ruby array" do
     array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
-    manual_array = described_class.arrayWithObjects(1, 2, 3, 4, 5, nil)
-
     expect(array.count).to eq 5
     expect(array.indexOfObject(1)).to eq 0
     expect(array.indexOfObject_inRange(1, ObjRuby::NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
+  end
+
+  it "can receive a variable argument list" do
+    array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+    manual_array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+
     expect(array.isEqualToArray(manual_array)).to be true
   end
 

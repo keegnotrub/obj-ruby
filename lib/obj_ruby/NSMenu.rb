@@ -27,16 +27,16 @@ module ObjRuby
       @shared ||= new
     end
 
-    def draw(&block)
+    def draw(&)
       removeAllItems
-      instance_exec(&block)
+      instance_exec(&)
 
       self
     end
 
-    def menu(title = "", &block)
+    def menu(title = "", &)
       submenu = self.class.alloc.initWithTitle(title)
-      submenu.draw(&block)
+      submenu.draw(&)
 
       wrapper = NSMenuItem.new
       wrapper.setSubmenu(submenu)

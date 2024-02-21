@@ -42,6 +42,7 @@ module ObjRuby
         create_file("pkg/.keep")
         copy_file("gitignore", ".gitignore")
         template("ruby-version", ".ruby-version")
+        template("tool-versions", ".tool-versions")
 
         run("git init -b main")
 

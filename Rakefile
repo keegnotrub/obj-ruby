@@ -10,7 +10,7 @@ desc "Compile obj_ext.bundle locally for lib"
 task :compile do
   Dir.chdir(File.expand_path("tmp", __dir__)) do
     extconf = File.expand_path("ext/obj_ext/extconf.rb", __dir__)
-        
+
     system(Gem.ruby, extconf) &&
       system("make install sitearchdir=../lib sitelibdir=../lib target_prefix=")
   end

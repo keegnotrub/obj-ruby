@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.extensions = ["ext/obj_ext/extconf.rb"]
 
   s.platform = Gem::Platform.new("darwin")
-  s.required_ruby_version = Gem::Requirement.new(">= 2.6.0")
+  s.required_ruby_version = Gem::Requirement.new(">= 2.7.0")
 
   s.add_runtime_dependency "thor", "~> 1.0"
   s.add_runtime_dependency "zeitwerk", "~> 2.6"

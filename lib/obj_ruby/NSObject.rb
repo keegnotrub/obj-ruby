@@ -32,7 +32,7 @@ module ObjRuby
       return if name.nil?
 
       attr_accessor name
-      alias_method "set#{name.capitalize}", "#{name}="
+      alias_method :"set#{name.capitalize}", :"#{name}="
     end
 
     def self.ib_action(...)

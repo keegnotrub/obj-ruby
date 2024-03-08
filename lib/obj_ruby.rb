@@ -33,9 +33,9 @@ require "obj_ruby/version"
 require "zeitwerk"
 
 module ObjRuby
-  def self.root(*)
+  def self.root(*args)
     if ENV["OBJR_ROOT"]
-      File.join(ENV["OBJR_ROOT"], *)
+      File.join(ENV["OBJR_ROOT"], *args)
     end
   end
 

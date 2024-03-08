@@ -1,10 +1,11 @@
 require_relative "environment"
 
 app = ObjRuby::NSApplication.sharedApplication
-app.setMenu(ObjRuby::NSMenu.shared)
+nib = ObjRuby::NSNib.alloc.initWithNibNamed_bundle("MainMenu", ObjRuby::NSBundle.bundleWithPath(ObjRuby.root("assets")))
+nib.instantiateNibWithExternalNameTable(ObjRuby::NSNibOwner => app)
+
 app.setActivationPolicy(ObjRuby::NSApplicationActivationPolicyRegular)
 app.activateIgnoringOtherApps(true)
-app.setDelegate(AppDelegate.new)
 app.run
 
 exit

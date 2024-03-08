@@ -1,0 +1,11 @@
+#import <Cocoa/Cocoa.h>
+<% stubs.each do |stub| %>
+@interface <%= stub.class_name %> : <%= stub.superclass_name %>
+<% stub.outlets.each do |action| %>
+@property (strong) IBOutlet id <%= action.id %>;
+<% end %>
+<% stub.actions.each do |action| %>
+-(IBAction)<%= action.id %>:(id)sender;
+<% end %>
+@end
+<% end %>

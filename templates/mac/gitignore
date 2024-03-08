@@ -7,6 +7,8 @@
 /spec/reports/
 /tmp/
 /lib/*.bundle
+/assets/*.nib
+/tmp/*
 
 # rspec failure tracking
 .rspec_status

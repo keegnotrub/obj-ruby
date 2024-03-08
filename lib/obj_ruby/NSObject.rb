@@ -26,6 +26,18 @@
 
 module ObjRuby
   class NSObject
+    def self.ib_outlet(*args)
+      name = args.first
+
+      return if name.nil?
+
+      attr_accessor name
+      alias_method "set#{name.capitalize}", "#{name}="
+    end
+
+    def self.ib_action(...)
+    end
+
     def ==(other)
       isEqual(other)
     end

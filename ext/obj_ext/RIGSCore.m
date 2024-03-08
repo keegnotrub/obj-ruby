@@ -280,6 +280,16 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
 
   rubyMethodName = rb_objc_sel_to_method(sel);
   rubyObject = (VALUE) NSMapGet(knownObjects,(void *)val);
+  if (rubyObject == NULL) {
+    Class retClass = [val classForCoder] ?: [val class];
+    VALUE rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
+    // TODO: handle when rb_class is NULL, this could happen if we failed
+    // to register the Ruby class ahead of Objective-C using it
+    if (rb_class != NULL) {
+      rubyObject = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
+      NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rubyObject);
+    }
+  }    
   rubyArgs = malloc((cif->nargs - 2) * sizeof(VALUE));
 
   for (i=2;i<cif->nargs;i++) {
@@ -1887,6 +1897,24 @@ rb_objc_raise_exception(NSException *exception)
 void
 Init_obj_ext()
 {
+    // char **a = *_NSGetArgv();
+    // int b = *_NSGetArgc();
+    // char *c = *_NSGetProgname();
+    // char **d = *_NSGetEnviron();
+      
+    // int i =0;
+    
+    // NSLog(@"start");
+    // for (i=0;i<b;i++) {
+    //     NSLog(@"here: %s", a[i]);
+    // }
+    // NSLog(@"prog: %s", c);
+    // for (i=0;d[i]!=NULL;i++) {
+    //   NSLog(@"env: %s", d[i]);
+    // }
+    // NSLog(@"end");
+  
+  
     // Initialize hash tables of known Objects and Classes
     knownClasses = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
                                     NSNonOwnedPointerMapValueCallBacks,
@@ -1934,7 +1962,7 @@ Init_obj_ext()
 
     // Ruby class methods under the ObjC Ruby module
     // - ObjRuby.class("NSDate") : registers ObjC class with Ruby
-    // - ObjRuby.register("app_delegate"): registers Ruby class with ObjC
+    // - ObjRuby.register(AppDelegate): registers Ruby class with ObjC
     // - ObjRuby.require_framework("Foundation"): registers ObjC framework with Ruby
 
     rb_mRigs = rb_define_module("ObjRuby");

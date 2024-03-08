@@ -1,7 +1,7 @@
 require "obj_ruby/version"
-require "fileutils"
+require "obj_ruby/stubs"
+require "obj_ruby/assets"
 require "thor"
-require "pathname"
 
 module ObjRuby
   class Commands < Thor
@@ -36,13 +36,18 @@ module ObjRuby
         template("Gemfile")
         directory("app")
         directory("bin")
+        directory("assets")
         chmod("bin/objr", "+x")
         directory("config")
         create_file("lib/.keep")
         create_file("pkg/.keep")
+        create_file("tmp/.keep")
         copy_file("gitignore", ".gitignore")
         template("ruby-version", ".ruby-version")
         template("tool-versions", ".tool-versions")
+        load_stubs
+        load_assets
+        directory("%app_name%.xcodeproj")
 
         run("git init -b main")
 
@@ -59,7 +64,9 @@ module ObjRuby
       self.destination_root = ENV["OBJR_ROOT"]
 
       in_root do
-        system(Gem.ruby, "config/boot.rb")
+        puts("ObjRuby #{ObjRuby::VERSION} application starting")
+        compile_xibs
+        exec(Gem.ruby, "config/boot.rb")
       end
     end
 
@@ -69,7 +76,24 @@ module ObjRuby
       self.destination_root = ENV["OBJR_ROOT"]
 
       in_root do
-        system(Gem.ruby, "config/console.rb")
+        puts("ObjRuby #{ObjRuby::VERSION} console starting")
+        compile_xibs
+        exec(Gem.ruby, "config/console.rb")
+      end
+    end
+
+    map ["e"] => :editor
+    desc "editor", "Opens the ObjRuby Xcode project", hide: generator?
+    def editor
+      self.destination_root = ENV["OBJR_ROOT"]
+      source_paths << File.expand_path("../../templates/mac", __dir__)
+
+      in_root do
+        load_stubs
+        load_assets
+        directory("%app_name%.xcodeproj", force: true)
+
+        system("open", editor_dir)
       end
     end
 
@@ -81,10 +105,11 @@ module ObjRuby
       source_paths << File.expand_path("../../templates/mac-app", __dir__)
 
       in_root do
-        app_files = `git ls-files`.split("\n")
+        app_files = `git ls-files`.split("\n").map { |f| Pathname.new(f) }
 
         if app_files.empty?
           error("Please check files into git by running `git add --all` prior to running `objr package`")
+          return
         end
 
         remove_dir(resources_dir)
@@ -94,7 +119,14 @@ module ObjRuby
         end
         source_paths << ENV["OBJR_ROOT"]
         app_files.each do |file|
-          copy_file(file, File.expand_path(file, resources_dir))
+          case file.extname
+          when ".xib"
+            nib = File.join(resources_dir, file.sub_ext(".nib"))
+            say_status(:create, nib)
+            system("ibtool #{file} --compile #{nib}")
+          else
+            copy_file(file, File.expand_path(file, resources_dir))
+          end
         end
         inside resources_dir do
           require "bundler"
@@ -106,6 +138,36 @@ module ObjRuby
     end
 
     private
+
+    def load_stubs
+      Pathname.glob("app/**/*.rb").each do |rb|
+        stubs.append_file(rb)
+      end
+    end
+
+    def load_assets
+      Assets::SUPPORTED_TYPES.each_key do |ext|
+        Pathname.glob("assets/**/*#{ext}").each do |asset|
+          unless asset.fnmatch("*/*.xcassets/*")
+            assets.append_file(asset)
+          end
+        end
+      end
+    end
+
+    def compile_xcassets
+      Pathname.glob("assets/**/*.xcassets").each do |xcassets|
+        system("xcrun actool #{xcassets} --compile #{xcassets.dirname} --platform macosx --minimum-deployment-target 12.0 --app-icon AppIcon --output-partial-info-plist tmp.plist")
+      end
+    end
+
+    def compile_xibs
+      Pathname.glob("assets/**/*.xib").each do |xib|
+        xib.sub_ext(".nib").tap do |nib|
+          system("xcrun ibtool #{xib} --compile #{nib}")
+        end
+      end
+    end
 
     def app_name
       app_dir.gsub(/[\W\-_]/, "_").squeeze("_").split("_").map(&:capitalize).join(" ")
@@ -123,8 +185,20 @@ module ObjRuby
       "pkg/#{app_name}.app/Contents/Resources"
     end
 
+    def editor_dir
+      "#{app_name}.xcodeproj"
+    end
+
     def app_dir
       File.basename(ENV["OBJR_ROOT"] || destination_root)
+    end
+
+    def stubs
+      @stubs ||= Stubs.new
+    end
+
+    def assets
+      @assets ||= Assets.new
     end
   end
 end

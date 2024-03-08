@@ -1,13 +1,22 @@
 class AppDelegate < ObjRuby::NSObject
-  def applicationWillFinishLaunching(notification)
-    @window_controller = WindowController.alloc.init
+  ib_outlet :window
+  ib_action :openTutorial
+
+  def openTutorial(sender)
+    ObjRuby::NSWorkspace.sharedWorkspace.openURL(ObjRuby::NSURL.URLWithString("https://github.com/keegnotrub/obj-ruby"))
   end
 
-  def applicationDidFinishLaunching(notification)
-    @window_controller.showWindow(self)
+  def applicationWillFinishLaunching(_)
+    ObjRuby::NSLog("applicationWillFinishLaunching:")
   end
 
-  def applicationShouldTerminateAfterLastWindowClosed(application)
+  def applicationDidFinishLaunching(_)
+    ObjRuby::NSLog("applicationDidFinishLaunching:")
+    window.center
+  end
+
+  def applicationShouldTerminateAfterLastWindowClosed(_)
+    ObjRuby::NSLog("applicationShouldTerminateAfterLastWindowClosed:")
     true
   end
 end

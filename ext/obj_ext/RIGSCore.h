@@ -30,6 +30,7 @@
 #import <Cocoa/Cocoa.h>
 #include <objc/runtime.h>
 #include <objc/message.h>
+#include <crt_externs.h>
 #include <ruby.h>
 #include <dlfcn.h>
 #include <ffi/ffi.h>

@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency "zeitwerk", "~> 2.6"
   s.add_runtime_dependency "prism", "~> 0.24"
 
-  a.add_development_dependency "rake"
+  s.add_development_dependency "rake"
   s.add_development_dependency "rspec"
   s.add_development_dependency "standard"
 end

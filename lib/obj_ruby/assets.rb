@@ -4,7 +4,6 @@ module ObjRuby
   class Assets
     SUPPORTED_TYPES = {
       ".xib" => "file.xib",
-      ".xcassets" => "folder.assetcatalog",
       ".gif" => "image.gif",
       ".png" => "image.png"
     }

@@ -1897,24 +1897,6 @@ rb_objc_raise_exception(NSException *exception)
 void
 Init_obj_ext()
 {
-    // char **a = *_NSGetArgv();
-    // int b = *_NSGetArgc();
-    // char *c = *_NSGetProgname();
-    // char **d = *_NSGetEnviron();
-      
-    // int i =0;
-    
-    // NSLog(@"start");
-    // for (i=0;i<b;i++) {
-    //     NSLog(@"here: %s", a[i]);
-    // }
-    // NSLog(@"prog: %s", c);
-    // for (i=0;d[i]!=NULL;i++) {
-    //   NSLog(@"env: %s", d[i]);
-    // }
-    // NSLog(@"end");
-  
-  
     // Initialize hash tables of known Objects and Classes
     knownClasses = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
                                     NSNonOwnedPointerMapValueCallBacks,

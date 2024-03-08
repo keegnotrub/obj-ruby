@@ -148,16 +148,8 @@ module ObjRuby
     def load_assets
       Assets::SUPPORTED_TYPES.each_key do |ext|
         Pathname.glob("assets/**/*#{ext}").each do |asset|
-          unless asset.fnmatch("*/*.xcassets/*")
-            assets.append_file(asset)
-          end
+          assets.append_file(asset)
         end
-      end
-    end
-
-    def compile_xcassets
-      Pathname.glob("assets/**/*.xcassets").each do |xcassets|
-        system("xcrun actool #{xcassets} --compile #{xcassets.dirname} --platform macosx --minimum-deployment-target 12.0 --app-icon AppIcon --output-partial-info-plist tmp.plist")
       end
     end
 

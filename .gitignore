@@ -14,4 +14,7 @@
 # use obj_ruby.gemspec instead
 Gemfile.lock
 
+# force empty directories
+!.keep
+
 .tool-versions

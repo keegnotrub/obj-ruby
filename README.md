@@ -4,8 +4,8 @@ A fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), updated for mo
 
 ## Dependencies
 
-- Ruby 2.7, 3.0, 3.1 or 3.2
-- macOS 11, 12, or 13
+- Ruby 2.7, 3.0, 3.1, 3.2, or 3.3
+- macOS 11, 12, 13, or 14 (with [Xcode installed](https://apps.apple.com/us/app/xcode/id497799835))
 
 ## Getting Started
 
@@ -40,4 +40,4 @@ It's really a testimate to both Laurent and the Objective-C runtime in general t
 
 ## License
 
-This project is Copyright © 2023 Ryan Krug and thoughtbot. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.
+This project is Copyright © 2024 Ryan Krug and thoughtbot. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.

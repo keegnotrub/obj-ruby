@@ -11,11 +11,11 @@ desc "Compile obj_ext.bundle into the lib directory"
 task :compile do
   tmp = File.expand_path("tmp", __dir__)
   extconf = File.expand_path("ext/obj_ext/extconf.rb", __dir__)
-  
+
   if !Dir.exist?(tmp)
     Dir.mkdir(tmp)
   end
-  
+
   Dir.chdir(tmp) do
     system(Gem.ruby, extconf, exception: true)
     system("make clean", exception: true)

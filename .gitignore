@@ -5,7 +5,7 @@
 /doc/
 /pkg/
 /spec/reports/
-/tmp/*
+/tmp/
 /lib/*.bundle
 
 # rspec failure tracking

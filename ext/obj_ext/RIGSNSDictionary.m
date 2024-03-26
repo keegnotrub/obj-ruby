@@ -44,6 +44,8 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   NSDictionary *returnDictionary;
   int i;
   int count;
+  void *keyData;
+  void *valueData;
   id *keyObjects;
   id *valueObjects;
   VALUE rb_key;
@@ -76,12 +78,13 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSDictionary
   for (i = 0; i < count; i++) {
-      
+    keyData = &keyObjects[i];
+    valueData = &valueObjects[i];
     rb_key = rb_ary_entry(ruby_keys, (long)i);
     rb_value = rb_ary_entry(ruby_values, (long)i);
      
-    okydoky = rb_objc_convert_to_objc(rb_key, &keyObjects[i], 0, idType);
-    okydoky = rb_objc_convert_to_objc(rb_value, &valueObjects[i], 0, idType);
+    okydoky = rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
+    okydoky = rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
   }
 
   returnDictionary = [NSDictionary dictionaryWithObjects:valueObjects forKeys:keyObjects count:count];

@@ -18,7 +18,7 @@ module ObjRuby
     end
 
     def self.exit_on_failure?
-      false
+      true
     end
 
     map ["-v", "--version"] => :version
@@ -108,8 +108,7 @@ module ObjRuby
         app_files = `git ls-files`.split("\n").map { |f| Pathname.new(f) }
 
         if app_files.empty?
-          error("Please check files into git by running `git add --all` prior to running `objr package`")
-          return
+          raise Thor::Error, "Please check files into git by running `git add --all` prior to running `objr package`"
         end
 
         remove_dir(resources_dir)
@@ -123,7 +122,7 @@ module ObjRuby
           when ".xib"
             nib = File.join(resources_dir, file.sub_ext(".nib"))
             say_status(:create, nib)
-            system("ibtool #{file} --compile #{nib}")
+            system("xcrun ibtool #{file} --compile #{nib}")
           else
             copy_file(file, File.expand_path(file, resources_dir))
           end

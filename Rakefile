@@ -1,19 +1,29 @@
 # frozen_string_literal: true
 
-require "bundler/gem_tasks"
-require "rspec/core/rake_task"
+require "rake/clean"
 require "standard/rake"
+require "rspec/core/rake_task"
+require "bundler/gem_tasks"
 
-RSpec::Core::RakeTask.new(:spec)
+CLOBBER.include("tmp")
 
-desc "Compile obj_ext.bundle locally for lib"
+desc "Compile obj_ext.bundle into the lib directory"
 task :compile do
-  Dir.chdir(File.expand_path("tmp", __dir__)) do
-    extconf = File.expand_path("ext/obj_ext/extconf.rb", __dir__)
-
-    system(Gem.ruby, extconf) &&
-      system("make install sitearchdir=../lib sitelibdir=../lib target_prefix=")
+  tmp = File.expand_path("tmp", __dir__)
+  extconf = File.expand_path("ext/obj_ext/extconf.rb", __dir__)
+  
+  if !Dir.exist?(tmp)
+    Dir.mkdir(tmp)
+  end
+  
+  Dir.chdir(tmp) do
+    system(Gem.ruby, extconf, exception: true)
+    system("make clean", exception: true)
+    system("make", exception: true)
+    system("make install sitearchdir=../lib sitelibdir=../lib target_prefix=", exception: true)
   end
 end
 
-task default: [:standard, :compile, :spec]
+RSpec::Core::RakeTask.new(:spec)
+
+task default: [:compile, :spec]

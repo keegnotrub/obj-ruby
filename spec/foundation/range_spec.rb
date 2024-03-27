@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSRange do
+RSpec.describe ObjRuby::NSRange do
   it "can create an instance" do
     range1 = described_class.new(0, 5)
     range2 = ObjRuby::NSMakeRange(5, 10)

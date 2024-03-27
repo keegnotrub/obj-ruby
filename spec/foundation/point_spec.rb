@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSPoint do
+RSpec.describe ObjRuby::NSPoint do
   it "can create an instance" do
     point1 = described_class.new(1, 2)
     point2 = ObjRuby::NSMakePoint(3, 4)

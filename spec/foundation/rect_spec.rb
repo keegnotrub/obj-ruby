@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSRect do
+RSpec.describe ObjRuby::NSRect do
   it "can create an instance" do
     rect1 = ObjRuby::NSRect.new(ObjRuby::NSMakePoint(50, 100), ObjRuby::NSMakeSize(200, 300))
     rect2 = ObjRuby::NSMakeRect(100, 200, 50, 150)

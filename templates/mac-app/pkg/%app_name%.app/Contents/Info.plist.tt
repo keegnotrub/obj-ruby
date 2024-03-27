@@ -7,9 +7,9 @@
     <key>CFBundleDisplayName</key>
     <string><%= app_name %></string>
     <key>CFBundleExecutable</key>
-    <string><%= app_slug %></string>
+    <string><%= app_name %></string>
     <key>CFBundleIconFile</key>
-    <string><%= app_slug %></string>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.company.<%= app_slug %></string>
     <key>CFBundleInfoDictionaryVersion</key>

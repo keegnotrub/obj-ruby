@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/app_kit"
 
-describe ObjRuby::NSAlert do
+RSpec.describe ObjRuby::NSAlert do
   it "can create an instance" do
     alert = described_class.new
 

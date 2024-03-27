@@ -1,0 +1,8 @@
+#import "Stubs.h"
+<% stubs.each do |stub| %>
+@implementation <%= stub.class_name %>
+<% stub.actions.each do |action| %>
+-(IBAction)<%= action.id %>:(id)sender { }
+<% end %>
+@end
+<% end %>

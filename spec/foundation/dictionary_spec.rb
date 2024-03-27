@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSDictionary do
+RSpec.describe ObjRuby::NSDictionary do
   it "can create an instance" do
     date = described_class.new
 

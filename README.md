@@ -4,53 +4,30 @@ A fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), updated for mo
 
 ## Dependencies
 
-- Ruby 2.7, 3.0, 3.1 or 3.2
-- macOS 11, 12, or 13
+- Ruby 2.7, 3.0, 3.1, 3.2, or 3.3
+- macOS 11, 12, 13, or 14 (with [Xcode installed](https://apps.apple.com/us/app/xcode/id497799835))
 
-## Installation
+## Getting Started
 
-You can run: 
+1. Install ObjRuby at the command prompt:
 
-    $ gem install obj_ruby
+        $ gem install obj_ruby
 
-Or you can include in your Gemfile:
+2. At the command prompt, create a new ObjRuby application:
 
-```ruby
-gem 'obj_ruby', '~> 0.1'
-```
+        $ objr new myapp
 
-## Usage
+   where "myapp" is the application name.
 
-ObjRuby imports Objective-C classes dynamically at runtime. As an example, here is how you can import the `NSDate` class into Ruby's namespace (for more examples, see this projects [spec](https://github.com/keegnotrub/obj-ruby/tree/main/spec) folder):
+3. Change directory to `myapp` and start the app:
 
-``` ruby
-ObjRuby.import("NSDate")
+        $ cd myapp
+        $ objr start
 
-date = ObjRuby::NSDate.dateWithTimeIntervalSince1970(42424242)
-other_date = date.addTimeInterval(1000)
-earlier_date = date.earlierDate(other_date)
-```
+   Run `objr help` for other options.
 
-Oftentimes you'll want to import all of a particular framework like [Foundation](https://developer.apple.com/documentation/foundation?language=objc) or [AppKit](https://developer.apple.com/documentation/appkit?language=objc). ObjRuby provides convenience requires for each:
+5. Follow the [getting started guide](docs/getting-started.md) to start developing your application.
 
-``` ruby
-require "obj_ruby/foundation"
-
-dict = ObjRuby::NSMutableDictionary.new
-dict.setObject_forKey(ObjRuby::NSDate.new, "Hello!")
-```
-
-``` ruby
-require "obj_ruby/app_kit"
-
-app = ObjRuby::NSApplication.sharedApplication
-app.setActivationPolicy ObjRuby::NSApplicationActivationPolicyRegular
-app.activateIgnoringOtherApps(true)
-
-alert = ObjRuby::NSAlert.new
-alert.setMessageText("Hello world!")
-alert.runModal
-```
 
 ## Credit
 
@@ -63,4 +40,4 @@ It's really a testimate to both Laurent and the Objective-C runtime in general t
 
 ## License
 
-This project is Copyright © 2023 Ryan Krug and thoughtbot. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.
+This project is Copyright © 2024 Ryan Krug and thoughtbot. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.

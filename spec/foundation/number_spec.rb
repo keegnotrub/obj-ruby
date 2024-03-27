@@ -1,7 +1,7 @@
 require "spec_helper"
 require "obj_ruby/foundation"
 
-describe ObjRuby::NSNumber do
+RSpec.describe ObjRuby::NSNumber do
   it "can create an instance" do
     number = described_class.numberWithBool(true)
 

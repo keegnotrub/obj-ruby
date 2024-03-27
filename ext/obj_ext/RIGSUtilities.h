@@ -52,9 +52,28 @@ struct rb_objc_block {
 
 struct rb_objc_ptr
 {
-  long allocated_size;
+  unsigned long allocated_size;
+  BOOL retained;
   void *cptr;
   const char *encoding;
+};
+
+static const char* rb_objc_ptr_types[][2] = {
+  {     "object", "@" },
+  {       "bool", "B" },
+  {       "char", "c" },
+  {      "uchar", "C" },
+  {      "short", "s" },
+  {     "ushort", "S" },
+  {        "int", "i" },
+  {       "uint", "I" },
+  {       "long", "l" },
+  {      "ulong", "L" },
+  {  "long_long", "q" },
+  { "ulong_long", "Q" },
+  {      "float", "f" },
+  {     "double", "d" },
+  {        NULL, NULL }
 };
 
 SEL rb_objc_method_to_sel(const char* name, int argc);

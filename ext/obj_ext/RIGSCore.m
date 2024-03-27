@@ -178,6 +178,8 @@ rb_objc_ptr_retain(VALUE rcv)
       offset += sizeof(id);
       [obj retain];
     }
+
+    dp->retained = YES;
   }
 }
 
@@ -1913,9 +1915,30 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
 }
 
 void
+rb_objc_ptr_release(struct rb_objc_ptr *dp)
+{
+  id obj;
+  long offset = 0;
+
+  if (dp->retained == NO) return;
+  if (dp->allocated_size == 0) return;
+  if (dp->encoding == NULL) return;
+  if (*(dp->encoding) != _C_ID) return;
+
+  while (offset < dp->allocated_size) {
+    obj = *(id*)(dp->cptr + offset);
+    offset += sizeof(id);
+    [obj release];
+  }
+
+  dp->retained = NO;
+}
+
+void
 rb_objc_ptr_free(struct rb_objc_ptr *dp)
 {
   if (dp != NULL) {
+    if (dp->retained) rb_objc_ptr_release(dp);
     if (dp->allocated_size > 0) free(dp->cptr);
     if (dp->encoding) free((char*)dp->encoding);
     dp->allocated_size = 0;
@@ -1933,20 +1956,47 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     VALUE enc;
     VALUE cnt;
     char *encoding;
+    ID key;
+    const char* (*types)[2];
     char *data;
     NSUInteger tsize;
     struct rb_objc_ptr *dp;
 
     rigs_argc = rb_scan_args(rigs_argc, rigs_argv, "11", &enc, &cnt);
 
-    Check_Type(enc, T_STRING);
+    switch (TYPE(enc)) {
+    case T_SYMBOL:
+      encoding = NULL;
+      key = rb_to_id(enc);
+      types = rb_objc_ptr_types;
+      while ((*types)[0] != NULL) {
+        if (rb_intern((*types)[0]) == key) {
+          encoding = (*types)[1];
+          break;
+        }
+        types++;
+      }
+      break;
+    case T_STRING:
+      encoding = rb_string_value_cstr(&enc);
+      break;
+    default:
+      encoding = NULL;
+      break;
+    }
+
+    if (encoding == NULL) {
+      enc = rb_inspect(enc);
+      rb_raise(rb_eTypeError, "unsupported encoding -- %s", rb_string_value_cstr(&enc));
+    }
+
     if (rigs_argc == 2) {
       Check_Type(cnt, T_FIXNUM);
     }
 
     dp = (struct rb_objc_ptr*)malloc(sizeof(struct rb_objc_ptr));
+    dp->retained = NO;
 
-    encoding = rb_string_value_cstr(&enc);
     data = malloc(sizeof(char) * (strlen(encoding) + 1));
     strcpy(data, encoding);
     dp->encoding = data;

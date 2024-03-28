@@ -776,16 +776,14 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
         case _C_CHARPTR:
             // Inspired from the Guile interface
             if (TYPE(rb_val) == T_STRING) {
-            
                 NSMutableData	*d;
                 char		*s;
                 int		l;
             
                 s = rb_string_value_cstr(&rb_val);
                 l = strlen(s)+1;
-                d = [NSMutableData dataWithBytesNoCopy: s length: l freeWhenDone:NO];
+                d = [NSMutableData dataWithBytesNoCopy:s length:l freeWhenDone:NO];
                 *(char**)where = (char*)[d mutableBytes];
-            
             } else if (TYPE(rb_val) == T_DATA) {
                 // I guess this is the right thing to do. Pass the
                 // embedded ObjC as a blob
@@ -1009,8 +1007,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             }
             else {
               // TODO: return pointers as ObjRuby::Ptr
-              // void *cptr = *(void**)where;
-              // a pointer is simply returned as its integer value
+              // for now a pointer is returned as its integer value
               rb_val = LL2NUM((long long) where);
             }
           }

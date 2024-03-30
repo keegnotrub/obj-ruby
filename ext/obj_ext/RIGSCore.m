@@ -174,8 +174,10 @@ rb_objc_ptr_retain(VALUE rcv)
 
     while (offset < dp->allocated_size) {
       obj = *(id*)(dp->cptr + offset);
+      if ([obj respondsToSelector:@selector(retain)]) {
+        [obj retain];
+      }
       offset += sizeof(id);
-      [obj retain];
     }
 
     dp->retained = YES;
@@ -1985,36 +1987,31 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
 }
 
 void
-rb_objc_ptr_release(struct rb_objc_ptr *dp)
-{
-  id obj;
-  long offset = 0;
-
-  if (dp->retained == NO) return;
-  if (dp->allocated_size == 0) return;
-  if (dp->encoding == NULL) return;
-  if (*(dp->encoding) != _C_ID) return;
-
-  while (offset < dp->allocated_size) {
-    obj = *(id*)(dp->cptr + offset);
-    offset += sizeof(id);
-    [obj release];
-  }
-
-  dp->retained = NO;
-}
-
-void
 rb_objc_ptr_free(struct rb_objc_ptr *dp)
 {
-  if (dp != NULL) {
-    if (dp->retained) rb_objc_ptr_release(dp);
-    if (dp->allocated_size > 0) free(dp->cptr);
-    if (dp->encoding) free((char*)dp->encoding);
-    dp->allocated_size = 0;
-    dp->cptr = NULL;
-    dp->encoding = NULL;
-    free(dp);
+  @autoreleasepool {
+    id obj;
+    long offset;
+
+    if (dp != NULL) {
+      if (dp->retained && dp->allocated_size > 0) {
+        offset = 0;
+        while (offset < dp->allocated_size) {
+          obj = *(id*)(dp->cptr + offset);
+          if ([obj respondsToSelector:@selector(release)]) {
+            [obj release];
+          }
+          offset += sizeof(id);
+        }        
+      }
+      if (dp->allocated_size > 0) free(dp->cptr);
+      if (dp->encoding) free((char*)dp->encoding);
+      dp->allocated_size = 0;
+      dp->cptr = NULL;
+      dp->encoding = NULL;
+      dp->retained = NO;
+      free(dp);
+    }
   }
 }
 

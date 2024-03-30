@@ -25,7 +25,7 @@ unless have_library("ffi")
   abort_on_missing("ffi library")
 end
 
-if enable_config("debug", ENV["OBJR_BUILD_DEBUG"] || false)
+if enable_config("debug", ENV["OBJR_BUILD_DEBUG"] == "true")
   append_cflags("-DNSDebugLog=NSLog")
 end
 

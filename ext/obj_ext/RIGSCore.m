@@ -1989,6 +1989,8 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
 void
 rb_objc_ptr_free(struct rb_objc_ptr *dp)
 {
+  NSDebugLog(@"Call to ObjRuby::Ptr free on %p", dp);
+  
   @autoreleasepool {
     id obj;
     long offset;

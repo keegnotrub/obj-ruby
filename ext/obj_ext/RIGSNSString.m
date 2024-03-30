@@ -27,7 +27,6 @@
 
 #import "RIGSNSString.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 @implementation NSString ( RIGSNSString )
 
@@ -39,11 +38,6 @@
 + (id) stringWithRubySymbol:(VALUE)rb_symbol
 {
   return [NSString stringWithRubyString: rb_sym_to_s(rb_symbol)];
-}
-
-- (id) to_s
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
 - (VALUE) getRubyObject

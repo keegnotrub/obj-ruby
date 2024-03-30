@@ -48,10 +48,6 @@ rb_objc_method_to_sel(const char* name, int argc)
   size_t i;
   size_t length;
   
-  if (argc == 0 && strstr(name, "to_") == name) {
-    return sel_getUid(name);
-  }
-
   length = strlen(name);
   selName = alloca(length + 2);
   nbArgs = 0;

@@ -37,7 +37,6 @@
 + (id) stringWithRubyString: (VALUE)rb_string;
 + (id) stringWithRubySymbol: (VALUE)rb_symbol;
 
-- (id) to_s;
 - (VALUE) getRubyObject;
 
 @end

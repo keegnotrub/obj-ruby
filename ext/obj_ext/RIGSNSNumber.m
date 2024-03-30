@@ -25,7 +25,6 @@
 
 #import "RIGSNSNumber.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 @implementation NSNumber ( RIGSNSNumber )
 
@@ -47,16 +46,6 @@
 + (id) numberWithRubyBool: (VALUE) rb_bool
 {
   return [NSNumber numberWithBool:rb_bool == Qtrue];
-}
-
-- (id) to_i
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyInteger]];
-}
-
-- (id) to_f
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyFloat]];
 }
 
 - (VALUE) getRubyObject

@@ -25,7 +25,6 @@
 
 #import "RIGSNSDictionary.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 static int rigs_ary_keys_i(VALUE key, VALUE value, VALUE ary) {
   rb_ary_push(ary, key);
@@ -92,11 +91,6 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   free(valueObjects);
 
   return returnDictionary;
-}
-
-- (id) to_h
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
 - (VALUE) getRubyObject

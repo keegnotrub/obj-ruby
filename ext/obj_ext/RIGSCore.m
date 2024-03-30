@@ -34,7 +34,6 @@
 #import "RIGSCore.h"
 #import "RIGSUtilities.h"
 #import "RIGS.h"
-#import "RIGSWrapObject.h"
 #import "RIGSNSDictionary.h"
 #import "RIGSNSArray.h"
 #import "RIGSNSString.h"
@@ -369,127 +368,6 @@ rb_objc_types_for_selector(SEL sel, int nbArgs) {
   }
 
   return objcTypes;
-}
-
-Class
-rb_objc_register_ruby_class(VALUE rb_class) {
-  @autoreleasepool {
-  int i;
-  int count;
-  VALUE listOption;
-  int nbArgs;
-  VALUE rb_mth_ary;
-  VALUE rb_super_class;
-  Class superClass;
-  Class class;
-  char *rb_mth_name;
-  SEL objcMthSEL;
-  const char *signature;
-  const char *objcTypes;
-  char *rb_class_name = NULL;
-  BOOL guessed;
-  void *mthIMP;
-  unsigned long hash;
-
-  // Check that this is a Ruby Class. 
-  if (TYPE(rb_class) == T_CLASS) {
-      // Yes it is. So get the class name 
-      rb_class_name = rb_class2name(rb_class);
-  } else {
-      // Nope! give up
-      NSLog(@"Trying to register unknown Ruby class: %s",rb_class_name);
-      return nil;
-  }
-
-  NSDebugLog (@"Registering Ruby class %s with the objective-C runtime", 
-              rb_class_name);
-
-  // If this class has already been registered with ObjC then
-  // do nothing
-  if ( (class = objc_lookUpClass(rb_class_name)) ) {
-      NSDebugLog(@"Class already registered with ObjC: %s", rb_class_name);
-      return class;
-  }
-  
-  // Create the Objective-C proxy class. 
-  rb_super_class = rb_class_superclass(rb_class);
-  if (rb_super_class == rb_cObject || rb_super_class == rb_cBasicObject) {
-    superClass = [NSObject class];
-  }
-  else {
-    // TODO: possible this class isn't registered yet
-    // Could be something that hasn't been imported yet
-    // Or could be something that hasn't been registered yet
-    // rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
-    
-    superClass = (Class) NUM2LL(rb_iv_get(rb_super_class, "@objc_class"));
-  }
-  
-  class = objc_allocateClassPair (superClass, rb_class_name, 0);
-  if (class == nil) {
-      NSLog(@"Could not allocate class pair with ObjC: %s",rb_class_name);
-      return nil; 
-  }
-
-  // Get instance method list. Pass no argument to function to
-  // eliminate ancestor's method from the list.
-  listOption = Qfalse;
-  rb_mth_ary = rb_class_instance_methods(1,&listOption,rb_class);
-  // number of instance methods in this class
-  count = RARRAY_LEN(RARRAY(rb_mth_ary));
-  NSDebugLog(@"This Ruby class has %d instance methods",count);
-  
-  for (i=0;i<count;i++) {
-    ID entry = rb_sym2id(rb_ary_entry(rb_mth_ary, (long)i));
-    nbArgs = rb_mod_method_arity(rb_class, entry);
-
-    if (nbArgs < 0) continue;
-
-    rb_mth_name = rb_id2name(entry);
-    objcMthSEL = rb_objc_method_to_sel(rb_mth_name, nbArgs);
-
-    objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
-
-    hash = rb_objc_hash(objcTypes);
-    mthIMP = NSMapGet(knownImplementations, hash);
-
-    if (mthIMP != NULL) {
-      class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
-      continue;
-    }
-
-    ffi_closure *closure = NULL;
-    ffi_cif *cif;
-
-    cif = malloc(sizeof(ffi_cif));
-
-    if (rb_objc_build_closure_cif(cif, objcTypes) == FFI_OK) {
-      closure = ffi_closure_alloc(sizeof(ffi_closure), &mthIMP);
-      if (ffi_prep_closure_loc(closure, cif, rb_objc_proxy_handler, objcTypes, mthIMP) == FFI_OK) {
-        NSMapInsertKnownAbsent(knownImplementations, hash, mthIMP);
-        class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
-      }
-    }
-
-    NSDebugLog(@"Ruby method %s has %d arguments with signature %s",rb_mth_name,nbArgs,objcTypes);
-  }
-  
-  objc_registerClassPair(class);
-
-  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
-  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)class));
-
-  // Remember that this class is defined in Ruby
-  NSMapInsertKnownAbsent(knownClasses, (void*)class, (void*)rb_class);
-
-  // Redefine the new method to point to our special rb_objc_new function
-  rb_undef_alloc_func(rb_class);
-  rb_undef_method(CLASS_OF(rb_class),"new");
-  rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
-
-  return class;
-  
-  }
 }
 
 BOOL
@@ -925,12 +803,6 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                   
                   rb_val = Qnil;
                   
-              } else if ( [val class] == [RIGSWrapObject class] ) {
-                  
-                  // This a native ruby object wrapped into an Objective C 
-                  // nutshell. Returns what's in the nutshell
-                  rb_val = [val getRubyObject];
-
               } else if ( autoconvert && [val isKindOfClass:[NSString class]] ) {
                   rb_val = [val getRubyObject];
               } else if ( autoconvert && [val isKindOfClass:[NSNumber class]] ) {
@@ -1564,6 +1436,90 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
   }  
 }
 
+VALUE
+rb_objc_ib_outlet(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+  int i;
+  ID attr;
+  ID attrset;
+  char *attrname;
+  char *attrsetname;
+  
+  for (i=0; i<rigs_argc; i++) {
+    attr = rb_to_id(rigs_argv[i]);
+
+    rb_attr(rb_self, attr, 1, 1, 0);
+
+    attrname = rb_id2name(attr);
+    attrsetname = malloc(sizeof(char) * strlen(attrname) + 4);
+    strcpy(attrsetname, "set");
+    strcat(attrsetname, attrname);
+    attrsetname[3] = toupper(attrsetname[3]);
+
+    rb_alias(rb_self, rb_intern(attrsetname), rb_id_attrset(attr));
+
+    free(attrsetname);
+  }
+
+  return Qnil;
+}
+
+VALUE
+rb_objc_ib_action(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
+{
+  return Qnil;
+}
+
+VALUE
+rb_objc_description(VALUE rb_self)
+{
+  id rcv;
+
+  Data_Get_Struct(rb_self, id, rcv);
+
+  return rb_str_new_cstr([[rcv description] UTF8String]);
+}
+
+VALUE
+rb_objc_debug_description(VALUE rb_self)
+{
+  id rcv;
+
+  Data_Get_Struct(rb_self, id, rcv);
+
+  return rb_str_new_cstr([[rcv debugDescription] UTF8String]);
+}
+
+VALUE
+rb_objc_get_ruby_object(VALUE rb_self)
+{
+  id rcv;
+
+  Data_Get_Struct(rb_self, id, rcv);
+
+  return [rcv getRubyObject];
+}
+
+VALUE
+rb_objc_get_ruby_int(VALUE rb_self)
+{
+  id rcv;
+
+  Data_Get_Struct(rb_self, id, rcv);
+
+  return [rcv getRubyInteger];
+}
+
+VALUE
+rb_objc_get_ruby_float(VALUE rb_self)
+{
+  id rcv;
+
+  Data_Get_Struct(rb_self, id, rcv);
+
+  return [rcv getRubyFloat];
+}
+
 unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
     SEL mthSel;
@@ -1825,43 +1781,160 @@ rb_objc_register_class_from_objc (Class objc_class)
 
     NSDebugLog(@"%d instance and %d class methods defined for class %s",imth_cnt,cmth_cnt,cname);
 
+    // Extend any extra Ruby specific support to Objective-C classes
+    if (objc_class == [NSObject class]) {
+      rb_define_alias(rb_class, "==", "isEqual");
+      rb_define_method(rb_class, "to_s", rb_objc_description, 0);
+      rb_define_method(rb_class, "inspect", rb_objc_debug_description, 0);
+      rb_define_singleton_method(rb_class, "ib_outlet", rb_objc_ib_outlet, -1);
+      rb_define_singleton_method(rb_class, "ib_action", rb_objc_ib_action, -1);
+    }
+    else if (objc_class == [NSString class]) {
+      rb_define_method(rb_class, "to_s", rb_objc_get_ruby_object, 0);
+    }
+    else if (objc_class == [NSArray class]) {
+      rb_define_method(rb_class, "to_a", rb_objc_get_ruby_object, 0);
+    }
+    else if (objc_class == [NSDictionary class]) {
+      rb_define_method(rb_class, "to_h", rb_objc_get_ruby_object, 0);
+    }
+    else if (objc_class == [NSDate class]) {
+      rb_define_method(rb_class, "to_time", rb_objc_get_ruby_object, 0);
+    }
+    else if (objc_class == [NSNumber class]) {
+      rb_define_method(rb_class, "to_i", rb_objc_get_ruby_int, 0);
+      rb_define_method(rb_class, "to_f", rb_objc_get_ruby_float, 0);
+    }
+    
     // Remember that this class is now defined in Ruby
     NSMapInsertKnownAbsent(knownClasses, (void*)objc_class, (void*)rb_class);
     
     NSDebugLog(@"VALUE for new Ruby Class %s = 0x%lx",cname,rb_class);
 
-    // also make sure to load the corresponding ruby file and execute
-    // any additional Ruby code for this class
-    NSDebugLog(@"Calling ObjRuby.extend_class(%s) from Objc", cname);
-    
-    rb_funcall(rb_mRigs, rb_intern("extend_class"), 1,rb_str_new_cstr(cname));
-    
     return rb_class;
     }
 }
 
 VALUE
-rb_objc_register_ruby_class_from_ruby(VALUE rb_self, VALUE rb_name)
+rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
 {
   @autoreleasepool {
-    return rb_objc_register_ruby_class(rb_name);
+  int i;
+  int count;
+  VALUE listOption;
+  int nbArgs;
+  VALUE rb_mth_ary;
+  VALUE rb_super_class;
+  Class superClass;
+  Class class;
+  char *rb_mth_name;
+  SEL objcMthSEL;
+  const char *signature;
+  const char *objcTypes;
+  char *rb_class_name = NULL;
+  BOOL guessed;
+  void *mthIMP;
+  unsigned long hash;
+
+  // Check that this is a Ruby Class. 
+  if (TYPE(rb_class) == T_CLASS) {
+      // Yes it is. So get the class name 
+      rb_class_name = rb_class2name(rb_class);
+  } else {
+      // Nope! give up
+      NSLog(@"Trying to register unknown Ruby class: %s",rb_class_name);
+      return nil;
   }
-}
 
-VALUE
-rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name)
-{
-    @autoreleasepool {
-    char *cname = rb_string_value_cstr(&rb_name);
-    VALUE rb_class = Qnil;
+  NSDebugLog (@"Registering Ruby class %s with the objective-C runtime", 
+              rb_class_name);
 
-    Class objc_class = objc_getClass(cname);
+  // If this class has already been registered with ObjC then
+  // do nothing
+  if ( (class = objc_lookUpClass(rb_class_name)) ) {
+      NSDebugLog(@"Class already registered with ObjC: %s", rb_class_name);
+      return class;
+  }
+  
+  // Create the Objective-C proxy class. 
+  rb_super_class = rb_class_superclass(rb_class);
+  if (rb_super_class == rb_cObject || rb_super_class == rb_cBasicObject) {
+    superClass = [NSObject class];
+  }
+  else {
+    // TODO: possible this class isn't registered yet
+    // Could be something that hasn't been imported yet
+    // Or could be something that hasn't been registered yet
+    // rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
     
-    if(objc_class)
-        rb_class = rb_objc_register_class_from_objc(objc_class);
+    superClass = (Class) NUM2LL(rb_iv_get(rb_super_class, "@objc_class"));
+  }
+  
+  class = objc_allocateClassPair (superClass, rb_class_name, 0);
+  if (class == nil) {
+      NSLog(@"Could not allocate class pair with ObjC: %s",rb_class_name);
+      return nil; 
+  }
 
-    return rb_class;
+  // Get instance method list. Pass no argument to function to
+  // eliminate ancestor's method from the list.
+  listOption = Qfalse;
+  rb_mth_ary = rb_class_instance_methods(1,&listOption,rb_class);
+  // number of instance methods in this class
+  count = RARRAY_LEN(RARRAY(rb_mth_ary));
+  NSDebugLog(@"This Ruby class has %d instance methods",count);
+  
+  for (i=0;i<count;i++) {
+    ID entry = rb_sym2id(rb_ary_entry(rb_mth_ary, (long)i));
+    nbArgs = rb_mod_method_arity(rb_class, entry);
+
+    if (nbArgs < 0) continue;
+
+    rb_mth_name = rb_id2name(entry);
+    objcMthSEL = rb_objc_method_to_sel(rb_mth_name, nbArgs);
+
+    objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
+
+    hash = rb_objc_hash(objcTypes);
+    mthIMP = NSMapGet(knownImplementations, hash);
+
+    if (mthIMP != NULL) {
+      class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
+      continue;
     }
+
+    ffi_closure *closure = NULL;
+    ffi_cif *cif;
+
+    cif = malloc(sizeof(ffi_cif));
+
+    if (rb_objc_build_closure_cif(cif, objcTypes) == FFI_OK) {
+      closure = ffi_closure_alloc(sizeof(ffi_closure), &mthIMP);
+      if (ffi_prep_closure_loc(closure, cif, rb_objc_proxy_handler, objcTypes, mthIMP) == FFI_OK) {
+        NSMapInsertKnownAbsent(knownImplementations, hash, mthIMP);
+        class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
+      }
+    }
+
+    NSDebugLog(@"Ruby method %s has %d arguments with signature %s",rb_mth_name,nbArgs,objcTypes);
+  }
+  
+  objc_registerClassPair(class);
+
+  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
+  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)class));
+
+  // Remember that this class is defined in Ruby
+  NSMapInsertKnownAbsent(knownClasses, (void*)class, (void*)rb_class);
+
+  // Redefine the new method to point to our special rb_objc_new function
+  rb_undef_alloc_func(rb_class);
+  rb_undef_method(CLASS_OF(rb_class),"new");
+  rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
+
+  return class;
+  
+  }
 }
 
 VALUE
@@ -2137,13 +2210,11 @@ Init_obj_ext()
     @protocol(NSTokenFieldDelegate);
 
     // Ruby class methods under the ObjC Ruby module
-    // - ObjRuby.class("NSDate") : registers ObjC class with Ruby
-    // - ObjRuby.register(AppDelegate): registers Ruby class with ObjC
+    // - ObjRuby.register_class(AppDelegate): registers Ruby class with ObjC
     // - ObjRuby.require_framework("Foundation"): registers ObjC framework with Ruby
 
     rb_mRigs = rb_define_module("ObjRuby");
-    rb_define_module_function(rb_mRigs, "class", rb_objc_register_class_from_ruby, 1);
-    rb_define_module_function(rb_mRigs, "register", rb_objc_register_ruby_class_from_ruby, 1);
+    rb_define_module_function(rb_mRigs, "register_class", rb_objc_register_class_from_ruby, 1);
     rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
 
     rb_cRigsPtr = rb_define_class_under(rb_mRigs, "Ptr", rb_cObject);

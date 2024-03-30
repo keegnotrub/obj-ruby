@@ -37,7 +37,6 @@
 
 + (id) arrayWithRubyArray: (VALUE) ruby_array;
 
-- (id) to_a;
 - (VALUE) getRubyObject;
 
 @end

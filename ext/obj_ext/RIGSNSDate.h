@@ -36,7 +36,6 @@
 
 + (id) dateWithRubyTime: (VALUE) ruby_time;
 
-- (id) to_time;
 - (VALUE) getRubyObject;
 
 @end

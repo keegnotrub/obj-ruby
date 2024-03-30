@@ -49,24 +49,10 @@ module ObjRuby
     end
 
     loader.on_load do |_, klass|
-      register(klass)
+      register_class(klass)
     end
 
     loader.setup
     loader.eager_load
-  end
-
-  def self.import(class_name)
-    if const_defined?(class_name)
-      const_get(class_name)
-    else
-      self.class(class_name)
-    end
-  end
-
-  def self.extend_class(class_name)
-    require "obj_ruby/#{class_name}"
-  rescue LoadError
-    # Not extended by ObjRuby
   end
 end

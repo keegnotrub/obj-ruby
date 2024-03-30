@@ -25,7 +25,6 @@
 
 #import "RIGSNSDate.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 @implementation NSDate ( RIGSNSDate )
 
@@ -40,11 +39,6 @@
   interval = nsecs / 1E9;
 
   return [NSDate dateWithTimeIntervalSince1970:interval];
-}
-
-- (id) to_time
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
 - (VALUE) getRubyObject

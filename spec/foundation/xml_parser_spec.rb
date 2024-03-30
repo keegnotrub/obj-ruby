@@ -17,7 +17,7 @@ XML
 
 RSpec.describe ObjRuby::NSXMLParser do
   it "can take a delegate" do
-    ObjRuby.register(TestXMLParserDelegate)
+    ObjRuby.register_class(TestXMLParserDelegate)
 
     allow_any_instance_of(TestXMLParserDelegate).to receive(:parser_didStartElement_namespaceURI_qualifiedName_attributes)
     allow_any_instance_of(TestXMLParserDelegate).to receive(:parser_didEndElement_namespaceURI_qualifiedName)

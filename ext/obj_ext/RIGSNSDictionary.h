@@ -35,7 +35,6 @@
 
 + (id) dictionaryWithRubyHash: (VALUE) ruby_hash;
 
-- (id) to_h;
 - (VALUE) getRubyObject;
 
 @end

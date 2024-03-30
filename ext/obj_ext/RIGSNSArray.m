@@ -27,7 +27,6 @@
 
 #import "RIGSNSArray.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 @implementation NSArray ( RIGSNSArray )
 
@@ -70,11 +69,6 @@
   free (objects);
 
   return returnArray;
-}
-
-- (id) to_a
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
 }
 
 - (VALUE) getRubyObject

@@ -38,8 +38,6 @@
 + (id) numberWithRubyFloat: (VALUE) rb_float;
 + (id) numberWithRubyBool: (VALUE) rb_bool;
 
-- (id) to_i;
-- (id) to_f;
 - (VALUE) getRubyObject;
 
 @end

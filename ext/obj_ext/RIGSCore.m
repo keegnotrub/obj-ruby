@@ -138,7 +138,7 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     NSUInteger cnt = NSCountMapTable(knownObjects);
     obj  = [[objc_class alloc] init];
     BOOL proxied = cnt != NSCountMapTable(knownObjects);
-    
+
     new_rb_object = NSMapGet(knownObjects, (void*)obj);
 
     if (new_rb_object == NULL) {
@@ -1998,7 +1998,7 @@ rb_objc_ptr_free(struct rb_objc_ptr *dp)
     long offset;
 
     if (dp != NULL) {
-      if (dp->retained && dp->allocated_size > 0) {
+      if (dp->retained) {
         offset = 0;
         while (offset < dp->allocated_size) {
           obj = *(id*)(dp->cptr + offset);

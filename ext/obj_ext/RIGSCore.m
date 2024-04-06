@@ -135,8 +135,10 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     // This object is not released on purpose. The Ruby garbage collector
     // will take care of deallocating it by calling rb_objc_release()
 
+    NSUInteger cnt = NSCountMapTable(knownObjects);
     obj  = [[objc_class alloc] init];
-
+    BOOL proxied = cnt != NSCountMapTable(knownObjects);
+    
     new_rb_object = NSMapGet(knownObjects, (void*)obj);
 
     if (new_rb_object == NULL) {
@@ -147,7 +149,7 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
    
       NSMapInsertKnownAbsent(knownObjects, (void*)obj, (void*)new_rb_object);
     }
-    else {
+    else if (!proxied) {
       NSDebugLog(@"Found existing object of Class %@ (id = 0x%lx, VALUE = 0x%lx)",
                  NSStringFromClass([objc_class classForCoder]), obj, new_rb_object);
       
@@ -358,7 +360,7 @@ rb_objc_types_for_selector(SEL sel, int nbArgs) {
   if (objcTypes == NULL) {
     objcTypes = malloc(sizeof(char) * (nbArgs + 4));
     
-    objcTypes[0] = _C_VOID;
+    objcTypes[0] = _C_ID;
     objcTypes[1] = _C_ID;
     objcTypes[2] = _C_SEL;
     for (i=0;i<nbArgs;i++) {

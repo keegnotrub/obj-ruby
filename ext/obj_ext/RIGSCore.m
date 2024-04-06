@@ -2211,13 +2211,15 @@ Init_obj_ext()
     @protocol(NSTokenFieldDelegate);
 
     // Ruby class methods under the ObjC Ruby module
-    // - ObjRuby.register_class(AppDelegate): registers Ruby class with ObjC
     // - ObjRuby.require_framework("Foundation"): registers ObjC framework with Ruby
+    // - ObjRuby.register_class(AppDelegate): registers Ruby class with ObjC
 
     rb_mRigs = rb_define_module("ObjRuby");
-    rb_define_module_function(rb_mRigs, "register_class", rb_objc_register_class_from_ruby, 1);
     rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
+    rb_define_module_function(rb_mRigs, "register_class", rb_objc_register_class_from_ruby, 1);
 
+    // Ruby class for holding a C-style pointer
+    //  - ObjRuby::Ptr.new(:object)
     rb_cRigsPtr = rb_define_class_under(rb_mRigs, "Ptr", rb_cObject);
     rb_undef_alloc_func(rb_cRigsPtr);
     rb_undef_method(CLASS_OF(rb_cRigsPtr), "new");

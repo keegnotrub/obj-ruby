@@ -39,6 +39,8 @@
 + (id) numberWithRubyBool: (VALUE) rb_bool;
 
 - (VALUE) getRubyObject;
+- (VALUE) getRubyInteger;
+- (VALUE) getRubyFloat;
 
 @end
 

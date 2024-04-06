@@ -104,7 +104,7 @@ rb_objc_hash(const char* value)
   char keyChar;
   unsigned long hash = HASH_SEED;
   
-  while (keyChar = *value++) {
+  while ((keyChar = *value++)) {
     hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
   }
 

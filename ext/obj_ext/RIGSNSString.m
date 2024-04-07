@@ -23,7 +23,7 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */
+*/
 
 #import "RIGSNSString.h"
 #import "RIGSCore.h"
@@ -32,7 +32,7 @@
 
 + (id) stringWithRubyString:(VALUE)rb_string
 {
-  return [NSString stringWithCString: rb_string_value_cstr(&rb_string)];
+  return [NSString stringWithUTF8String: rb_string_value_cstr(&rb_string)];
 }
 
 + (id) stringWithRubySymbol:(VALUE)rb_symbol
@@ -42,8 +42,7 @@
 
 - (VALUE) getRubyObject
 {
-  return rb_str_new_cstr([self cString]);
+  return rb_str_new_cstr([self UTF8String]);
 }
 
 @end
-      

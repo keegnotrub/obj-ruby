@@ -10,7 +10,7 @@ RSpec.describe ObjRuby::NSData do
   end
 
   it "sets an error on failure" do
-    error_ptr = ObjRuby::Ptr.new(:object)
+    error_ptr = ObjRuby::Pointer.new(:object)
 
     result = described_class.dataWithContentsOfFile_options_error("not-a-path", 0, error_ptr)
 

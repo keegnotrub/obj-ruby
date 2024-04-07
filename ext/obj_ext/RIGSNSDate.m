@@ -21,7 +21,7 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */
+*/
 
 #import "RIGSNSDate.h"
 #import "RIGSCore.h"
@@ -54,6 +54,4 @@
   return rb_time_nano_new((time_t)secs, nsecs);
 }
 
-
 @end
-      

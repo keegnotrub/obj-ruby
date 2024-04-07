@@ -19,7 +19,7 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */
+*/
 
 #ifndef __RIGSUtilities_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSUtilities_h_GNUSTEP_RUBY_INCLUDE
@@ -31,9 +31,9 @@
 
 #define HASH_SEED 5381
 #define HASH_BITSHIFT 5
-#define ROUND(V, A)                        \
-  ({ typeof(V) __v=(V); typeof(A) __a=(A); \
-     __a*((__v+__a-1)/__a); })
+#define ROUND(V, A)                             \
+  ({ typeof(V) __v=(V); typeof(A) __a=(A);      \
+    __a*((__v+__a-1)/__a); })
 
 // https://clang.llvm.org/docs/Block-ABI-Apple.html
 struct rb_objc_block_descriptor
@@ -77,13 +77,12 @@ static const char* rb_objc_ptr_types[][2] = {
 };
 
 SEL rb_objc_method_to_sel(const char* name, int argc);
-const char *rb_objc_sel_to_method(SEL sel);
+char *rb_objc_sel_to_method(SEL sel);
 
 unsigned long rb_objc_hash(const char* value);
 const char *objc_skip_type_qualifiers (const char *type);
 const char *objc_skip_typespec (const char *type);
 const char *objc_skip_offset (const char *type);
 const char *objc_skip_argspec (const char *type);
-
 
 #endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

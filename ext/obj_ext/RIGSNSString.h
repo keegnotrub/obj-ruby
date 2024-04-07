@@ -3,7 +3,7 @@
 
    $Id$
 
-     Copyright (C) 2001 Free Software Foundation, Inc.
+   Copyright (C) 2001 Free Software Foundation, Inc.
    
    Written by:  Laurent Julliard <laurent@julliard-online.org>
    Date: July 2001
@@ -23,7 +23,7 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */ 
+*/ 
 
 #ifndef __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
 #define __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
@@ -40,6 +40,5 @@
 - (VALUE) getRubyObject;
 
 @end
-
 
 #endif

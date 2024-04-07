@@ -77,7 +77,7 @@ static VALUE rb_cRigsPtr = Qnil;
 void
 rb_objc_release(id objc_object) 
 {
-  NSDebugLog(@"Call to ObjC release on 0x%lx",objc_object);
+  NSDebugLog(@"Call to ObjC release on %p", objc_object);
 
   if (objc_object != nil) {
     @autoreleasepool {
@@ -139,19 +139,19 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     obj  = [[objc_class alloc] init];
     BOOL proxied = cnt != NSCountMapTable(knownObjects);
 
-    new_rb_object = NSMapGet(knownObjects, (void*)obj);
+    new_rb_object = (VALUE)NSMapGet(knownObjects, (void*)obj);
 
-    if (new_rb_object == NULL) {
-      NSDebugLog(@"Creating new object of Class %@ (id = 0x%lx, VALUE = 0x%lx)",
-                 NSStringFromClass([objc_class classForCoder]), obj, new_rb_object);
-      
+    if (new_rb_object == Qfalse) {
       new_rb_object = Data_Wrap_Struct(rb_class, 0, rb_objc_release, obj);
+
+      NSDebugLog(@"Creating new object of Class %@ (id = %p, VALUE = %p)",
+                 NSStringFromClass([objc_class classForCoder]), obj, (void*)new_rb_object);
    
       NSMapInsertKnownAbsent(knownObjects, (void*)obj, (void*)new_rb_object);
     }
     else if (!proxied) {
-      NSDebugLog(@"Found existing object of Class %@ (id = 0x%lx, VALUE = 0x%lx)",
-                 NSStringFromClass([objc_class classForCoder]), obj, new_rb_object);
+      NSDebugLog(@"Found existing object of Class %@ (id = %p, VALUE = %p)",
+                 NSStringFromClass([objc_class classForCoder]), obj, (void*)new_rb_object);
       
       [obj release];
     }
@@ -166,7 +166,7 @@ rb_objc_ptr_retain(VALUE rcv)
   @autoreleasepool {
     struct rb_objc_ptr *dp;
     id obj;
-    long offset = 0;
+    size_t offset = 0;
 
     dp = (struct rb_objc_ptr*)DATA_PTR(rcv);
 
@@ -175,7 +175,7 @@ rb_objc_ptr_retain(VALUE rcv)
     if (*(dp->encoding) != _C_ID) return;
 
     while (offset < dp->allocated_size) {
-      obj = *(id*)(dp->cptr + offset);
+      obj = *((id*)(dp->cptr) + offset);
       if ([obj respondsToSelector:@selector(retain)]) {
         [obj retain];
       }
@@ -192,7 +192,7 @@ rb_objc_ffi_type_for_type(const char *type)
   ffi_type *inStruct = NULL;
   unsigned long inStructHash;
   int inStructIndex = 0;
-  int inStructCount = 0;
+  long inStructCount = 0;
 
   type = objc_skip_type_qualifiers (type);
 
@@ -206,7 +206,7 @@ rb_objc_ffi_type_for_type(const char *type)
       if (*type == '=') continue;
       inStructHash = ((inStructHash << HASH_BITSHIFT) + inStructHash) + (*type);
     }
-    inStructCount = RARRAY_LEN(rb_struct_s_members(NSMapGet(knownStructs, inStructHash)));
+    inStructCount = rb_array_len(rb_struct_s_members((VALUE)NSMapGet(knownStructs, (void*)inStructHash)));
                                
     inStruct = (ffi_type *)malloc(sizeof(ffi_type));
     inStruct->size = 0;
@@ -266,14 +266,14 @@ ffi_status
 rb_objc_build_closure_cif(ffi_cif *cif, const char *objcTypes)
 {
   NSMethodSignature *signature;
-  int nbArgs;
-  char *type;
+  unsigned int nbArgs;
+  const char *type;
   ffi_type **arg_types;
   ffi_type *ret_type;
-  int i;
+  unsigned int i;
   
   signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
-  nbArgs = [signature numberOfArguments];
+  nbArgs = (unsigned int)[signature numberOfArguments];
 
   arg_types = malloc(sizeof(ffi_type*) * nbArgs);
   memset(arg_types, 0, sizeof(ffi_type*) * nbArgs);
@@ -296,12 +296,11 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   SEL sel;
   VALUE rubyObject;
   VALUE rubyRetVal;
-  const char *rubyMethodName;
+  char *rubyMethodName;
   VALUE *rubyArgs;
   NSMethodSignature	*signature;
-  int i;
+  unsigned int i;
   const char *type;
-  BOOL okydoky;
   void *data;
 
   val = *(id*)args[0];
@@ -310,21 +309,20 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
 
   rubyMethodName = rb_objc_sel_to_method(sel);
   rubyObject = (VALUE) NSMapGet(knownObjects,(void *)val);
-  if (rubyObject == NULL) {
+  if (rubyObject == Qfalse) {
     Class retClass = [val classForCoder] ?: [val class];
     VALUE rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
-    // TODO: handle when rb_class is NULL, this could happen if we failed
-    // to register the Ruby class ahead of Objective-C using it
-    if (rb_class != NULL) {
-      rubyObject = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
-      NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rubyObject);
+    if (rb_class == Qfalse) {
+      rb_class = rb_objc_register_class_from_objc(retClass);
     }
+    rubyObject = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
+    NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rubyObject);
   }    
   rubyArgs = malloc((cif->nargs - 2) * sizeof(VALUE));
 
   for (i=2;i<cif->nargs;i++) {
     type = [signature getArgumentTypeAtIndex:i];
-    okydoky = rb_objc_convert_to_rb(args[i], 0, type, &rubyArgs[i-2], NO);
+    rb_objc_convert_to_rb(args[i], 0, type, &rubyArgs[i-2], NO);
   }
 
   rubyRetVal = rb_funcallv(rubyObject, rb_intern(rubyMethodName), cif->nargs - 2, rubyArgs);
@@ -345,16 +343,16 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
 }
 
 const char *
-rb_objc_types_for_selector(SEL sel, int nbArgs) {
+rb_objc_types_for_selector(SEL sel, size_t nbArgs) {
   char *objcTypes;
   unsigned long hash;
-  int i;
+  size_t i;
 
   hash = rb_objc_hash(sel_getName(sel));
-  objcTypes = NSMapGet(knownProtocols, hash);
+  objcTypes = NSMapGet(knownProtocols, (void*)hash);
 
   if (objcTypes == NULL) {
-    objcTypes = NSMapGet(knownProtocols, nbArgs);
+    objcTypes = NSMapGet(knownProtocols, (void*)nbArgs);
   }
 
   if (objcTypes == NULL) {
@@ -368,19 +366,16 @@ rb_objc_types_for_selector(SEL sel, int nbArgs) {
     }
     objcTypes[3+i] = '\0';
     
-    NSMapInsertKnownAbsent(knownProtocols, nbArgs, objcTypes);
+    NSMapInsertKnownAbsent(knownProtocols, (void*)nbArgs, objcTypes);
   }
 
   return objcTypes;
 }
 
 BOOL
-rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type)
+rb_objc_convert_to_objc(VALUE rb_thing,void **data, size_t offset, const char *type)
 {
     BOOL ret = YES;
-    Class objcClass;
-    NSString *msg;
-    VALUE rb_class_val;
     int idx = 0;
     BOOL inStruct = NO;
   
@@ -415,12 +410,12 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
         NSGetSizeAndAlignment(type, &tsize, &align);
    
         offset = ROUND(offset, align);
-        where = *(data) + offset;
+        where = *((uint8_t**)data) + offset;
         
         offset += tsize;
 
-        NSDebugLog(@"Converting Ruby value (0x%lx, type 0x%02lx) to ObjC value of type '%c' at target address 0x%lx)",
-                   rb_thing, TYPE(rb_thing),*type,where);
+        NSDebugLog(@"Converting Ruby value (%p, type 0x%02x) to ObjC value (%p, encoding %c)",
+                   (void*)rb_thing, TYPE(rb_thing), where, *type);
 
         if (inStruct) {
             rb_val = rb_struct_aref(rb_thing, INT2NUM(idx++));
@@ -441,7 +436,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
                       *(NSDate**)where = [NSDate dateWithRubyTime:rb_val];
                     }
                     else {
-                      Data_Get_Struct(rb_val,id,* (id*)where);
+                      Data_Get_Struct(rb_val, void, *(id*)where);
                     }
                     break;
 
@@ -454,17 +449,14 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
                     break;
           
                 case T_CLASS:
-                    *(Class**)where = (Class) NUM2LL(rb_iv_get(rb_val, "@objc_class"));
+                    *(Class*)where = (Class)NUM2LL(rb_iv_get(rb_val, "@objc_class"));
                     break;
                 case T_OBJECT:
                     /* Ruby sends a Ruby class or a ruby object. Automatically register
                                       an ObjC proxy class. It is very likely that we'll need it in the future
                                       (e.g. typical for setDelegate method call) */
-                    rb_class_val = (TYPE(rb_val) == T_CLASS ? rb_val : CLASS_OF(rb_val));
-                    NSDebugLog(@"Converting object of Ruby class: %s", rb_class2name(rb_class_val));
-
-                    Data_Get_Struct(rb_val,id,* (id*)where);
-                    NSDebugLog(@"Wrapping Ruby Object of type: 0x%02x (ObjC object at 0x%lx)",TYPE(rb_val), *(id*)where);
+                    Data_Get_Struct(rb_val, void, *(id*)where);
+                    NSDebugLog(@"Wrapping Ruby Object of type: 0x%02x (ObjC object at %p)", TYPE(rb_val), where);
                     break;
           
                 case T_ARRAY:
@@ -635,7 +627,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
 
                 // FIXME: possible overflow but don't know (yet) how to check it ??
                 *(float*)where = (float) NUM2DBL(rb_val);
-                NSDebugLog(@"Converting ruby value to float : %f", *(float*)where);
+                NSDebugLog(@"Converting ruby value to float: %f", *(float*)where);
             }
             else
                 ret = NO;	  	
@@ -649,7 +641,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
         
                 // FIXME: possible overflow but don't know (yet) how to check it ??
                 *(double*)where = (double) NUM2DBL(rb_val);
-                NSDebugLog(@"Converting ruby value to double : %lf", *(double*)where);
+                NSDebugLog(@"Converting ruby value to double: %lf", *(double*)where);
             }
             else
                 ret = NO;	  	
@@ -659,8 +651,8 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
             // Inspired from the Guile interface
             if (TYPE(rb_val) == T_STRING) {
                 NSMutableData	*d;
-                char		*s;
-                int		l;
+                char *s;
+                size_t l;
             
                 s = rb_string_value_cstr(&rb_val);
                 l = strlen(s)+1;
@@ -669,7 +661,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
             } else if (TYPE(rb_val) == T_DATA) {
                 // I guess this is the right thing to do. Pass the
                 // embedded ObjC as a blob
-                Data_Get_Struct(rb_val,char* ,* (char**)where);
+                Data_Get_Struct(rb_val, char, *(char**)where);
             } else {
                 ret = NO;
             }
@@ -680,8 +672,8 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
             // Inspired from the Guile interface. Same as char_ptr above
             if (TYPE(rb_val) == T_STRING) {
                 NSMutableData	*d;
-                char		*s;
-                int		l;
+                char *s;
+                size_t l;
             
                 s = rb_string_value_cstr(&rb_val);
                 l = strlen(s);
@@ -694,10 +686,10 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
             } else if (TYPE(rb_val) == T_DATA) {              
               if (strncmp(type, "^{", 2) == 0) {
                 // Assume toll-free bridge
-                Data_Get_Struct(rb_val,id,* (id*)where);
+                Data_Get_Struct(rb_val, void, *(id*)where);
               }
               else {
-                Data_Get_Struct(rb_val,void* ,*(void**)where);
+                Data_Get_Struct(rb_val, void, *(void**)where);
               }
             } else {
                 ret = NO;
@@ -734,9 +726,7 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
   
     if (ret == NO) {
         /* raise exception - Don't know how to handle this type of argument */
-        msg = [NSString stringWithFormat: @"Don't know how to convert Ruby type 0x%02x in ObjC type '%c'", TYPE(rb_thing), *type];
-        NSDebugLog(msg);
-        rb_raise(rb_eTypeError, [msg cString]);
+        rb_raise(rb_eTypeError, "don't know how to convert Ruby (type 0x%02x) from ObjC (encoding %c)", TYPE(rb_thing), *type);
     }
 
 
@@ -746,11 +736,10 @@ rb_objc_convert_to_objc(VALUE rb_thing,void **data, int offset, const char *type
 
 
 BOOL
-rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_ptr, BOOL autoconvert)
+rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val_ptr, BOOL autoconvert)
 {
     BOOL ret = YES;
     VALUE rb_class;
-    double dbl_value;
     BOOL inStruct = NO;
     unsigned long inStructHash;
     VALUE end = Qnil;
@@ -783,13 +772,13 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
 
       type = objc_skip_type_qualifiers (type);
 
-      NSDebugLog(@"Converting ObjC value (0x%lx) of type '%c' to Ruby value",
-                 *(id*)data, *type);
-
       NSGetSizeAndAlignment(type, &tsize, &align);
       
       offset = ROUND(offset, align);
-      where = data + offset;
+      where = (uint8_t*)data + offset;
+
+      NSDebugLog(@"Converting ObjC value (%p, encoding %c) to Ruby value",
+                 where, *type);
         
       offset += tsize;
 
@@ -801,7 +790,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
               // If so do not create a new object. Return the existing one
               if ( (rb_val = (VALUE) NSMapGet(knownObjects,(void *)val)) )  {
 
-                      NSDebugLog(@"ObJC object already wrapped in an existing Ruby value (0x%lx)",rb_val);
+                  NSDebugLog(@"ObjC object already wrapped in an existing Ruby value (%p)", (void*)rb_val);
 
               } else if (val == nil) {
                   
@@ -831,7 +820,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
                     retClass = [val class];
                   }
                   
-                  NSDebugLog(@"Class of arg transmitted to Ruby = %@",NSStringFromClass(retClass));
+                  NSDebugLog(@"Class of arg transmitted to Ruby = %@", NSStringFromClass(retClass));
 
                   rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
                   
@@ -869,7 +858,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
 
               Class retClass = [val classForCoder] ?: [val class];
                   
-              NSDebugLog(@"Class of arg transmitted to Ruby = %@",NSStringFromClass(retClass));
+              NSDebugLog(@"Class of arg transmitted to Ruby = %@", NSStringFromClass(retClass));
 
               rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
                   
@@ -882,7 +871,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
               NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rb_val);
             }
             else {
-              // TODO: return pointers as ObjRuby::Ptr
+              // TODO: return pointers as ObjRuby::Pointer
               // for now a pointer is returned as its integer value
               rb_val = LL2NUM((long long) where);
             }
@@ -945,30 +934,18 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
             break;
             
         case _C_FLT:
-          {
-            // FIXME
-            // This one doesn't crash but returns a bad floating point
-            // value to Ruby. val doesn not contain the expected float
-            // value. why???
-            NSDebugLog(@"ObjC val for float = %f", *(float*)where);
-            
-            dbl_value = (double) (*(float*)where);
-            NSDebugLog(@"Double ObjC value returned = %lf",dbl_value);
-            rb_val = rb_float_new(dbl_value);
-          }
-          break;
-
-        case _C_DBL:
-            NSDebugLog(@"Double float Value returned = %lf",*(double*)where);
-             rb_val = rb_float_new(*(double*)where);
+            rb_val = rb_float_new((double)(*(float*)where));
             break;
 
+        case _C_DBL:
+            rb_val = rb_float_new(*(double*)where);
+            break;
 
         case _C_CLASS:
           {
             Class val = *(Class*)where;
             
-            NSDebugLog(@"ObjC Class = 0x%lx", val);
+            NSDebugLog(@"ObjC Class = %@", NSStringFromClass([val classForCoder]));
             rb_class = (VALUE) NSMapGet(knownClasses, (void *)val);
 
             // if the Class is unknown to Ruby then register it 
@@ -984,7 +961,7 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
           {
             SEL val = *(SEL*)where;
             
-            NSDebugLog(@"ObjC Selector = 0x%lx", val);
+            NSDebugLog(@"ObjC Selector = %s", sel_getName(val));
 
             rb_val = rb_str_new_cstr(sel_getName(val));
           }
@@ -1043,8 +1020,8 @@ rb_objc_convert_to_rb(void *data, int offset, const char *type, VALUE *rb_val_pt
  
   } while (inStruct && *type != _C_STRUCT_E);
 
-  if (end != Qnil && NSMapGet(knownStructs, inStructHash)) {
-    *rb_val_ptr = rb_struct_alloc(NSMapGet(knownStructs, inStructHash), end);
+  if (end != Qnil && NSMapGet(knownStructs, (void*)inStructHash) != NULL) {
+    *rb_val_ptr = rb_struct_alloc((VALUE)NSMapGet(knownStructs, (void*)inStructHash), end);
   }
 
   NSDebugLog(@"End of ObjC to Ruby conversion");
@@ -1057,11 +1034,11 @@ NSMethodSignature*
 rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *formatString, int nbArgsExtra)
 {
   char objcTypes[128];
-  int objcTypesIndex;
-  int formatStringLength;
-  char *type;
-  int nbArgs;
-  int i;
+  uint8_t objcTypesIndex;
+  size_t formatStringLength;
+  const char *type;
+  size_t nbArgs;
+  size_t i;
 
   nbArgs = [signature numberOfArguments];
   objcTypesIndex = 0;
@@ -1129,7 +1106,7 @@ rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *f
       if (objcTypes[objcTypesIndex] != '\0') {
         objcTypesIndex++;
         if (--nbArgsExtra < 0) {
-          rb_raise(rb_eArgError, "Too many tokens in the format string '%s' for the given argument(s)", formatString);
+          rb_raise(rb_eArgError, "too many tokens in the format string '%s' for the given argument(s)", formatString);
         }
         break;
       }
@@ -1149,13 +1126,12 @@ rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   struct rb_objc_block *block;
   const char *objcTypes;
   NSMethodSignature *signature;
-  int nbArgs;
-  char *type;
-  int i;
+  NSUInteger nbArgs;
+  const char *type;
+  NSUInteger i;
   void *data;
   VALUE rb_array;
   VALUE rb_arg;
-  BOOL okydoky;
   VALUE rb_proc;
   VALUE rb_ret;
 
@@ -1167,7 +1143,7 @@ rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
 
   for (i=1;i<nbArgs;i++) {
     type = [signature getArgumentTypeAtIndex:i];
-    okydoky = rb_objc_convert_to_rb(args[i], 0, type, &rb_arg, NO);
+    rb_objc_convert_to_rb(args[i], 0, type, &rb_arg, NO);
     rb_ary_push(rb_array, rb_arg);
   }
 
@@ -1195,10 +1171,9 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
   int nbArgsExtra;
   int nbArgsAdjust;
   int i;
-  char *type;
+  const char *type;
   void *data;
   void **args;
-  BOOL okydoky;
   VALUE rb_arg;
   VALUE rb_retval;
   ffi_cif cif;
@@ -1235,19 +1210,18 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
 
   hash = rb_objc_hash(method);
 
-  nbArgs = [signature numberOfArguments];
+  nbArgs = (int)[signature numberOfArguments];
   nbArgsExtra = rigs_argc - (nbArgs - nbArgsAdjust);
   
   if (nbArgsExtra < 0) {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)",rigs_argc, nbArgs - nbArgsAdjust);
-    return Qnil;
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)", rigs_argc, nbArgs - nbArgsAdjust);
   }
   
   if (nbArgsExtra > 0) {
-    int formatStringIndex;
+    NSInteger formatStringIndex;
     const char *formatString;
       
-    formatStringIndex = NSMapGet(knownFormatStrings, hash) - 1;
+    formatStringIndex = (NSInteger)NSMapGet(knownFormatStrings, (void*)hash) - 1;
     if (formatStringIndex != -1 && TYPE(rigs_argv[formatStringIndex]) == T_STRING) {
       formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex]);
     }
@@ -1255,7 +1229,7 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
       formatString = "";
     }
     signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
-    nbArgs = [signature numberOfArguments];
+    nbArgs = (int)[signature numberOfArguments];
   }
 
   args = alloca(sizeof(void*) * nbArgs);
@@ -1286,7 +1260,7 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
   for (i=nbArgsAdjust;i<nbArgs;i++) {
     type = [signature getArgumentTypeAtIndex:i];
     if (strcmp(type, "@?") == 0) {
-      const char* blockObjcTypes = NSMapGet(knownBlocks, hash + i - nbArgsAdjust);
+      const char* blockObjcTypes = NSMapGet(knownBlocks, (void*)(hash + i - nbArgsAdjust));
       if (blockObjcTypes && rb_objc_build_closure_cif(&closureCif, blockObjcTypes) == FFI_OK) {
         closure = ffi_closure_alloc(sizeof(ffi_closure), &closurePtr);
         if (ffi_prep_closure_loc(closure, &closureCif, rb_objc_block_handler, &rigs_argv[i-nbArgsAdjust], closurePtr) == FFI_OK) {
@@ -1313,7 +1287,7 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
       NSUInteger tsize;
       NSGetSizeAndAlignment(type, &tsize, NULL);
       void *tdata = alloca(tsize);
-      okydoky = rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], &tdata, 0, type);
+      rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], &tdata, 0, type);
       args[i] = tdata;
       arg_types[i] = rb_objc_ffi_type_for_type(type);
     }
@@ -1333,7 +1307,8 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
   status = nbArgsExtra > 0 ?
     ffi_prep_cif_var(&cif, FFI_DEFAULT_ABI, nbArgs - nbArgsExtra, nbArgs, ret_type, arg_types) :
     ffi_prep_cif(&cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types);
-      
+
+  rb_retval = Qnil;
   if (status == FFI_OK) {
     ffi_call(&cif, FFI_FN(sym), (ffi_arg *)data, args);
 
@@ -1345,7 +1320,7 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
     }
     
     if (ret_type != &ffi_type_void) {
-      okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
+      rb_objc_convert_to_rb(data, 0, type, &rb_retval, NO);
     }
   }
 
@@ -1387,19 +1362,17 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     /* determine the receiver type - Class or instance ? */
     switch (TYPE(rb_self)) {
     case T_DATA:
-      NSDebugLog(@"Self Ruby value is 0x%lx (ObjC is at 0x%lx)",rb_self,DATA_PTR(rb_self));
-      Data_Get_Struct(rb_self,id,rcv);
-      NSDebugLog(@"Self is an object of Class %@ (description is '%@')",NSStringFromClass([rcv classForCoder]),rcv);
+      Data_Get_Struct(rb_self, void, rcv);
+      NSDebugLog(@"Self is Ruby instance (%p) of %@ (%p): %@)",
+                 (void*)rb_self, NSStringFromClass([rcv classForCoder]), DATA_PTR(rb_self), rcv);
       break;
     case T_CLASS:
       rcv = (Class) NUM2LL(rb_iv_get(rb_self, "@objc_class"));
-      NSDebugLog(@"Self is Class: %@", NSStringFromClass(rcv));
+      NSDebugLog(@"Self is Ruby class (%p): %@", (void*)rb_self, NSStringFromClass([rcv classForCoder]));
       break;
     default:
-      /* raise exception */
-      NSDebugLog(@"Don't know how to handle self Ruby object of type 0x%02x",TYPE(rb_self));
-      rb_raise(rb_eTypeError, "not valid self value");
-      return Qnil;
+      rb_raise(rb_eTypeError, "type 0x%02x not valid self value", TYPE(rb_self));
+      break;
     }
 
     sel = rb_objc_method_to_sel(method, our_argc);
@@ -1424,7 +1397,7 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     
     method = rb_id2name(rb_frame_this_func());
     hash = rb_objc_hash(method);
-    objcTypes = NSMapGet(knownFunctions, hash);
+    objcTypes = NSMapGet(knownFunctions, (void*)hash);
 
     if (!objcTypes) {
       return Qnil;
@@ -1445,8 +1418,7 @@ rb_objc_ib_outlet(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 {
   int i;
   ID attr;
-  ID attrset;
-  char *attrname;
+  const char *attrname;
   char *attrsetname;
   
   for (i=0; i<rigs_argc; i++) {
@@ -1479,7 +1451,7 @@ rb_objc_description(VALUE rb_self)
 {
   id rcv;
 
-  Data_Get_Struct(rb_self, id, rcv);
+  Data_Get_Struct(rb_self, void, rcv);
 
   return rb_str_new_cstr([[rcv description] UTF8String]);
 }
@@ -1489,7 +1461,7 @@ rb_objc_debug_description(VALUE rb_self)
 {
   id rcv;
 
-  Data_Get_Struct(rb_self, id, rcv);
+  Data_Get_Struct(rb_self, void, rcv);
 
   return rb_str_new_cstr([[rcv debugDescription] UTF8String]);
 }
@@ -1499,7 +1471,7 @@ rb_objc_get_ruby_object(VALUE rb_self)
 {
   id rcv;
 
-  Data_Get_Struct(rb_self, id, rcv);
+  Data_Get_Struct(rb_self, void, rcv);
 
   return [rcv getRubyObject];
 }
@@ -1509,7 +1481,7 @@ rb_objc_get_ruby_int(VALUE rb_self)
 {
   id rcv;
 
-  Data_Get_Struct(rb_self, id, rcv);
+  Data_Get_Struct(rb_self, void, rcv);
 
   return [rcv getRubyInteger];
 }
@@ -1519,7 +1491,7 @@ rb_objc_get_ruby_float(VALUE rb_self)
 {
   id rcv;
 
-  Data_Get_Struct(rb_self, id, rcv);
+  Data_Get_Struct(rb_self, void, rcv);
 
   return [rcv getRubyFloat];
 }
@@ -1527,7 +1499,7 @@ rb_objc_get_ruby_float(VALUE rb_self)
 unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
     SEL mthSel;
-    const char *mthRubyName;
+    char *mthRubyName;
     unsigned int imth_cnt;
     unsigned int i;
     Method *methods;
@@ -1555,7 +1527,7 @@ unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 unsigned int rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 {
     SEL mthSel;
-    const char *mthRubyName;
+    char *mthRubyName;
     Class objc_meta_class;
     unsigned int cmth_cnt;
     unsigned int i;
@@ -1606,11 +1578,11 @@ rb_objc_register_protocol_from_objc(const char *protocolName)
 
   for (i=0;i<numDescriptions;i++) {
     hash = rb_objc_hash(sel_getName(descriptions[i].name));
-    if (!NSMapGet(knownProtocols, hash)) {
+    if (!NSMapGet(knownProtocols, (void*)hash)) {
       objcTypes = rb_objc_sanitize_objc_types(descriptions[i].types);
       data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
       strcpy(data, objcTypes);
-      NSMapInsertKnownAbsent(knownProtocols, hash, data);
+      NSMapInsertKnownAbsent(knownProtocols, (void*)hash, (void*)data);
     }
   }
 
@@ -1626,7 +1598,7 @@ rb_objc_register_function_from_objc(const char *name, const char *objcTypes)
   data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
   strcpy(data, objcTypes);
   
-  NSMapInsertKnownAbsent(knownFunctions, hash, data);
+  NSMapInsertKnownAbsent(knownFunctions, (void*)hash, (void*)data);
 
   rb_define_module_function(rb_mRigs, name, rb_objc_invoke, -1);
 }
@@ -1636,14 +1608,12 @@ void
 rb_objc_register_constant_from_objc(const char *name, const char *type)
 {
   void *data;
-  BOOL okydoky;
   VALUE rb_retval;
   
   data = dlsym(RTLD_DEFAULT, name);
 
   if (data != NULL) {
-    okydoky = rb_objc_convert_to_rb(data, 0, type, &rb_retval, YES);
-    if (okydoky) {
+    if (rb_objc_convert_to_rb(data, 0, type, &rb_retval, YES)) {
       rb_define_const(rb_mRigs, name, rb_retval);
     }
   }
@@ -1670,46 +1640,40 @@ rb_objc_register_integer_from_objc(const char *name, long long value)
 }
 
 void
-rb_objc_register_block_from_objc(const char *selector, int index, const char *objcTypes)
+rb_objc_register_block_from_objc(const char *selector, size_t index, const char *objcTypes)
 {
   unsigned long hash;
   char *data;
-
-  if (index == -1) return;
 
   hash = rb_objc_hash(selector) + index;
 
-  if (!NSMapGet(knownBlocks, hash)) {
+  if (!NSMapGet(knownBlocks, (void*)hash)) {
     data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
     strcpy(data, objcTypes);
-    NSMapInsertKnownAbsent(knownBlocks, hash, data);
+    NSMapInsertKnownAbsent(knownBlocks, (void*)hash, (void*)data);
   }
 }
 
 void
-rb_objc_register_format_string_from_objc(const char *selector, int index)
+rb_objc_register_format_string_from_objc(const char *selector, size_t index)
 {
   unsigned long hash;
-  char *data;
-
-  if (index == -1) return;
 
   hash = rb_objc_hash(selector);
 
-  if (!NSMapGet(knownFormatStrings, hash)) {
-    NSMapInsertKnownAbsent(knownFormatStrings, hash, index + 1);
+  if (!NSMapGet(knownFormatStrings, (void*)hash)) {
+    NSMapInsertKnownAbsent(knownFormatStrings, (void*)hash, (void*)(index + 1));
   }
 }
 
 
 void
-rb_objc_register_struct_from_objc(const char *key, const char *name, const char *args[], int argCount)
+rb_objc_register_struct_from_objc(const char *key, const char *name, const char *args[], size_t argCount)
 {
   VALUE rb_struct;
-  char keyChar;
   unsigned long hash = rb_objc_hash(key);
   
-  if (NSMapGet(knownStructs, hash)) {
+  if (NSMapGet(knownStructs, (void*)hash)) {
     return;
   }
   
@@ -1733,11 +1697,11 @@ rb_objc_register_struct_from_objc(const char *key, const char *name, const char 
     rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], args[1], args[2], args[3], args[4], args[5], NULL);
     break;
   default:
-    rb_raise(rb_eTypeError, "Unsupported struct '%s' with argument size: %d", name, argCount);
+    rb_raise(rb_eTypeError, "unsupported struct '%s' with argument size: %zu", name, argCount);
     break;
   }
 
-  NSMapInsertKnownAbsent(knownStructs, hash, (void*)rb_struct);
+  NSMapInsertKnownAbsent(knownStructs, (void*)hash, (void*)rb_struct);
 }
 
 
@@ -1754,14 +1718,14 @@ rb_objc_register_class_from_objc (Class objc_class)
     unsigned int imth_cnt;
     unsigned int cmth_cnt;
 
-    NSDebugLog(@"Request to register ObjC Class %s (ObjC id = 0x%lx)",cname,objc_class);
+    NSDebugLog(@"Request to register ObjC Class %s (ObjC id = %p)", cname, objc_class);
 
     // If this class has already been registered then return existing
     // Ruby class VALUE
     rb_class = (VALUE) NSMapGet(knownClasses, (void *)objc_class);
 
-    if (rb_class) {
-       NSDebugLog(@"Class %s already registered (VALUE 0x%lx)", cname, rb_class);
+    if (rb_class != Qfalse) {
+       NSDebugLog(@"Class %s already registered (VALUE %p)", cname, (void*)rb_class);
        return rb_class;
     }
 
@@ -1783,7 +1747,7 @@ rb_objc_register_class_from_objc (Class objc_class)
     cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
     imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);
 
-    NSDebugLog(@"%d instance and %d class methods defined for class %s",imth_cnt,cmth_cnt,cname);
+    NSDebugLog(@"%d instance and %d class methods defined for class %s", imth_cnt, cmth_cnt, cname);
 
     // Extend any extra Ruby specific support to Objective-C classes
     if (objc_class == [NSObject class]) {
@@ -1813,7 +1777,7 @@ rb_objc_register_class_from_objc (Class objc_class)
     // Remember that this class is now defined in Ruby
     NSMapInsertKnownAbsent(knownClasses, (void*)objc_class, (void*)rb_class);
     
-    NSDebugLog(@"VALUE for new Ruby Class %s = 0x%lx",cname,rb_class);
+    NSDebugLog(@"VALUE for new Ruby Class %s = %p", cname, (void*)rb_class);
 
     return rb_class;
     }
@@ -1823,32 +1787,24 @@ VALUE
 rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
 {
   @autoreleasepool {
-  int i;
-  int count;
+  long i;
+  long count;
   VALUE listOption;
   int nbArgs;
   VALUE rb_mth_ary;
   VALUE rb_super_class;
   Class superClass;
   Class class;
-  char *rb_mth_name;
+  const char *rb_mth_name;
   SEL objcMthSEL;
-  const char *signature;
   const char *objcTypes;
-  char *rb_class_name = NULL;
-  BOOL guessed;
+  const char *rb_class_name;
   void *mthIMP;
   unsigned long hash;
 
-  // Check that this is a Ruby Class. 
-  if (TYPE(rb_class) == T_CLASS) {
-      // Yes it is. So get the class name 
-      rb_class_name = rb_class2name(rb_class);
-  } else {
-      // Nope! give up
-      NSLog(@"Trying to register unknown Ruby class: %s",rb_class_name);
-      return nil;
-  }
+  Check_Type(rb_class, T_CLASS);
+  
+  rb_class_name = rb_class2name(rb_class);
 
   NSDebugLog (@"Registering Ruby class %s with the objective-C runtime", 
               rb_class_name);
@@ -1857,7 +1813,7 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
   // do nothing
   if ( (class = objc_lookUpClass(rb_class_name)) ) {
       NSDebugLog(@"Class already registered with ObjC: %s", rb_class_name);
-      return class;
+      return Qfalse;
   }
   
   // Create the Objective-C proxy class. 
@@ -1876,8 +1832,7 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
   
   class = objc_allocateClassPair (superClass, rb_class_name, 0);
   if (class == nil) {
-      NSLog(@"Could not allocate class pair with ObjC: %s",rb_class_name);
-      return nil; 
+      rb_raise(rb_eTypeError, "could not allocate class pair with ObjC: %s", rb_class_name);
   }
 
   // Get instance method list. Pass no argument to function to
@@ -1885,11 +1840,11 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
   listOption = Qfalse;
   rb_mth_ary = rb_class_instance_methods(1,&listOption,rb_class);
   // number of instance methods in this class
-  count = RARRAY_LEN(RARRAY(rb_mth_ary));
-  NSDebugLog(@"This Ruby class has %d instance methods",count);
+  count = rb_array_len(rb_mth_ary);
+  NSDebugLog(@"Ruby class %s has %ld instance methods", rb_class_name, count);
   
   for (i=0;i<count;i++) {
-    ID entry = rb_sym2id(rb_ary_entry(rb_mth_ary, (long)i));
+    ID entry = rb_sym2id(rb_ary_entry(rb_mth_ary, i));
     nbArgs = rb_mod_method_arity(rb_class, entry);
 
     if (nbArgs < 0) continue;
@@ -1900,7 +1855,7 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
     objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
 
     hash = rb_objc_hash(objcTypes);
-    mthIMP = NSMapGet(knownImplementations, hash);
+    mthIMP = NSMapGet(knownImplementations, (void*)hash);
 
     if (mthIMP != NULL) {
       class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
@@ -1914,13 +1869,13 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
 
     if (rb_objc_build_closure_cif(cif, objcTypes) == FFI_OK) {
       closure = ffi_closure_alloc(sizeof(ffi_closure), &mthIMP);
-      if (ffi_prep_closure_loc(closure, cif, rb_objc_proxy_handler, objcTypes, mthIMP) == FFI_OK) {
-        NSMapInsertKnownAbsent(knownImplementations, hash, mthIMP);
+      if (ffi_prep_closure_loc(closure, cif, rb_objc_proxy_handler, (void*)objcTypes, mthIMP) == FFI_OK) {
+        NSMapInsertKnownAbsent(knownImplementations, (void*)hash, (void*)mthIMP);
         class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
       }
     }
 
-    NSDebugLog(@"Ruby method %s has %d arguments with signature %s",rb_mth_name,nbArgs,objcTypes);
+    NSDebugLog(@"Ruby method %s has %d arguments with signature %s", rb_mth_name, nbArgs, objcTypes);
   }
   
   objc_registerClassPair(class);
@@ -1936,7 +1891,7 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
   rb_undef_method(CLASS_OF(rb_class),"new");
   rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
 
-  return class;
+  return Qtrue;
   
   }
 }
@@ -1954,7 +1909,7 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
     rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
   }
   
-  if (NSHashGet(knownFrameworks, bundle.bundleIdentifier.hash)) {
+  if (NSHashGet(knownFrameworks, (void*)bundle.bundleIdentifier.hash)) {
     return Qfalse;
   }
 
@@ -1981,7 +1936,7 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
   [delegate release];
 
   if (parsed) {
-    NSHashInsertKnownAbsent(knownFrameworks, bundle.bundleIdentifier.hash);
+    NSHashInsertKnownAbsent(knownFrameworks, (void*)bundle.bundleIdentifier.hash);
     return Qtrue;
   }
   rb_raise(rb_eLoadError, "cannot parse such framework -- %s", cname);
@@ -1991,17 +1946,17 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
 void
 rb_objc_ptr_free(struct rb_objc_ptr *dp)
 {
-  NSDebugLog(@"Call to ObjRuby::Ptr free on %p", dp);
+  NSDebugLog(@"Call to ObjRuby::Pointer free on %p", dp);
   
   @autoreleasepool {
     id obj;
-    long offset;
+    size_t offset;
 
     if (dp != NULL) {
       if (dp->retained) {
         offset = 0;
         while (offset < dp->allocated_size) {
-          obj = *(id*)(dp->cptr + offset);
+          obj = *((id*)(dp->cptr) + offset);
           if ([obj respondsToSelector:@selector(release)]) {
             [obj release];
           }
@@ -2026,7 +1981,7 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     VALUE obj;
     VALUE enc;
     VALUE cnt;
-    char *encoding;
+    const char *encoding;
     ID key;
     const char* (*types)[2];
     char *data;
@@ -2099,24 +2054,25 @@ rb_objc_ptr_get(VALUE rcv, VALUE index)
     NSUInteger offset;
     struct rb_objc_ptr *dp;
     VALUE val;
-    BOOL okydoky;
+    BOOL converted;
 
     Check_Type(index, T_FIXNUM);
   
     dp = (struct rb_objc_ptr*)DATA_PTR(rcv);
 
+    converted = NO;
     offset = 0;
     if (dp->encoding != NULL) {
       NSGetSizeAndAlignment(dp->encoding, &offset, NULL);
       offset *= FIX2INT(index);
 
       if (dp->allocated_size > 0) {
-        okydoky = rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val, NO);
+        converted = rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val, NO);
       }
     }
 
-    if (!okydoky) {
-      rb_raise(rb_eRuntimeError, "Can't convert element of type '%s' at index %d with offset %d", dp->encoding ?: "(unknown)", FIX2INT(index), offset);
+    if (!converted) {
+      rb_raise(rb_eRuntimeError, "can't convert element of type '%s' at index %d with offset %lu", dp->encoding ?: "(unknown)", FIX2INT(index), offset);
     }
 
     return val;
@@ -2134,12 +2090,12 @@ rb_objc_ptr_inspect(VALUE rcv)
     rb_class = rb_mod_name(CLASS_OF(rcv));
     dp = (struct rb_objc_ptr*)DATA_PTR(rcv);
   
-    snprintf(s, sizeof(s), "#<%s:0x%lx cptr=%p allocated_size=%ld encoding=%s>",
+    snprintf(s, sizeof(s), "#<%s:%p cptr=%p allocated_size=%ld encoding=%s>",
              rb_string_value_cstr(&rb_class),
-             NUM2ULONG(rb_obj_id(rcv)),
+             (void*)rcv,
              dp->cptr,
              dp->allocated_size,
-             dp->encoding ?: "(unknown)");
+             dp->encoding ?: "(NULL)");
   
     return rb_str_new2(s);  
   }
@@ -2148,15 +2104,16 @@ rb_objc_ptr_inspect(VALUE rcv)
 void __attribute__((noreturn))
 rb_objc_raise_exception(NSException *exception)
 {
+    const char *class_name;
+    const char *message;
     VALUE rb_exception;
-    
-    NSDebugLog(@"Uncaught Objective C Exception raised !");
-    NSDebugLog(@"Name:%@  / Reason:%@  /  UserInfo: ?",
-               [exception name],[exception reason]);
 
-   
-    rb_exception = rb_define_class_under(rb_mRigs, [[[exception name] stringByReplacingOccurrencesOfString:@"Exception" withString:@"Error"] cString], rb_eRuntimeError);
-    rb_raise(rb_exception, [[exception reason] cString]);
+    class_name = [[[exception name] stringByReplacingOccurrencesOfString:@"Exception"
+                                                              withString:@"Error"] UTF8String];
+    message = [[exception reason] UTF8String];
+    
+    rb_exception = rb_define_class_under(rb_mRigs, class_name, rb_eRuntimeError);
+    rb_raise(rb_exception, "%s", message);
 }
 
 
@@ -2165,34 +2122,18 @@ rb_objc_raise_exception(NSException *exception)
 void
 Init_obj_ext()
 {
-    // Initialize hash tables of known Objects and Classes
-    knownClasses = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
-                                    NSNonOwnedPointerMapValueCallBacks,
-                                    0);
-    knownObjects = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks,
-                                    NSNonOwnedPointerMapValueCallBacks,
-                                    0);
-    knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-                                    NSNonOwnedPointerMapValueCallBacks,
-                                    0);
-    knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-                                      NSNonOwnedPointerMapValueCallBacks,
-                                      0);
-    knownBlocks = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-                                   NSNonOwnedPointerMapValueCallBacks,
-                                   0);
-    knownProtocols = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-                                      NSNonOwnedPointerMapValueCallBacks,
-                                      0);
-    knownImplementations = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-                                            NSNonOwnedPointerMapValueCallBacks,
-                                            0);
-    knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks,
-                                          NSIntegerMapValueCallBacks,
-                                          0);
-    
+    // Initialize hash tables of known Objective-C bridge data
+    knownClasses = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownObjects = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownBlocks = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownProtocols = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownImplementations = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+    knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
     knownFrameworks = NSCreateHashTable(NSIntegerHashCallBacks, 0);
 
+    // reference protocols so objc_getProtocol sees them
     @protocol(NSApplicationDelegate);
     @protocol(NSConnectionDelegate);
     @protocol(NSURLDownloadDelegate);
@@ -2219,8 +2160,8 @@ Init_obj_ext()
     rb_define_module_function(rb_mRigs, "register_class", rb_objc_register_class_from_ruby, 1);
 
     // Ruby class for holding a C-style pointer
-    //  - ObjRuby::Ptr.new(:object)
-    rb_cRigsPtr = rb_define_class_under(rb_mRigs, "Ptr", rb_cObject);
+    //  - ObjRuby::Pointer.new(:object): pointer to an "id" ObjC object like NSError
+    rb_cRigsPtr = rb_define_class_under(rb_mRigs, "Pointer", rb_cObject);
     rb_undef_alloc_func(rb_cRigsPtr);
     rb_undef_method(CLASS_OF(rb_cRigsPtr), "new");
     rb_define_singleton_method(rb_cRigsPtr, "new", rb_objc_ptr_new, -1);  

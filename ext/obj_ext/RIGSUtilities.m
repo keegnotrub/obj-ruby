@@ -26,7 +26,7 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */ 
+*/ 
 
 #import "RIGSUtilities.h"
 
@@ -70,7 +70,7 @@ rb_objc_method_to_sel(const char* name, int argc)
   return sel_getUid(selName);
 }
 
-const char *
+char *
 rb_objc_sel_to_method(SEL sel)
 {
   const char *selName;
@@ -113,13 +113,13 @@ rb_objc_hash(const char* value)
 
 
 inline const char *
-objc_skip_type_qualifiers (const char *type)
+objc_skip_type_qualifiers(const char *type)
 {
   while (*type == _C_CONST
-	 || *type == _C_IN
-	 || *type == _C_INOUT
-	 || *type == _C_OUT
-	 || *type == _C_BYCOPY
+         || *type == _C_IN
+         || *type == _C_INOUT
+         || *type == _C_OUT
+         || *type == _C_BYCOPY
          || *type == _C_BYREF
          || *type == _C_ONEWAY)
     {
@@ -129,16 +129,16 @@ objc_skip_type_qualifiers (const char *type)
 }
 
 const char *
-objc_skip_typespec (const char *type)
+objc_skip_typespec(const char *type)
 {
   /* Skip the variable name if any */
   if (*type == '"')
     {
       for (type++; *type++ != '"';)
-	/* do nothing */;
+        /* do nothing */;
     }
 
-  type = objc_skip_type_qualifiers (type);
+  type = objc_skip_type_qualifiers(type);
 
   switch (*type) {
 
@@ -150,9 +150,9 @@ objc_skip_typespec (const char *type)
       return type;
     else
       {
-	while (*++type != '"')
-	  /* do nothing */;
-	return type + 1;
+        while (*++type != '"')
+          /* do nothing */;
+        return type + 1;
       }
 
     /* The following are one character type codes */
@@ -180,32 +180,32 @@ objc_skip_typespec (const char *type)
   case _C_ARY_B:
     /* skip digits, typespec and closing ']' */
 
-    while (isdigit ((unsigned char)*++type))
-      ;
-    type = objc_skip_typespec (type);
+    while (isdigit((unsigned char)*++type))
+      /* do nothing */;
+    type = objc_skip_typespec(type);
     if (*type == _C_ARY_E)
       return ++type;
     else
       {
-	return 0;
+        return 0;
       }
 
   case _C_BFLD:
     /* The new encoding of bitfields is: b 'position' 'type' 'size' */
-    while (isdigit ((unsigned char)*++type))
-      ;	/* skip position */
-    while (isdigit ((unsigned char)*++type))
-      ;	/* skip type and size */
+    while (isdigit((unsigned char)*++type))
+      /* skip position */;
+    while (isdigit((unsigned char)*++type))
+      /* skip type and size */;
     return type;
 
   case _C_STRUCT_B:
     /* skip name, and elements until closing '}'  */
 
     while (*type != _C_STRUCT_E && *type++ != '=')
-      ;
+      /* do nothing */;
     while (*type != _C_STRUCT_E)
       {
-	type = objc_skip_typespec (type);
+        type = objc_skip_typespec(type);
       }
     return ++type;
 
@@ -213,17 +213,17 @@ objc_skip_typespec (const char *type)
     /* skip name, and elements until closing ')'  */
 
     while (*type != _C_UNION_E && *type++ != '=')
-      ;
+      /* do nothing */;
     while (*type != _C_UNION_E)
       {
-	type = objc_skip_typespec (type);
+        type = objc_skip_typespec(type);
       }
     return ++type;
 
   case _C_PTR:
     /* Just skip the following typespec */
 
-    return objc_skip_typespec (++type);
+    return objc_skip_typespec(++type);
 
   default:
     {
@@ -234,20 +234,20 @@ objc_skip_typespec (const char *type)
 
 
 inline const char *
-objc_skip_offset (const char *type)
+objc_skip_offset(const char *type)
 {
   if (*type == '+')
     type++;
-  while (isdigit ((unsigned char) *++type))
-    ;
+  while (isdigit((unsigned char) *++type))
+    /* do nothing */;
   return type;
 }
 
 const char *
-objc_skip_argspec (const char *type)
+objc_skip_argspec(const char *type)
 {
-  type = objc_skip_typespec (type);
-  type = objc_skip_offset (type);
+  type = objc_skip_typespec(type);
+  type = objc_skip_offset(type);
   return type;
 }
 

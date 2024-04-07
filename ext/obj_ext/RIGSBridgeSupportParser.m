@@ -20,17 +20,17 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */
+*/
 
 #import "RIGSBridgeSupportParser.h"
 #import "RIGSCore.h"
 
 @implementation RIGSBridgeSupportParser
 
-- (void)parser:(NSXMLParser *)parser 
-didStartElement:(NSString *)elementName 
-  namespaceURI:(NSString *)namespaceURI 
- qualifiedName:(NSString *)qName 
+- (void)parser:(NSXMLParser *)parser
+didStartElement:(NSString *)elementName
+  namespaceURI:(NSString *)namespaceURI
+ qualifiedName:(NSString *)qName
     attributes:(NSDictionary*)attributeDict {
   if ([elementName isEqualToString:@"struct"]) {
     [self parseStructWithName:[attributeDict objectForKey:@"name"]
@@ -101,7 +101,7 @@ didStartElement:(NSString *)elementName
   
   if (_blockIndex != -1) {
     if (_methodName) {
-      rb_objc_register_block_from_objc([_methodName cString], _blockIndex, [_objcTypes cString]);
+      rb_objc_register_block_from_objc([_methodName UTF8String], _blockIndex, [_objcTypes UTF8String]);
     }
 
     _blockIndex = -1;
@@ -111,10 +111,10 @@ didStartElement:(NSString *)elementName
 
   if (_formatStringIndex != -1) {
     if (_methodName) {
-      rb_objc_register_format_string_from_objc([_methodName cString], _formatStringIndex);
+      rb_objc_register_format_string_from_objc([_methodName UTF8String], _formatStringIndex);
     }
     else if (_functionName) {
-      rb_objc_register_format_string_from_objc([_functionName cString], _formatStringIndex);
+      rb_objc_register_format_string_from_objc([_functionName UTF8String], _formatStringIndex);
     }
     _formatStringIndex = -1;
   }
@@ -122,7 +122,7 @@ didStartElement:(NSString *)elementName
 
 - (void)finalizeFunction
 {
-  rb_objc_register_function_from_objc([_functionName cString], [_objcTypes cString]);
+  rb_objc_register_function_from_objc([_functionName UTF8String], [_objcTypes UTF8String]);
   
   [_objcTypes release];
   _objcTypes = nil;
@@ -138,7 +138,7 @@ didStartElement:(NSString *)elementName
 
 - (void)parseProtocolWithName:(NSString*)name
 {
-  rb_objc_register_protocol_from_objc([name cString]);
+  rb_objc_register_protocol_from_objc([name UTF8String]);
 }
 
 - (void)parseFunctionWithName:(NSString*)name
@@ -222,23 +222,23 @@ didStartElement:(NSString *)elementName
     [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\"}"] intoString:NULL];
     [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"}"] intoString:NULL];
 
-    args[argIndex++] = [arg cString];
+    args[argIndex++] = [arg UTF8String];
   }
 
-  rb_objc_register_struct_from_objc([structKey cString], [name cString], args, argCount);
+  rb_objc_register_struct_from_objc([structKey UTF8String], [name UTF8String], args, argCount);
 
   free(args);
 }
 
 - (void)parseConstantWithName:(NSString*)name type:(NSString*)type
 {
-  rb_objc_register_constant_from_objc([name cString], [type cString]);
+  rb_objc_register_constant_from_objc([name UTF8String], [type UTF8String]);
 }
 
 - (void)parseEnumWithName:(NSString*)name value:(NSString*)value
 {
   if ([name isEqualToString:@"NSNotFound"]) {
-    rb_objc_register_integer_from_objc([name cString], NSIntegerMax);
+    rb_objc_register_integer_from_objc([name UTF8String], NSIntegerMax);
     return;
   }
     
@@ -247,10 +247,10 @@ didStartElement:(NSString *)elementName
   double floatResult;
 
   if ([scanner scanLongLong:&integerResult] && scanner.atEnd) {
-    rb_objc_register_integer_from_objc([name cString], integerResult);
+    rb_objc_register_integer_from_objc([name UTF8String], integerResult);
   }
   else if ([scanner scanDouble:&floatResult] && scanner.atEnd) {
-    rb_objc_register_float_from_objc([name cString], floatResult);
+    rb_objc_register_float_from_objc([name UTF8String], floatResult);
   }
 }
 

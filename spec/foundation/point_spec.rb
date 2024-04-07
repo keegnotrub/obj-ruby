@@ -1,5 +1,4 @@
 require "spec_helper"
-require "obj_ruby/foundation"
 
 RSpec.describe ObjRuby::NSPoint do
   it "can create an instance" do

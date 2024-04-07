@@ -1,40 +1,36 @@
 require "spec_helper"
 
 RSpec.describe ObjRuby do
-  describe "#require_frameowrk" do
-    it "loads all Objective-C classes of a given framework into Ruby's namespace" do
-      described_class.require_framework("Foundation")
-
-      expect(described_class.const_defined?(:NSAffineTransform)).to be true
-      expect(described_class.const_defined?(:NSAppleEventDescriptor)).to be true
-      expect(described_class.const_defined?(:NSAppleEventManager)).to be true
-      expect(described_class.const_defined?(:NSAppleScript)).to be true
+  describe "#root" do
+    it "returns nil without the needed ENV var" do
+      with_modified_env OBJR_ROOT: nil do
+        expect(described_class.root).to be_nil
+      end
     end
 
-    it "loads Objective-C structs of a given framework into Ruby's namespace" do
-      described_class.require_framework("Foundation")
-
-      expect(described_class.const_get(:NSRange).members).to eq [:location, :length]
-      expect(described_class.const_get(:NSPoint).members).to eq [:x, :y]
-      expect(described_class.const_get(:NSSize).members).to eq [:width, :height]
-      expect(described_class.const_get(:NSRect).members).to eq [:origin, :size]
+    it "returns the path set by the needed ENV var" do
+      with_modified_env OBJR_ROOT: "/my/path" do
+        expect(described_class.root).to eq("/my/path")
+      end
     end
 
-    it "loads Objective-C enums of a given framework into Ruby's namespace" do
-      described_class.require_framework("Foundation")
-
-      expect(described_class.const_get(:NSNotFound)).to eq 2**63 - 1
-      expect(described_class.const_get(:NSOrderedSame)).to eq 0
-      expect(described_class.const_get(:NSASCIIStringEncoding)).to eq 1
+    it "can extend the path set by the needed ENV var" do
+      with_modified_env OBJR_ROOT: "/my/path" do
+        result = described_class.root "extended", "path"
+        expect(result).to eq("/my/path/extended/path")
+      end
     end
+  end
 
-    it "loads Objective-C constants of a given framework into Ruby's namespace" do
-      described_class.require_framework("Foundation")
+  describe "#initialize!" do
+    it "calls register_class for found Ruby classes" do
+      with_modified_env OBJR_ROOT: source_root do
+        allow(described_class).to receive(:register_class)
 
-      expect(described_class.const_get(:NSZeroPoint)).to eq ObjRuby::NSPoint.new(0, 0)
-      expect(described_class.const_get(:NSWeekDayNameArray)).to eq "NSWeekDayNameArray"
-      expect(described_class.const_get(:NSKeepAllocationStatistics)).to eq true
-      expect(described_class.const_get(:NSZombieEnabled)).to eq false
+        described_class.initialize!
+
+        expect(described_class).to have_received(:register_class).once
+      end
     end
   end
 end

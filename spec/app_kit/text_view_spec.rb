@@ -1,5 +1,4 @@
 require "spec_helper"
-require "obj_ruby/app_kit"
 
 RSpec.describe ObjRuby::NSTextView do
   it "can create an instance" do

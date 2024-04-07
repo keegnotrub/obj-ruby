@@ -1,5 +1,4 @@
 require "spec_helper"
-require "obj_ruby/foundation"
 
 RSpec.describe "ObjRuby::NSLog" do
   it "can output to stderr" do

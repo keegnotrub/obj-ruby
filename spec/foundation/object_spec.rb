@@ -1,5 +1,4 @@
 require "spec_helper"
-require "obj_ruby/foundation"
 
 RSpec.describe ObjRuby::NSObject do
   it "can set ib_outets that act as attr_accessor" do

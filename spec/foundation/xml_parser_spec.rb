@@ -1,6 +1,4 @@
 require "spec_helper"
-require "obj_ruby/foundation"
-require_relative "../fixtures/test_xml_parser_delegate"
 
 RSpec.describe ObjRuby::NSXMLParser do
   it "can take a delegate" do

@@ -1,3 +1,3 @@
 # Getting Started
 
-https://gnustep.github.io/experience/PierresDevTutorial/index.html
+https://github.com/rubycocoa/rubycocoa/blob/master/doc/programming.md#a-first-example-with-sensory-appeal

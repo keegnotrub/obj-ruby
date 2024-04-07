@@ -29,7 +29,8 @@
 #define __RIGS_h_GNUSTEP_RUBY_INCLUDE
 
 #ifndef NSDebugLog
-#define NSDebugLog
+#define NSDebugLog(fmt, ...) \
+          do { if (0) NSLog(fmt, ##__VA_ARGS__); } while (0)
 #endif
 
 #endif

@@ -1,33 +1,26 @@
 /* RIGSCore.m - Ruby Interface to Objective-C
 
-   $Id$
-
-   Copyright (C) 2001 Free Software Foundation, Inc.
-
-   Written by:  Laurent Julliard <laurent@julliard-online.org>
-   Date: Aug 2001
-   
-   This file is part of the GNUstep Ruby Interface Library.
+   Written by: Ryan Krug <ryank@kit.com>
+   Date: April 2023
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
    License as published by the Free Software Foundation; either
    version 2 of the License, or (at your option) any later version.
-   
+
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Library General Public License for more details.
-   
+
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 
-
    History:
    - Original code from Avi Bryant's cupertino test project <avi@beta4.com>
    - Code patiently improved and augmented by Laurent Julliard <laurent@julliard-online.org>
-   - Then once again by Ryan Krug <ryan.krug@thoughtbot.com>
+   - Then once again by Ryan Krug <ryank@kit.com>
 
 */
 
@@ -1414,39 +1407,6 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 }
 
 VALUE
-rb_objc_ib_outlet(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
-{
-  int i;
-  ID attr;
-  const char *attrname;
-  char *attrsetname;
-  
-  for (i=0; i<rigs_argc; i++) {
-    attr = rb_to_id(rigs_argv[i]);
-
-    rb_attr(rb_self, attr, 1, 1, 0);
-
-    attrname = rb_id2name(attr);
-    attrsetname = malloc(sizeof(char) * strlen(attrname) + 4);
-    strcpy(attrsetname, "set");
-    strcat(attrsetname, attrname);
-    attrsetname[3] = toupper(attrsetname[3]);
-
-    rb_alias(rb_self, rb_intern(attrsetname), rb_id_attrset(attr));
-
-    free(attrsetname);
-  }
-
-  return Qnil;
-}
-
-VALUE
-rb_objc_ib_action(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
-{
-  return Qnil;
-}
-
-VALUE
 rb_objc_description(VALUE rb_self)
 {
   id rcv;
@@ -1754,8 +1714,6 @@ rb_objc_register_class_from_objc (Class objc_class)
       rb_define_alias(rb_class, "==", "isEqual");
       rb_define_method(rb_class, "to_s", rb_objc_description, 0);
       rb_define_method(rb_class, "inspect", rb_objc_debug_description, 0);
-      rb_define_singleton_method(rb_class, "ib_outlet", rb_objc_ib_outlet, -1);
-      rb_define_singleton_method(rb_class, "ib_action", rb_objc_ib_action, -1);
     }
     else if (objc_class == [NSString class]) {
       rb_define_method(rb_class, "to_s", rb_objc_get_ruby_object, 0);

@@ -1,14 +1,8 @@
 /* RIGSNSArray.m - Some additional code to properly wrap the
    NSArrayclass in Ruby and provide some convenient new methods
 
-   $Id$
-
-   Copyright (C) 2001 Free Software Foundation, Inc.
-   
-   Written by:  Laurent Julliard <laurent@julliard-online.org>
-   Date: August 2001
-   
-   This file is part of the GNUstep Ruby Interface Library.
+   Written by: Ryan Krug <ryank@kit.com>
+   Date: April 2023
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public

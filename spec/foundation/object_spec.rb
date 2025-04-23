@@ -1,18 +1,6 @@
 require "spec_helper"
 
 RSpec.describe ObjRuby::NSObject do
-  it "can set ib_outets that act as attr_accessor" do
-    described_class.ib_outlet :myThing, :otherThing
-
-    obj = described_class.new
-
-    obj.myThing = "a"
-    obj.setOtherThing("b")
-
-    expect(obj.myThing).to eq("a")
-    expect(obj.otherThing).to eq("b")
-  end
-
   it "uses description for to_s" do
     obj = described_class.new
 

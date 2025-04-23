@@ -11,12 +11,4 @@ RSpec.configure do |config|
     expectations.syntax = :expect
   end
   config.order = :random
-
-  def source_root
-    File.join(__dir__, "support", "fixtures", "dummy")
-  end
-
-  def destination_root
-    File.join(__dir__, "sandbox")
-  end
 end

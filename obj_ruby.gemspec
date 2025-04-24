@@ -1,5 +1,6 @@
-$LOAD_PATH << File.expand_path("lib", __dir__)
-require "obj_ruby/version"
+# frozen_string_literal: true
+
+require_relative "lib/obj_ruby/version"
 
 Gem::Specification.new do |s|
   s.name = "obj_ruby"
@@ -11,7 +12,7 @@ Gem::Specification.new do |s|
   s.description = "A fork of GNUstep's RIGS, updated for modern verions of macOS and Ruby."
   s.license = "LGPL-2.1"
 
-  s.files = `git ls-files -- {ext,lib,templates}/*`.split("\n")
+  s.files = `git ls-files -- {ext,lib}/*`.split("\n")
   s.require_paths = ["lib"]
   s.extensions = ["ext/obj_ext/extconf.rb"]
 

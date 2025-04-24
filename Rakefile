@@ -7,6 +7,8 @@ require "bundler/gem_tasks"
 
 CLOBBER.include("tmp")
 
+RSpec::Core::RakeTask.new(:spec)
+
 namespace "compile" do
   task :run do
     build
@@ -20,8 +22,7 @@ end
 desc "Compile obj_ext.bundle into the lib directory"
 task compile: ["compile:run"]
 
-RSpec::Core::RakeTask.new(:spec)
-
+task build: :compile
 task default: [:compile, :spec]
 
 def build(options = "")

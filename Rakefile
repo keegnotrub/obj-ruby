@@ -5,12 +5,12 @@ require "standard/rake"
 require "rspec/core/rake_task"
 require "bundler/gem_tasks"
 
-CLOBBER.include("tmp")
-
 RSpec::Core::RakeTask.new(:spec)
 
+CLOBBER.include("tmp")
+
 namespace "compile" do
-  task :run do
+  task :release do
     build
   end
   desc "Compile obj_ext.bundle into the lib directory with debug enabled"
@@ -20,9 +20,8 @@ namespace "compile" do
 end
 
 desc "Compile obj_ext.bundle into the lib directory"
-task compile: ["compile:run"]
+task compile: ["compile:release"]
 
-task build: :compile
 task default: [:compile, :spec]
 
 def build(options = "")

@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.extensions = ["ext/obj_ext/extconf.rb"]
 
   s.platform = Gem::Platform.new("darwin")
-  s.required_ruby_version = Gem::Requirement.new(">= 2.7.0")
+  s.required_ruby_version = Gem::Requirement.new(">= 2.6.10")
 
   s.add_development_dependency "rake"
   s.add_development_dependency "rspec"

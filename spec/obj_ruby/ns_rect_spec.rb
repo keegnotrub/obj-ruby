@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe ObjRuby::NSRect do
   it "can create an instance" do
-    rect1 = ObjRuby::NSRect.new(ObjRuby::NSMakePoint(50, 100), ObjRuby::NSMakeSize(200, 300))
+    rect1 = described_class.new(ObjRuby::NSMakePoint(50, 100), ObjRuby::NSMakeSize(200, 300))
     rect2 = ObjRuby::NSMakeRect(100, 200, 50, 150)
 
     expect(rect1).to be_a described_class

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # core_data.rb - Load CoreData Framework
 #
 # Written by:  Ryan Krug <ryank@kit.com>

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # app_kit.rb - Load AppKit Framework
 #
 # Written by:  Ryan Krug <ryank@kit.com>

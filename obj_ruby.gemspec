@@ -12,14 +12,12 @@ Gem::Specification.new do |s|
   s.description = "A fork of GNUstep's RIGS, updated for modern verions of macOS and Ruby."
   s.license = "LGPL-2.1"
 
+  s.metadata = { "rubygems_mfa_required" => "true" }
+
   s.files = `git ls-files -- {ext,lib}/*`.split("\n")
   s.require_paths = ["lib"]
   s.extensions = ["ext/obj_ext/extconf.rb"]
 
   s.platform = Gem::Platform.new("darwin")
   s.required_ruby_version = Gem::Requirement.new(">= 2.6.10")
-
-  s.add_development_dependency "rake"
-  s.add_development_dependency "rspec"
-  s.add_development_dependency "standard"
 end

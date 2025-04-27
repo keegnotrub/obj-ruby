@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # version.rb - Declare ObjRuby Version
 #
 # Written by: Ryan Krug <ryank@kit.com>
@@ -18,5 +20,5 @@
 # Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 
 module ObjRuby
-  VERSION = "0.1.0".freeze
+  VERSION = "0.1.0"
 end

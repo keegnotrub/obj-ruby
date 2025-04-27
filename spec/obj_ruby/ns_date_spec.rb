@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 RSpec.describe ObjRuby::NSDate do
@@ -9,12 +11,12 @@ RSpec.describe ObjRuby::NSDate do
   end
 
   it "can call instance methods" do
-    date = described_class.dateWithTimeIntervalSince1970(42424242)
+    date = described_class.dateWithTimeIntervalSince1970(42_424_242)
     other_date = date.addTimeInterval(1000)
     earlier_date = date.earlierDate(other_date)
 
-    expect(date.timeIntervalSince1970).to eq 42424242
-    expect(other_date.timeIntervalSince1970).to eq 42424242 + 1000
+    expect(date.timeIntervalSince1970).to eq 42_424_242
+    expect(other_date.timeIntervalSince1970).to eq 42_424_242 + 1000
     expect(earlier_date).to eq date
   end
 

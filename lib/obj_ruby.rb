@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # obj_ruby.rb - Main file to require to start using ObjRuby
 #
 # Written by: Ryan Krug <ryank@kit.com>

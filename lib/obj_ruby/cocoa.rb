@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # cocoa.rb - Load Cocoa Framework
 #
 # Written by:  Ryan Krug <ryank@kit.com>

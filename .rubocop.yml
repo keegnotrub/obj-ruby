@@ -1,10 +1,16 @@
-require:
-  - standard
-  - standard-custom
-  - standard-performance
-  - rubocop-performance
-
-inherit_gem:
-  standard: config/base.yml
-  standard-custom: config/base.yml
-  standard-performance: config/base.yml
+AllCops:
+  TargetRubyVersion: 2.6
+  NewCops: enable
+Naming/MethodName:
+  Enabled: false
+Style/IfUnlessModifier:
+  Enabled: false
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+RSpec/ExampleLength:
+  Enabled: false
+RSpec/MultipleExpectations:
+  Enabled: false
+plugins:
+  - rubocop-rake
+  - rubocop-rspec

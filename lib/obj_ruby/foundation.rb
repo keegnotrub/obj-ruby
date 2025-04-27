@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # foundation.rb - Load Foundation Framework
 #
 # Written by: Ryan Krug <ryank@kit.com>

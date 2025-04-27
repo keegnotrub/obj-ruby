@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 class TestXMLParserDelegate < ObjRuby::NSObject
-  attr_accessor :starts
-  attr_accessor :ends
+  attr_accessor :starts, :ends
 
   def init
     @starts = 0
@@ -9,11 +10,11 @@ class TestXMLParserDelegate < ObjRuby::NSObject
     self
   end
 
-  def parser_didStartElement_namespaceURI_qualifiedName_attributes(parser, element, namespace, name, attributes)
+  def parser_didStartElement_namespaceURI_qualifiedName_attributes(_parser, _element, _namespace, _name, _attributes)
     @starts += 1
   end
 
-  def parser_didEndElement_namespaceURI_qualifiedName(parser, element, namespace, name)
+  def parser_didEndElement_namespaceURI_qualifiedName(_parser, _element, _namespace, _name)
     @ends += 1
   end
 end

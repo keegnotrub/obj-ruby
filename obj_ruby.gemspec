@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.name = "obj_ruby"
   s.version = ObjRuby::VERSION
   s.authors = ["Ryan Krug"]
-  s.email = ["ryank@kit.com"]
+  s.email = ["keegnotrub@icloud.com"]
   s.homepage = "http://github.com/keegnotrub/obj_ruby"
   s.summary = "Ruby to Objective-C bridge"
   s.description = "A fork of GNUstep's RIGS, updated for modern verions of macOS and Ruby."

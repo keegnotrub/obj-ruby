@@ -1,6 +1,6 @@
 /* RIGSBridgeSupportParser.m - Delegate to parse BridgeSupport files
 
-   Written by: Ryan Krug <ryank@kit.com>
+   Written by: Ryan Krug <keegnotrub@icloud.com>
    Date: May 2023
 
    This library is free software; you can redistribute it and/or

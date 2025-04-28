@@ -1,6 +1,6 @@
 /* RIGSCore.m - Ruby Interface to Objective-C
 
-   Written by: Ryan Krug <ryank@kit.com>
+   Written by: Ryan Krug <keegnotrub@icloud.com>
    Date: April 2023
 
    This library is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
    History:
    - Original code from Avi Bryant's cupertino test project <avi@beta4.com>
    - Code patiently improved and augmented by Laurent Julliard <laurent@julliard-online.org>
-   - Then once again by Ryan Krug <ryank@kit.com>
+   - Then once again by Ryan Krug <keegnotrub@icloud.com>
 
 */
 

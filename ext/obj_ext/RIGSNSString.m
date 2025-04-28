@@ -1,7 +1,7 @@
 /* RIGSNSString.m - Some additional code to properly wrap the
    NSString class in Ruby
 
-   Written by: Ryan Krug <ryank@kit.com>
+   Written by: Ryan Krug <keegnotrub@icloud.com>
    Date: April 2023
 
    This library is free software; you can redistribute it and/or

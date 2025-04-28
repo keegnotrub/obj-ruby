@@ -1,7 +1,7 @@
 /* RIGSUtilities.h - Utilities to add classes and methods 
    in the Objective-C runtime, at runtime.
 
-   Written by: Ryan Krug <ryank@kit.com>
+   Written by: Ryan Krug <keegnotrub@icloud.com>
    Date: July 2023
 
    This library is free software; you can redistribute it and/or

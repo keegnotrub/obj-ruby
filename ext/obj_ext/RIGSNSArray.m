@@ -1,7 +1,7 @@
 /* RIGSNSArray.m - Some additional code to properly wrap the
    NSArrayclass in Ruby and provide some convenient new methods
 
-   Written by: Ryan Krug <ryank@kit.com>
+   Written by: Ryan Krug <keegnotrub@icloud.com>
    Date: April 2023
 
    This library is free software; you can redistribute it and/or

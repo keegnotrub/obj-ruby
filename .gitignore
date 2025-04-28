@@ -5,6 +5,7 @@
 /doc/
 /pkg/
 /spec/reports/
+/spec/sandbox/
 /tmp/
 /lib/*.bundle
 
@@ -13,5 +14,8 @@
 
 # use obj_ruby.gemspec instead
 Gemfile.lock
+
+# force empty directories
+!.keep
 
 .tool-versions

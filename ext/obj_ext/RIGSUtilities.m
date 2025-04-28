@@ -1,11 +1,9 @@
 /* RIGSUtilities.m - Utilities to add classes and methods 
    in the Objective-C runtime, at runtime.
 
-   Copyright (C) 2023 thoughtbot, Inc.
-   
-   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Written by:  Ryan Krug <ryank@kit.com>
    Date: July 2023
-   
+
    It was partially derived by: encoding.c
    Encoding of types for Objective C.
    Copyright (C) 1993, 1995, 1996, 1997, 1998, 2000, 2002
@@ -17,16 +15,16 @@
    modify it under the terms of the GNU Library General Public
    License as published by the Free Software Foundation; either
    version 2 of the License, or (at your option) any later version.
-   
+
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Library General Public License for more details.
-   
+
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */ 
+*/ 
 
 #import "RIGSUtilities.h"
 
@@ -48,10 +46,6 @@ rb_objc_method_to_sel(const char* name, int argc)
   size_t i;
   size_t length;
   
-  if (argc == 0 && strstr(name, "to_") == name) {
-    return sel_getUid(name);
-  }
-
   length = strlen(name);
   selName = alloca(length + 2);
   nbArgs = 0;
@@ -74,7 +68,7 @@ rb_objc_method_to_sel(const char* name, int argc)
   return sel_getUid(selName);
 }
 
-const char *
+char *
 rb_objc_sel_to_method(SEL sel)
 {
   const char *selName;
@@ -108,7 +102,7 @@ rb_objc_hash(const char* value)
   char keyChar;
   unsigned long hash = HASH_SEED;
   
-  while (keyChar = *value++) {
+  while ((keyChar = *value++)) {
     hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
   }
 
@@ -117,13 +111,13 @@ rb_objc_hash(const char* value)
 
 
 inline const char *
-objc_skip_type_qualifiers (const char *type)
+objc_skip_type_qualifiers(const char *type)
 {
   while (*type == _C_CONST
-	 || *type == _C_IN
-	 || *type == _C_INOUT
-	 || *type == _C_OUT
-	 || *type == _C_BYCOPY
+         || *type == _C_IN
+         || *type == _C_INOUT
+         || *type == _C_OUT
+         || *type == _C_BYCOPY
          || *type == _C_BYREF
          || *type == _C_ONEWAY)
     {
@@ -133,16 +127,16 @@ objc_skip_type_qualifiers (const char *type)
 }
 
 const char *
-objc_skip_typespec (const char *type)
+objc_skip_typespec(const char *type)
 {
   /* Skip the variable name if any */
   if (*type == '"')
     {
       for (type++; *type++ != '"';)
-	/* do nothing */;
+        /* do nothing */;
     }
 
-  type = objc_skip_type_qualifiers (type);
+  type = objc_skip_type_qualifiers(type);
 
   switch (*type) {
 
@@ -154,9 +148,9 @@ objc_skip_typespec (const char *type)
       return type;
     else
       {
-	while (*++type != '"')
-	  /* do nothing */;
-	return type + 1;
+        while (*++type != '"')
+          /* do nothing */;
+        return type + 1;
       }
 
     /* The following are one character type codes */
@@ -184,32 +178,32 @@ objc_skip_typespec (const char *type)
   case _C_ARY_B:
     /* skip digits, typespec and closing ']' */
 
-    while (isdigit ((unsigned char)*++type))
-      ;
-    type = objc_skip_typespec (type);
+    while (isdigit((unsigned char)*++type))
+      /* do nothing */;
+    type = objc_skip_typespec(type);
     if (*type == _C_ARY_E)
       return ++type;
     else
       {
-	return 0;
+        return 0;
       }
 
   case _C_BFLD:
     /* The new encoding of bitfields is: b 'position' 'type' 'size' */
-    while (isdigit ((unsigned char)*++type))
-      ;	/* skip position */
-    while (isdigit ((unsigned char)*++type))
-      ;	/* skip type and size */
+    while (isdigit((unsigned char)*++type))
+      /* skip position */;
+    while (isdigit((unsigned char)*++type))
+      /* skip type and size */;
     return type;
 
   case _C_STRUCT_B:
     /* skip name, and elements until closing '}'  */
 
     while (*type != _C_STRUCT_E && *type++ != '=')
-      ;
+      /* do nothing */;
     while (*type != _C_STRUCT_E)
       {
-	type = objc_skip_typespec (type);
+        type = objc_skip_typespec(type);
       }
     return ++type;
 
@@ -217,17 +211,17 @@ objc_skip_typespec (const char *type)
     /* skip name, and elements until closing ')'  */
 
     while (*type != _C_UNION_E && *type++ != '=')
-      ;
+      /* do nothing */;
     while (*type != _C_UNION_E)
       {
-	type = objc_skip_typespec (type);
+        type = objc_skip_typespec(type);
       }
     return ++type;
 
   case _C_PTR:
     /* Just skip the following typespec */
 
-    return objc_skip_typespec (++type);
+    return objc_skip_typespec(++type);
 
   default:
     {
@@ -238,20 +232,19 @@ objc_skip_typespec (const char *type)
 
 
 inline const char *
-objc_skip_offset (const char *type)
+objc_skip_offset(const char *type)
 {
   if (*type == '+')
     type++;
-  while (isdigit ((unsigned char) *++type))
-    ;
+  while (isdigit((unsigned char) *++type))
+    /* do nothing */;
   return type;
 }
 
 const char *
-objc_skip_argspec (const char *type)
+objc_skip_argspec(const char *type)
 {
-  type = objc_skip_typespec (type);
-  type = objc_skip_offset (type);
+  type = objc_skip_typespec(type);
+  type = objc_skip_offset(type);
   return type;
 }
-

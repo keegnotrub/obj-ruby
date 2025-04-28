@@ -2,16 +2,20 @@
 
 A fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), updated for modern verions of macOS and Ruby.
 
-## Dependencies
+## Requirements
 
-- Ruby 2.7, 3.0, 3.1 or 3.2
-- macOS 11, 12, or 13
+- Ruby 3.2, 3.3, or 3.4
+- macOS 13, 14, or 15
 
 ## Installation
 
-You can run: 
+Be sure you have Xcode Command Line Tools installed
 
-    $ gem install obj_ruby
+    $ xcode-select --install
+
+Then you can run: 
+
+    $ sudo gem install obj_ruby
 
 Or you can include in your Gemfile:
 
@@ -21,26 +25,30 @@ gem 'obj_ruby', '~> 0.1'
 
 ## Usage
 
-ObjRuby imports Objective-C classes dynamically at runtime. As an example, here is how you can import the `NSDate` class into Ruby's namespace (for more examples, see this projects [spec](https://github.com/keegnotrub/obj-ruby/tree/main/spec) folder):
+ObjRuby imports Objective-C classes dynamically at runtime. As an example, here is how you can import the `NSDate` class into Ruby's namespace by using the [Foundation framework](https://developer.apple.com/documentation/foundation?language=objc).
 
 ``` ruby
-ObjRuby.import("NSDate")
+require "obj_ruby"
+require "obj_ruby/foundation"
 
 date = ObjRuby::NSDate.dateWithTimeIntervalSince1970(42424242)
 other_date = date.addTimeInterval(1000)
 earlier_date = date.earlierDate(other_date)
 ```
 
-Oftentimes you'll want to import all of a particular framework like [Foundation](https://developer.apple.com/documentation/foundation?language=objc) or [AppKit](https://developer.apple.com/documentation/appkit?language=objc). ObjRuby provides convenience requires for each:
+Note you are allowed to mix some Ruby and Objective-C types. Ruby's `String`, `Array`, `Hash`, `Time`, and `Numeric` classes bridge to Objective-C's `NSString`, `NSArray`, `NSDictionary`, `NSDate`, and `NSNumber` classes automatically.
 
 ``` ruby
+require "obj_ruby"
 require "obj_ruby/foundation"
 
 dict = ObjRuby::NSMutableDictionary.new
-dict.setObject_forKey(ObjRuby::NSDate.new, "Hello!")
+dict.setObject_forKey(Time.now, "Hello!")
 ```
+Other frameworks, like the [AppKit framework](https://developer.apple.com/documentation/appkit?language=objc) for graphical user interfaces, are also supported.
 
 ``` ruby
+require "obj_ruby"
 require "obj_ruby/app_kit"
 
 app = ObjRuby::NSApplication.sharedApplication
@@ -52,6 +60,8 @@ alert.setMessageText("Hello world!")
 alert.runModal
 ```
 
+For more examples, see this projects [spec](https://github.com/keegnotrub/obj-ruby/tree/main/spec) folder.
+
 ## Credit
 
 ObjRuby is a fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), which according to it's author/maintainer [Laurent Julliard](https://github.com/ljulliar):
@@ -60,7 +70,6 @@ ObjRuby is a fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), whi
 
 It's really a testimate to both Laurent and the Objective-C runtime in general that while much of the original code was written in 2001, an incredible amount of it runs unchanged over 20 years later on modern versions of macOS and Ruby.
 
-
 ## License
 
-This project is Copyright © 2023 Ryan Krug and thoughtbot. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.
+This project is Copyright © 2025 Ryan Krug. It is free software, and may be redistributed under the terms specified in the [LICENSE](https://github.com/keegnotrub/obj-ruby/blob/main/LICENSE) file.

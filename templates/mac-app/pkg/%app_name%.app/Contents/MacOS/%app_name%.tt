@@ -1,4 +1,0 @@
-#!/usr/bin/env <%= Gem.ruby %>
-
-require_relative "../Resources/config/boot"
-

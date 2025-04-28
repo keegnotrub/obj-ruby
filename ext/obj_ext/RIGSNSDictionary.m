@@ -1,31 +1,26 @@
 /* RIGSNSDictionary.m - Some additional code to properly wrap the
    NSDictionary class in Ruby and provide some convenient new methods
 
-   $Id$
-
-   Copyright (C) 2023 thoughtbot, Inc.
-   
-   Written by:  Ryan Krug <ryan.krug@thoughtbot.com>
+   Written by: Ryan Krug <ryank@kit.com>
    Date: April 2023
-   
+
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
    License as published by the Free Software Foundation; either
    version 2 of the License, or (at your option) any later version.
-   
+
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Library General Public License for more details.
-   
+
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */
+*/
 
 #import "RIGSNSDictionary.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 static int rigs_ary_keys_i(VALUE key, VALUE value, VALUE ary) {
   rb_ary_push(ary, key);
@@ -42,13 +37,14 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
 + (id) dictionaryWithRubyHash: (VALUE) ruby_hash
 {
   NSDictionary *returnDictionary;
-  int i;
-  int count;
+  long i;
+  long count;
+  void *keyData;
+  void *valueData;
   id *keyObjects;
   id *valueObjects;
   VALUE rb_key;
   VALUE rb_value;
-  BOOL okydoky;
   VALUE ruby_keys;
   VALUE ruby_values;
   const char idType[] = {_C_ID,'\0' };
@@ -59,7 +55,7 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
     return nil;
 
   // Loop through the elements of the ruby array and generate a NSArray
-  count = RHASH_SIZE(ruby_hash);
+  count = rb_hash_size_num(ruby_hash);
   ruby_keys = rb_ary_new_capa(count);
   ruby_values = rb_ary_new_capa(count);
 
@@ -69,19 +65,20 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   keyObjects = malloc(sizeof(id) * count);
   valueObjects = malloc(sizeof(id) * count);
   if (keyObjects == NULL || valueObjects == NULL) {
-      return nil;
+    return nil;
   }
 
   // Loop through the elements of the ruby hash, convert them to Objective-C
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSDictionary
   for (i = 0; i < count; i++) {
-      
-    rb_key = rb_ary_entry(ruby_keys, (long)i);
-    rb_value = rb_ary_entry(ruby_values, (long)i);
+    keyData = &keyObjects[i];
+    valueData = &valueObjects[i];
+    rb_key = rb_ary_entry(ruby_keys, i);
+    rb_value = rb_ary_entry(ruby_values, i);
      
-    okydoky = rb_objc_convert_to_objc(rb_key, &keyObjects[i], 0, idType);
-    okydoky = rb_objc_convert_to_objc(rb_value, &valueObjects[i], 0, idType);
+    rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
+    rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
   }
 
   returnDictionary = [NSDictionary dictionaryWithObjects:valueObjects forKeys:keyObjects count:count];
@@ -91,11 +88,6 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   return returnDictionary;
 }
 
-- (id) to_h
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
-}
-
 - (VALUE) getRubyObject
 {
   const char idType[] = {_C_ID,'\0'};
@@ -103,21 +95,18 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   VALUE rb_key;
   VALUE rb_value;
   id objc_value;
-  BOOL okydoky;
 
   rb_hash = rb_hash_new();
 
   for (id objc_key in self) {
     objc_value = [self objectForKey:objc_key];
-    okydoky = rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key, YES);
-    okydoky = okydoky && rb_objc_convert_to_rb((void *)&objc_value, 0, idType, &rb_value, YES);
-    if (okydoky)
+    if (rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key, YES)) {
+      rb_objc_convert_to_rb((void *)&objc_value, 0, idType, &rb_value, YES);
       rb_hash_aset(rb_hash, rb_key, rb_value);
+    }
   }
   
   return rb_hash;
 }
 
-
 @end
-      

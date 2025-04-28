@@ -1,0 +1,16 @@
+AllCops:
+  TargetRubyVersion: 2.6
+  NewCops: enable
+Naming/MethodName:
+  Enabled: false
+Style/IfUnlessModifier:
+  Enabled: false
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+RSpec/ExampleLength:
+  Enabled: false
+RSpec/MultipleExpectations:
+  Enabled: false
+plugins:
+  - rubocop-rake
+  - rubocop-rspec

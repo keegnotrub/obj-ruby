@@ -7,21 +7,38 @@ on:
   pull_request:
 
 jobs:
-  build:
+  lint:
+    name: Lint targeting Ruby 2.6
+    runs-on: "macos-latest"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Ruby 3.4
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "3.4"
+        bundler-cache: true
+        rubygems: default
+    - name: Run rubocop
+      run: bundle exec rake rubocop
+  build-and-run-tests:
     strategy:
       fail-fast: false
       matrix:
-        os: ['macos-11', 'macos-12', 'macos-13', 'macos-14']
-        ruby-version: ['2.7', '3.0', '3.1', '3.2']
+        os: ["macos-13", "macos-14", "macos-15"]
+        ruby-version: ["2.6.10", "3.2", "3.3", "3.4"]
     runs-on: ${{ matrix.os }}
-    name: Specs - ${{ matrix.os }} with Ruby ${{ matrix.ruby-version }}
+    name: Ruby ${{ matrix.ruby-version }} / ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Ruby ${{ matrix.ruby-version }}
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
         rubygems: default
+    - name: Compile extension
+      run: bundle exec rake compile
+      env:
+        OBJR_BUILD_DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG }}
     - name: Run specs
-      run: bundle exec rake
+      run: bundle exec rake spec

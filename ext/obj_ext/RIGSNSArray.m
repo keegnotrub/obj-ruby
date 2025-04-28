@@ -1,14 +1,8 @@
 /* RIGSNSArray.m - Some additional code to properly wrap the
    NSArrayclass in Ruby and provide some convenient new methods
 
-   $Id$
-
-   Copyright (C) 2001 Free Software Foundation, Inc.
-   
-   Written by:  Laurent Julliard <laurent@julliard-online.org>
-   Date: August 2001
-   
-   This file is part of the GNUstep Ruby Interface Library.
+   Written by: Ryan Krug <ryank@kit.com>
+   Date: April 2023
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -23,11 +17,10 @@
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
-   */
+*/
 
 #import "RIGSNSArray.h"
 #import "RIGSCore.h"
-#import "RIGSWrapObject.h"
 
 @implementation NSArray ( RIGSNSArray )
 
@@ -35,11 +28,11 @@
 {
   NSArray *array = [NSArray alloc];
   NSArray *returnArray;
-  int i;
-  int count;
+  long i;
+  long count;
   id *objects;
   VALUE rb_elt;
-  BOOL okydoky;
+  void *data;
   const char idType[] = {_C_ID,'\0' };
   
   
@@ -49,20 +42,20 @@
     return nil;
     
   // Loop through the elements of the ruby array and generate a NSArray
-  count = RARRAY_LEN(RARRAY(ruby_array));
-  objects = malloc (sizeof (id) * count);
+  count = rb_array_len(ruby_array);
+  objects = malloc(sizeof(id) * count);
   if (objects == NULL) {
-      return nil;
+    return nil;
   }
 
   // Loop through the elements of the ruby array, convert them to Objective-C
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSArray
   for (i = 0; i < count; i++) {
+    data = &objects[i];
+    rb_elt = rb_ary_entry(ruby_array, i);
       
-      rb_elt = rb_ary_entry(ruby_array, (long)i);
-     
-      okydoky = rb_objc_convert_to_objc(rb_elt, &objects[i], 0, idType);
+    rb_objc_convert_to_objc(rb_elt, &data, 0, idType);
   }
 
   returnArray = [array initWithObjects: objects  count:count];
@@ -71,29 +64,20 @@
   return returnArray;
 }
 
-- (id) to_a
-{
-  return [RIGSWrapObject objectWithRubyObject:[self getRubyObject]];
-}
-
 - (VALUE) getRubyObject
 {
   const char idType[] = {_C_ID,'\0'};
   VALUE rb_array;
   VALUE rb_elt;
-  BOOL okydoky;
 
   rb_array = rb_ary_new_capa([self count]);
 
   for (id objc_elt in self) {
-    okydoky = rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt, YES);
-    if (okydoky)
-      rb_ary_push(rb_array, rb_elt);
+    rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt, YES);
+    rb_ary_push(rb_array, rb_elt);
   }
   
   return rb_array;
 }
 
-
 @end
-      

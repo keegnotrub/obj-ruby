@@ -1,14 +1,38 @@
 # frozen_string_literal: true
 
-require "rake/extensiontask"
-require "bundler/gem_tasks"
+require "rake/clean"
 require "rspec/core/rake_task"
-require "standard/rake"
+require "rubocop/rake_task"
+require "bundler/gem_tasks"
 
-Rake::ExtensionTask.new("obj_ext") do |ext|
-  ext.source_pattern = "*.m"
+RSpec::Core::RakeTask.new
+RuboCop::RakeTask.new
+
+CLOBBER.include("tmp")
+
+namespace "compile" do
+  desc ""
+  task :default do
+    build
+  end
+  desc "Compile obj_ext.bundle into the lib directory with debug enabled"
+  task :debug do
+    build("--enable-debug")
+  end
 end
 
-RSpec::Core::RakeTask.new(:spec)
+desc "Compile obj_ext.bundle into the lib directory"
+task compile: ["compile:default"]
 
-task default: [:standard, :compile, :spec]
+task default: %i[compile spec]
+
+def build(options = "")
+  tmp = File.expand_path("tmp", __dir__)
+  FileUtils.mkdir_p(tmp)
+  FileUtils.chdir(tmp) do
+    system(Gem.ruby, File.expand_path("ext/obj_ext/extconf.rb", __dir__), options, exception: true)
+    system("make clean", exception: true)
+    system("make", exception: true)
+    system("make install sitearchdir=../lib sitelibdir=../lib target_prefix=", exception: true)
+  end
+end

@@ -4,7 +4,7 @@ A fork of [GNUstep's RIGS](https://github.com/gnustep/libs-ruby), updated for mo
 
 ## Requirements
 
-- Ruby 3.2, 3.3, or 3.4
+- Ruby 3.2, 3.3, or 3.4 (macOS's default, Ruby 2.6.10, is also supported)
 - macOS 13, 14, or 15
 
 ## Installation

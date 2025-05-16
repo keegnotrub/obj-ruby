@@ -1863,17 +1863,25 @@ VALUE
 rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
 {
   @autoreleasepool {
-    char *cname = rb_string_value_cstr(&rb_name);
-    NSString *path = [NSString stringWithFormat:@"/System/Library/Frameworks/%s.framework/", cname];
-    NSURL *url = [NSURL fileURLWithPath:path];
-    NSBundle *bundle = [NSBundle bundleWithURL:url];
+    unsigned long hash;
+    char *cname;
+    NSString *path;
+    NSURL *url;
+    NSBundle *bundle;
+
+    cname = rb_string_value_cstr(&rb_name);
+    hash = rb_objc_hash(cname);
+
+    if (NSHashGet(knownFrameworks, (void*)hash)) {
+      return Qfalse;
+    }
+
+    path = [NSString stringWithFormat:@"/System/Library/Frameworks/%s.framework/", cname];
+    url = [NSURL fileURLWithPath:path];
+    bundle = [NSBundle bundleWithURL:url];
 
     if (bundle == nil) {
       rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
-    }
-  
-    if (NSHashGet(knownFrameworks, (void*)bundle.bundleIdentifier.hash)) {
-      return Qfalse;
     }
 
     path = [NSString stringWithFormat:@"BridgeSupport/%s.dylib", cname];
@@ -1899,7 +1907,7 @@ rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
     [delegate release];
 
     if (parsed) {
-      NSHashInsertKnownAbsent(knownFrameworks, (void*)bundle.bundleIdentifier.hash);
+      NSHashInsertKnownAbsent(knownFrameworks, (void*)hash);
       return Qtrue;
     }
     rb_raise(rb_eLoadError, "cannot parse such framework -- %s", cname);

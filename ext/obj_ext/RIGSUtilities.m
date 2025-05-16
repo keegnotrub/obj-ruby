@@ -28,16 +28,6 @@
 
 #import "RIGSUtilities.h"
 
-/* For macOS 11 - objc/runtime.h doesn't define these */
-#define _C_CONST       'r'
-#define _C_IN          'n'
-#define _C_INOUT       'N'
-#define _C_OUT         'o'
-#define _C_BYCOPY      'O'
-#define _C_BYREF       'R'
-#define _C_ONEWAY      'V'
-
-
 SEL
 rb_objc_method_to_sel(const char* name, int argc)
 {

@@ -937,16 +937,21 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       case _C_CLASS:
         {
           Class val = *(Class*)where;
-            
-          NSDebugLog(@"ObjC Class = %@", NSStringFromClass([val classForCoder]));
-          rb_class = (VALUE) NSMapGet(knownClasses, (void *)val);
 
-          // if the Class is unknown to Ruby then register it 
-          // in Ruby in return the corresponding Ruby class VALUE
-          if (rb_class == Qfalse) {
-            rb_class = rb_objc_register_class_from_objc(val);
+          if (val == Nil) {
+            rb_val = Qnil;
           }
-          rb_val = rb_class;
+          else {
+            NSDebugLog(@"ObjC Class = %@", NSStringFromClass([val classForCoder]));
+            rb_class = (VALUE) NSMapGet(knownClasses, (void *)val);
+
+            // if the Class is unknown to Ruby then register it 
+            // in Ruby in return the corresponding Ruby class VALUE
+            if (rb_class == Qfalse) {
+              rb_class = rb_objc_register_class_from_objc(val);
+            }
+            rb_val = rb_class;
+          }
         }
         break;
           

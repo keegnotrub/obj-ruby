@@ -20,7 +20,6 @@
 */
 
 #import "RIGSNSString.h"
-#import "RIGSCore.h"
 
 @implementation NSString ( RIGSNSString )
 

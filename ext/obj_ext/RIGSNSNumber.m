@@ -20,7 +20,6 @@
 */
 
 #import "RIGSNSNumber.h"
-#import "RIGSCore.h"
 
 @implementation NSNumber ( RIGSNSNumber )
 

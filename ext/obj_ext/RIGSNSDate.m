@@ -20,7 +20,6 @@
 */
 
 #import "RIGSNSDate.h"
-#import "RIGSCore.h"
 
 @implementation NSDate ( RIGSNSDate )
 

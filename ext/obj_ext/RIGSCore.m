@@ -26,7 +26,6 @@
 
 #import "RIGSCore.h"
 #import "RIGSUtilities.h"
-#import "RIGS.h"
 #import "RIGSNSDictionary.h"
 #import "RIGSNSArray.h"
 #import "RIGSNSString.h"

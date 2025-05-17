@@ -27,6 +27,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifndef NSDebugLog
+#define NSDebugLog(fmt, ...) \
+  do { if (0) NSLog(fmt, ##__VA_ARGS__); } while (0)
+#endif
+
 #define HASH_SEED 5381
 #define HASH_BITSHIFT 5
 #define ROUND(V, A)                             \

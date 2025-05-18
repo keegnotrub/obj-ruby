@@ -35,7 +35,6 @@
   void *data;
   const char idType[] = {_C_ID,'\0' };
   
-  
   // A nil value should not get there. It should be a 
   // Ruby Array in any case
   if ( NIL_P(ruby_array) || (TYPE(ruby_array) != T_ARRAY) )
@@ -52,14 +51,19 @@
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSArray
   for (i = 0; i < count; i++) {
-    data = &objects[i];
     rb_elt = rb_ary_entry(ruby_array, i);
-      
-    rb_objc_convert_to_objc(rb_elt, &data, 0, idType);
+
+    if (NIL_P(rb_elt)) {
+      objects[i] = [NSNull null];
+    }
+    else {
+      data = &objects[i];
+      rb_objc_convert_to_objc(rb_elt, &data, 0, idType);
+    }
   }
 
-  returnArray = [array initWithObjects: objects  count:count];
-  free (objects);
+  returnArray = [array initWithObjects:objects count:count];
+  free(objects);
 
   return returnArray;
 }

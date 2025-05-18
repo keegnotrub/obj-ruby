@@ -301,7 +301,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
     rubyMethodName = rb_objc_sel_to_method(sel);
     rubyObject = (VALUE) NSMapGet(knownObjects,(void *)val);
     if (rubyObject == Qfalse) {
-      Class retClass = [val classForCoder] ?: [val class];
+      Class retClass = [val classForCoder];
       VALUE rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
       if (rb_class == Qfalse) {
         rb_class = rb_objc_register_class_from_objc(retClass);
@@ -778,26 +778,20 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       {
       case _C_ID: {
         id val = *(id*)where;
-        // Check if the ObjC object is already wrapped into a Ruby object
-        // If so do not create a new object. Return the existing one
-        if ( (rb_val = (VALUE) NSMapGet(knownObjects,(void *)val)) )  {
-
+        if (val == nil || (autoconvert && val == [NSNull null])) {
+          rb_val = Qnil;                  
+        } else if ( autoconvert && [[val classForCoder] isSubclassOfClass:[NSString class]] ) {
+          rb_val = [val getRubyObject];
+        } else if ( autoconvert && [[val classForCoder] isSubclassOfClass:[NSNumber class]] ) {
+          rb_val = [val getRubyObject];
+        } else if ( autoconvert && [[val classForCoder] isSubclassOfClass:[NSArray class]] ) {
+          rb_val = [val getRubyObject];
+        } else if ( autoconvert && [[val classForCoder] isSubclassOfClass:[NSDictionary class]] ) {
+          rb_val = [val getRubyObject];
+        } else if ( autoconvert && [[val classForCoder] isSubclassOfClass:[NSDate class]] ) {
+          rb_val = [val getRubyObject];
+        } else if ( (rb_val = (VALUE) NSMapGet(knownObjects,(void *)val)) )  {
           NSDebugLog(@"ObjC object already wrapped in an existing Ruby value (%p)", (void*)rb_val);
-
-        } else if (val == nil) {
-                  
-          rb_val = Qnil;
-                  
-        } else if ( autoconvert && [val isKindOfClass:[NSString class]] ) {
-          rb_val = [val getRubyObject];
-        } else if ( autoconvert && [val isKindOfClass:[NSNumber class]] ) {
-          rb_val = [val getRubyObject];
-        } else if ( autoconvert && [val isKindOfClass:[NSArray class]] ) {
-          rb_val = [val getRubyObject];
-        } else if ( autoconvert && [val isKindOfClass:[NSDictionary class]] ) {
-          rb_val = [val getRubyObject];
-        } else if ( autoconvert && [val isKindOfClass:[NSDate class]] ) {
-          rb_val = [val getRubyObject];
         } else {
                   
           /* Retain the value otherwise ObjC releases it and Ruby crashes
@@ -807,7 +801,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
             [val retain];
           }
 
-          Class retClass = [val classForCoder] ?: [val class];
+          Class retClass = [val classForCoder];
           if (retClass != [val class] && strncmp(object_getClassName(val), "NSConcrete", 10) == 0) { 
             retClass = [val class];
           }
@@ -848,7 +842,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
               [val retain];
             }
 
-            Class retClass = [val classForCoder] ?: [val class];
+            Class retClass = [val classForCoder];
                   
             NSDebugLog(@"Class of arg transmitted to Ruby = %@", NSStringFromClass(retClass));
 
@@ -1431,6 +1425,77 @@ rb_objc_debug_description(VALUE rb_self)
 }
 
 VALUE
+rb_objc_pretty_description(VALUE rb_self, VALUE rb_pp)
+{
+  id rcv;
+  VALUE text;
+
+  Data_Get_Struct(rb_self, void, rcv);
+
+  text = rb_str_new_cstr([[rcv debugDescription] UTF8String]);
+
+  return rb_funcall(rb_pp, rb_intern("text"), 1, text);
+}
+
+VALUE
+rb_objc_is_nil(VALUE rb_self)
+{
+  id rcv;
+  
+  Data_Get_Struct(rb_self, void, rcv);
+
+  if (rcv == nil) {
+    return Qtrue;
+  }
+
+  return Qfalse;
+}
+
+VALUE
+rb_objc_is_kind_of(VALUE rb_self, VALUE rb_class)
+{
+  id rcv;
+  VALUE iv;
+  Class objc_class;
+
+  iv = rb_iv_get(rb_class, "@objc_class");
+  if (iv == Qnil) {
+    return Qfalse;
+  }
+
+  objc_class = (Class) NUM2LL(iv);
+  Data_Get_Struct(rb_self, void, rcv);
+
+  if ([[rcv classForCoder] isSubclassOfClass:objc_class]) {
+    return Qtrue;
+  }
+
+  return Qfalse;
+}
+
+VALUE
+rb_objc_is_member_of(VALUE rb_self, VALUE rb_class)
+{
+  id rcv;
+  VALUE iv;
+  Class objc_class;
+
+  iv = rb_iv_get(rb_class, "@objc_class");
+  if (iv == Qnil) {
+    return Qfalse;
+  }
+
+  objc_class = (Class) NUM2LL(iv);
+  Data_Get_Struct(rb_self, void, rcv);
+
+  if ([rcv classForCoder] == objc_class) {
+    return Qtrue;
+  }
+
+  return Qfalse;
+}
+
+VALUE
 rb_objc_get_ruby_object(VALUE rb_self)
 {
   id rcv;
@@ -1695,8 +1760,8 @@ rb_objc_register_class_from_objc (Class objc_class)
 
     // If it is not the mother of all classes then create the
     // Ruby super class first
-    if ((objc_class == [NSObject class]) || (objc_super_class == nil)) 
-      rb_super_class = rb_cObject;
+    if ((objc_class == [NSObject class]) || (objc_super_class == Nil)) 
+      rb_super_class = rb_cBasicObject;
     else
       rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
 
@@ -1716,8 +1781,14 @@ rb_objc_register_class_from_objc (Class objc_class)
     // Extend any extra Ruby specific support to Objective-C classes
     if (objc_class == [NSObject class]) {
       rb_define_alias(rb_class, "==", "isEqual");
+      rb_define_alias(rb_class, "eql?", "isEqual");
       rb_define_method(rb_class, "to_s", rb_objc_description, 0);
       rb_define_method(rb_class, "inspect", rb_objc_debug_description, 0);
+      rb_define_method(rb_class, "pretty_print", rb_objc_pretty_description, 1);
+      rb_define_method(rb_class, "nil?", rb_objc_is_nil, 0);
+      rb_define_method(rb_class, "instance_of?", rb_objc_is_member_of, 1);
+      rb_define_method(rb_class, "kind_of?", rb_objc_is_kind_of, 1);
+      rb_define_alias(rb_class, "is_a?", "kind_of?");
     }
     else if (objc_class == [NSString class]) {
       rb_define_method(rb_class, "to_s", rb_objc_get_ruby_object, 0);
@@ -2141,4 +2212,7 @@ Init_obj_ext()
 
   // Catch all Objective-C raised exceptions and direct them to Ruby
   NSSetUncaughtExceptionHandler(rb_objc_raise_exception);
+
+  // Preload NSObject and NSNull
+  rb_objc_register_class_from_objc([NSNull class]);
 }

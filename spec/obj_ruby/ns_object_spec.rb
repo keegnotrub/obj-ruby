@@ -3,6 +3,13 @@
 require "spec_helper"
 
 RSpec.describe ObjRuby::NSObject do
+  it "can create an instance" do
+    obj = described_class.new
+
+    expect(obj).to be_a described_class
+    expect(obj).not_to be_nil
+  end
+
   it "uses description for to_s" do
     obj = described_class.new
 

@@ -11,20 +11,25 @@ RSpec.describe ObjRuby::NSArray do
   end
 
   it "can call instance methods" do
-    array = described_class.arrayWithObject("here")
+    array = described_class.arrayWithObjects("here", "there", "everywhere", nil)
 
-    expect(array.count).to eq 1
+    expect(array.count).to eq 3
     expect(array.containsObject("here")).to be true
+    expect(array.containsObject("there")).to be true
+    expect(array.containsObject("everywhere")).to be true
     expect(array.containsObject("not here")).to be false
     expect(array.indexOfObject("here")).to eq 0
+    expect(array.indexOfObject("there")).to eq 1
+    expect(array.indexOfObject("everywhere")).to eq 2
     expect(array.indexOfObject("not here")).to eq ObjRuby::NSNotFound
   end
 
   it "can receive a Ruby array" do
-    array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+    array = described_class.arrayWithArray([1, nil, 3, 4, 5])
 
     expect(array.count).to eq 5
     expect(array.indexOfObject(1)).to eq 0
+    expect(array.indexOfObject(ObjRuby::NSNull.null)).to eq 1
     expect(array.indexOfObject_inRange(1, ObjRuby::NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
   end
 
@@ -36,14 +41,14 @@ RSpec.describe ObjRuby::NSArray do
   end
 
   it "can be transformed into a Ruby array" do
-    array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+    array = described_class.arrayWithArray([1, nil, 3, 4, 5])
 
     result = array.to_a
 
     expect(result).to be_a Array
     expect(result.size).to eq 5
-    expect(result.first).to eq 1
-    expect(result.last).to eq 5
+    expect(result[0]).to eq 1
+    expect(result[1]).to be_nil
   end
 
   it "can use a block method" do

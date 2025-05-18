@@ -4,10 +4,10 @@ require "spec_helper"
 
 RSpec.describe ObjRuby::NSDictionary do
   it "can create an instance" do
-    date = described_class.new
+    dict = described_class.new
 
-    expect(date).not_to be_nil
-    expect(date).to be_a described_class
+    expect(dict).not_to be_nil
+    expect(dict).to be_a described_class
   end
 
   it "can call instance methods" do
@@ -18,11 +18,11 @@ RSpec.describe ObjRuby::NSDictionary do
   end
 
   it "can receive a Ruby hash" do
-    dict = described_class.dictionaryWithDictionary(key1: "value1", key2: "value2")
+    dict = described_class.dictionaryWithDictionary(key1: "value1", key2: nil)
 
     expect(dict.count).to eq 2
     expect(dict.objectForKey(:key1)).to eq "value1"
-    expect(dict.objectForKey(:key2)).to eq "value2"
+    expect(dict.objectForKey(:key2)).to eq ObjRuby::NSNull.null
     expect(dict.objectForKey(:not_key)).to be_nil
   end
 
@@ -34,12 +34,12 @@ RSpec.describe ObjRuby::NSDictionary do
   end
 
   it "can be transformed into a Ruby hash" do
-    dict = described_class.dictionaryWithDictionary(key: "value")
+    dict = described_class.dictionaryWithDictionary(key1: "value", key2: nil)
 
     hash = dict.to_h
 
     expect(hash).to be_a Hash
-    expect(hash.include?("key")).to be true
-    expect(hash["key"]).to eq "value"
+    expect(hash["key1"]).to eq "value"
+    expect(hash["key2"]).to be_nil
   end
 end

@@ -72,13 +72,24 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSDictionary
   for (i = 0; i < count; i++) {
-    keyData = &keyObjects[i];
-    valueData = &valueObjects[i];
     rb_key = rb_ary_entry(ruby_keys, i);
     rb_value = rb_ary_entry(ruby_values, i);
-     
-    rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
-    rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
+
+    if (NIL_P(rb_key)) {
+      keyObjects[i] = [NSNull null];
+    }
+    else {
+      keyData = &keyObjects[i];
+      rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
+    }
+
+    if (NIL_P(rb_value)) {
+      valueObjects[i] = [NSNull null];
+    }
+    else {
+      valueData = &valueObjects[i];
+      rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
+    }
   }
 
   returnDictionary = [NSDictionary dictionaryWithObjects:valueObjects forKeys:keyObjects count:count];

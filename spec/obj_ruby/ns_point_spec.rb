@@ -3,10 +3,6 @@
 require "spec_helper"
 
 RSpec.describe ObjRuby::NSPoint do
-  it "does" do
-    expect(ObjRuby::NSZeroPoint).to eq described_class.new(0, 0)
-  end
-
   it "can create an instance" do
     point1 = described_class.new(1, 2)
     point2 = ObjRuby::NSMakePoint(3, 4)
@@ -18,6 +14,10 @@ RSpec.describe ObjRuby::NSPoint do
     expect(point2).to be_a described_class
     expect(point2.x).to eq 3
     expect(point2.y).to eq 4
+  end
+
+  it "can be compared to an NSPoint constant" do
+    expect(ObjRuby::NSZeroPoint).to eq described_class.new(0, 0)
   end
 
   it "can be compared to another NSPoint" do

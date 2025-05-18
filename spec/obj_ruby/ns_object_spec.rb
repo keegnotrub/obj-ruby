@@ -22,6 +22,12 @@ RSpec.describe ObjRuby::NSObject do
     expect(obj.inspect).to eq(obj.debugDescription.to_s)
   end
 
+  it "isn't an Object" do
+    obj = described_class.new
+
+    expect(obj.is_a?(Object)).to be(false)
+  end
+
   it "doesn't have a superclass" do
     expect(described_class.superclass).to be_nil
   end

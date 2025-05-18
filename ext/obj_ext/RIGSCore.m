@@ -1425,7 +1425,6 @@ rb_objc_debug_description(VALUE rb_self)
 }
 
 VALUE
-<<<<<<< HEAD
 rb_objc_pretty_description(VALUE rb_self, VALUE rb_pp)
 {
   id rcv;
@@ -1494,7 +1493,8 @@ rb_objc_is_member_of(VALUE rb_self, VALUE rb_class)
   }
 
   return Qfalse;
-=======
+}
+
 rb_objc_ruby_inherited(VALUE rb_class, VALUE rb_subclass)
 {
   const char *name;
@@ -1542,7 +1542,6 @@ rb_objc_ruby_singleton_method_added(VALUE rb_class, VALUE rb_singleton_method)
   NSLog(@"singleton method added: %s", name);
   
   return Qnil;
->>>>>>> faf17e5 (WIP)
 }
 
 VALUE

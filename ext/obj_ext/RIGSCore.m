@@ -1425,6 +1425,7 @@ rb_objc_debug_description(VALUE rb_self)
 }
 
 VALUE
+<<<<<<< HEAD
 rb_objc_pretty_description(VALUE rb_self, VALUE rb_pp)
 {
   id rcv;
@@ -1493,6 +1494,55 @@ rb_objc_is_member_of(VALUE rb_self, VALUE rb_class)
   }
 
   return Qfalse;
+=======
+rb_objc_ruby_inherited(VALUE rb_class, VALUE rb_subclass)
+{
+  const char *name;
+  
+  name = rb_class2name(rb_subclass);
+
+  if (strncmp(name, "ObjRuby::", 9) == 0) {
+    return Qnil;
+  }
+
+  // TODO: rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
+  
+  NSLog(@"inherited: %s", name);
+
+  return Qnil;
+}
+
+VALUE
+rb_objc_ruby_method_added(VALUE rb_class, VALUE rb_method)
+{
+  const char *name;
+  
+  name = rb_class2name(rb_class);
+
+  if (strncmp(name, "ObjRuby::", 9) == 0) {
+    return Qnil;
+  }
+  
+  NSLog(@"method added: %s", name);
+  
+  return Qnil;
+}
+
+VALUE
+rb_objc_ruby_singleton_method_added(VALUE rb_class, VALUE rb_singleton_method)
+{
+  const char *name;
+  
+  name = rb_class2name(rb_class);
+
+  if (strncmp(name, "ObjRuby::", 9) == 0) {
+    return Qnil;
+  }
+  
+  NSLog(@"singleton method added: %s", name);
+  
+  return Qnil;
+>>>>>>> faf17e5 (WIP)
 }
 
 VALUE
@@ -1789,6 +1839,11 @@ rb_objc_register_class_from_objc (Class objc_class)
       rb_define_method(rb_class, "instance_of?", rb_objc_is_member_of, 1);
       rb_define_method(rb_class, "kind_of?", rb_objc_is_kind_of, 1);
       rb_define_alias(rb_class, "is_a?", "kind_of?");
+      // TODO: auto call ObjRuby.register_class
+      // VALUE rb_call_super(int argc, const VALUE *argv);
+      //rb_define_singleton_method(rb_class, "inherited", rb_objc_ruby_inherited, 1);
+      //rb_define_singleton_method(rb_class, "method_added", rb_objc_ruby_method_added, 1);
+      //rb_define_singleton_method(rb_class, "singleton_method_added", rb_objc_ruby_singleton_method_added, 1);
     }
     else if (objc_class == [NSString class]) {
       rb_define_method(rb_class, "to_s", rb_objc_get_ruby_object, 0);

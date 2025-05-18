@@ -39,4 +39,11 @@ RSpec.describe ObjRuby::NSString do
 
     expect(string).to eq "one 2 three four 5"
   end
+
+  xit "can be subclassed" do
+    string = TestMyString.stringWithString("hello")
+
+    expect(string.length).to eq 5
+    expect(string.my_expected_method).to eq "expected string"
+  end
 end

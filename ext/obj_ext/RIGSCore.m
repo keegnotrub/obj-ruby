@@ -1495,6 +1495,7 @@ rb_objc_is_member_of(VALUE rb_self, VALUE rb_class)
   return Qfalse;
 }
 
+VALUE
 rb_objc_ruby_inherited(VALUE rb_class, VALUE rb_subclass)
 {
   const char *name;

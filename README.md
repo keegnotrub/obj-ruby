@@ -36,7 +36,16 @@ other_date = date.addTimeInterval(1000)
 earlier_date = date.earlierDate(other_date)
 ```
 
-Note you are allowed to mix some Ruby and Objective-C types. Ruby's `String`, `Array`, `Hash`, `Time`, and `Numeric` classes bridge to Objective-C's `NSString`, `NSArray`, `NSDictionary`, `NSDate`, and `NSNumber` classes automatically.
+Note you are allowed to mix some Ruby and Objective-C types. The following Ruby types will automatically bridge to these Objective-C types:
+
+| Ruby          | Objective-C   |
+| ------------- | ------------- |
+| String        | NSString      |
+| Array         | NSArray       |
+| Hash          | NSDictionary  |
+| Time          | NSDate        |
+| Numeric       | NSNumber      |
+| Nil           | NSNull        |
 
 ``` ruby
 require "obj_ruby"
@@ -45,6 +54,7 @@ require "obj_ruby/foundation"
 dict = ObjRuby::NSMutableDictionary.new
 dict.setObject_forKey(Time.now, "Hello!")
 ```
+
 Other frameworks, like the [AppKit framework](https://developer.apple.com/documentation/appkit?language=objc) for graphical user interfaces, are also supported.
 
 ``` ruby

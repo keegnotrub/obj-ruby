@@ -31,4 +31,10 @@ RSpec.describe ObjRuby::NSObject do
   it "doesn't have a superclass" do
     expect(described_class.superclass).to be_nil
   end
+
+  it "can be subclassed" do
+    obj = TestMyObject.new
+
+    expect(obj.myStringMethod).to eq "expected string"
+  end
 end

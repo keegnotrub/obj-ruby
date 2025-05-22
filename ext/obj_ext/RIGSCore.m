@@ -1499,16 +1499,14 @@ VALUE
 rb_objc_ruby_inherited(VALUE rb_class, VALUE rb_subclass)
 {
   const char *name;
-  
+
   name = rb_class2name(rb_subclass);
 
   if (strncmp(name, "ObjRuby::", 9) == 0) {
     return Qnil;
   }
 
-  // TODO: rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
-  
-  NSLog(@"inherited: %s", name);
+  rb_objc_register_class_from_rb(rb_subclass);
 
   return Qnil;
 }
@@ -1524,25 +1522,7 @@ rb_objc_ruby_method_added(VALUE rb_class, VALUE rb_method)
     return Qnil;
   }
   
-  NSLog(@"method added: %s", name);
-  
-  return Qnil;
-}
-
-VALUE
-rb_objc_ruby_singleton_method_added(VALUE rb_class, VALUE rb_singleton_method)
-{
-  const char *name;
-  
-  name = rb_class2name(rb_class);
-
-  if (strncmp(name, "ObjRuby::", 9) == 0) {
-    return Qnil;
-  }
-  
-  NSLog(@"singleton method added: %s", name);
-  
-  return Qnil;
+  return rb_objc_register_instance_method_from_rb(rb_class, rb_method);
 }
 
 VALUE
@@ -1839,11 +1819,8 @@ rb_objc_register_class_from_objc (Class objc_class)
       rb_define_method(rb_class, "instance_of?", rb_objc_is_member_of, 1);
       rb_define_method(rb_class, "kind_of?", rb_objc_is_kind_of, 1);
       rb_define_alias(rb_class, "is_a?", "kind_of?");
-      // TODO: auto call ObjRuby.register_class
-      // VALUE rb_call_super(int argc, const VALUE *argv);
-      //rb_define_singleton_method(rb_class, "inherited", rb_objc_ruby_inherited, 1);
-      //rb_define_singleton_method(rb_class, "method_added", rb_objc_ruby_method_added, 1);
-      //rb_define_singleton_method(rb_class, "singleton_method_added", rb_objc_ruby_singleton_method_added, 1);
+      rb_define_singleton_method(rb_class, "inherited", rb_objc_ruby_inherited, 1);
+      rb_define_singleton_method(rb_class, "method_added", rb_objc_ruby_method_added, 1);
     }
     else if (objc_class == [NSString class]) {
       rb_define_method(rb_class, "to_s", rb_objc_get_ruby_object, 0);
@@ -1872,100 +1849,97 @@ rb_objc_register_class_from_objc (Class objc_class)
 }
 
 VALUE
-rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
+rb_objc_register_instance_method_from_rb(VALUE rb_class, VALUE rb_method)
+{
+  VALUE rb_class_iv;
+	ID entry;
+  const char *name;
+  int nbArgs;
+  SEL objcMthSEL;
+  const char *objcTypes;
+  unsigned long hash;
+  void *mthIMP;
+  Class class;
+  ffi_closure *closure;
+  ffi_cif *cif;
+
+  rb_class_iv = rb_iv_get(rb_class, "@objc_class");
+  if (rb_class_iv == Qnil) {
+    return Qfalse;
+  }
+  
+  class = (Class) NUM2LL(rb_class_iv);
+  entry = rb_sym2id(rb_method);
+  nbArgs = rb_mod_method_arity(rb_class, entry);
+
+  if (nbArgs < 0) {
+    return Qfalse;
+  }
+  
+  name = rb_id2name(entry);
+  objcMthSEL = rb_objc_method_to_sel(name, nbArgs);
+  objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
+
+  hash = rb_objc_hash(objcTypes);
+  mthIMP = NSMapGet(knownImplementations, (void*)hash);
+
+  if (mthIMP != NULL) {
+    class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
+    return Qtrue;
+  }
+
+  closure = NULL;
+  cif = malloc(sizeof(ffi_cif));
+
+  if (rb_objc_build_closure_cif(cif, objcTypes) == FFI_OK) {
+    closure = ffi_closure_alloc(sizeof(ffi_closure), &mthIMP);
+    if (ffi_prep_closure_loc(closure, cif, rb_objc_proxy_handler, (void*)objcTypes, mthIMP) == FFI_OK) {
+      NSMapInsertKnownAbsent(knownImplementations, (void*)hash, (void*)mthIMP);
+      class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
+    }
+  }
+
+  NSDebugLog(@"Ruby method %s has %d arguments with signature %s", name, nbArgs, objcTypes);
+
+  return Qtrue;
+}
+
+VALUE
+rb_objc_register_class_from_rb(VALUE rb_class)
 {
   @autoreleasepool {
-    long i;
-    long count;
-    VALUE listOption;
-    int nbArgs;
-    VALUE rb_mth_ary;
     VALUE rb_super_class;
+    VALUE rb_class_iv;
     Class superClass;
     Class class;
-    const char *rb_mth_name;
-    SEL objcMthSEL;
-    const char *objcTypes;
     const char *rb_class_name;
-    void *mthIMP;
-    unsigned long hash;
 
     Check_Type(rb_class, T_CLASS);
-  
-    rb_class_name = rb_class2name(rb_class);
 
-    NSDebugLog (@"Registering Ruby class %s with the objective-C runtime", 
-                rb_class_name);
+    // FIXME: we probably need to strip "::" from modules
+    rb_class_name = rb_class2name(rb_class);
 
     // If this class has already been registered with ObjC then
     // do nothing
-    if ( (class = objc_lookUpClass(rb_class_name)) ) {
+    if (rb_iv_get(rb_class, "@objc_class") != Qnil) {
       NSDebugLog(@"Class already registered with ObjC: %s", rb_class_name);
       return Qfalse;
     }
-  
-    // Create the Objective-C proxy class. 
+
+    NSDebugLog(@"Registering Ruby class %s with the Objective-C runtime", rb_class_name);
+
     rb_super_class = rb_class_superclass(rb_class);
-    if (rb_super_class == rb_cObject || rb_super_class == rb_cBasicObject) {
-      superClass = [NSObject class];
+    rb_class_iv = rb_iv_get(rb_super_class, "@objc_class");
+    if (rb_class_iv == Qnil) {
+      rb_raise(rb_eTypeError, "superclass of %s was not yet registered with the Objective-C runtime", rb_class_name);
     }
-    else {
-      // TODO: possible this class isn't registered yet
-      // Could be something that hasn't been imported yet
-      // Or could be something that hasn't been registered yet
-      // rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
+    superClass = (Class) NUM2LL(rb_class_iv);
     
-      superClass = (Class) NUM2LL(rb_iv_get(rb_super_class, "@objc_class"));
-    }
-  
-    class = objc_allocateClassPair (superClass, rb_class_name, 0);
+    class = objc_allocateClassPair(superClass, rb_class_name, 0);
     if (class == nil) {
       rb_raise(rb_eTypeError, "could not allocate class pair with ObjC: %s", rb_class_name);
     }
 
-    // Get instance method list. Pass no argument to function to
-    // eliminate ancestor's method from the list.
-    listOption = Qfalse;
-    rb_mth_ary = rb_class_instance_methods(1,&listOption,rb_class);
-    // number of instance methods in this class
-    count = rb_array_len(rb_mth_ary);
-    NSDebugLog(@"Ruby class %s has %ld instance methods", rb_class_name, count);
-  
-    for (i=0;i<count;i++) {
-      ID entry = rb_sym2id(rb_ary_entry(rb_mth_ary, i));
-      nbArgs = rb_mod_method_arity(rb_class, entry);
-
-      if (nbArgs < 0) continue;
-
-      rb_mth_name = rb_id2name(entry);
-      objcMthSEL = rb_objc_method_to_sel(rb_mth_name, nbArgs);
-
-      objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
-
-      hash = rb_objc_hash(objcTypes);
-      mthIMP = NSMapGet(knownImplementations, (void*)hash);
-
-      if (mthIMP != NULL) {
-        class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
-        continue;
-      }
-
-      ffi_closure *closure = NULL;
-      ffi_cif *cif;
-
-      cif = malloc(sizeof(ffi_cif));
-
-      if (rb_objc_build_closure_cif(cif, objcTypes) == FFI_OK) {
-        closure = ffi_closure_alloc(sizeof(ffi_closure), &mthIMP);
-        if (ffi_prep_closure_loc(closure, cif, rb_objc_proxy_handler, (void*)objcTypes, mthIMP) == FFI_OK) {
-          NSMapInsertKnownAbsent(knownImplementations, (void*)hash, (void*)mthIMP);
-          class_addMethod(class, objcMthSEL, mthIMP, objcTypes);
-        }
-      }
-
-      NSDebugLog(@"Ruby method %s has %d arguments with signature %s", rb_mth_name, nbArgs, objcTypes);
-    }
-  
     objc_registerClassPair(class);
 
     //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
@@ -1980,7 +1954,6 @@ rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_class)
     rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
 
     return Qtrue;
-  
   }
 }
 
@@ -2254,7 +2227,6 @@ Init_obj_ext()
 
   rb_mRigs = rb_define_module("ObjRuby");
   rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
-  rb_define_module_function(rb_mRigs, "register_class", rb_objc_register_class_from_ruby, 1);
 
   // Ruby class for holding a C-style pointer
   //  - ObjRuby::Pointer.new(:object): pointer to an "id" ObjC object like NSError

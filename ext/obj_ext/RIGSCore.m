@@ -1980,7 +1980,7 @@ rb_objc_register_class_from_rb(VALUE rb_class)
 }
 
 VALUE
-rb_objc_require_framework_from_ruby(VALUE rb_self, VALUE rb_name)
+rb_objc_import(VALUE rb_self, VALUE rb_name)
 {
   @autoreleasepool {
     unsigned long hash;
@@ -2244,11 +2244,10 @@ Init_obj_ext()
   @protocol(NSTokenFieldDelegate);
 
   // Ruby class methods under the ObjC Ruby module
-  // - ObjRuby.require_framework("Foundation"): registers ObjC framework with Ruby
-  // - ObjRuby.register_class(AppDelegate): registers Ruby class with ObjC
+  // - ObjRuby.import("Foundation"): registers ObjC framework with Ruby
 
   rb_mRigs = rb_define_module("ObjRuby");
-  rb_define_module_function(rb_mRigs, "require_framework", rb_objc_require_framework_from_ruby, 1);
+  rb_define_module_function(rb_mRigs, "import", rb_objc_import, 1);
 
   // Ruby class for holding a C-style pointer
   //  - ObjRuby::Pointer.new(:object): pointer to an "id" ObjC object like NSError

@@ -4,8 +4,6 @@ require "spec_helper"
 
 RSpec.describe ObjRuby::NSXMLParser do
   it "can take a delegate" do
-    ObjRuby.register_class(TestXMLParserDelegate)
-
     xml = ObjRuby::NSString.stringWithString(example_xml)
 
     data = xml.dataUsingEncoding(ObjRuby::NSUTF8StringEncoding)

@@ -37,10 +37,9 @@ BOOL rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *r
 VALUE rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 
-unsigned int rb_objc_register_instance_methods(Class objc_class, VALUE rb_class);
-unsigned int rb_objc_register_class_methods(Class objc_class, VALUE rb_class);
 VALUE rb_objc_register_class_from_objc(Class objc_class);
-VALUE rb_objc_register_class_from_ruby(VALUE rb_self, VALUE rb_name);
+VALUE rb_objc_register_class_from_rb(VALUE rb_class);
+VALUE rb_objc_register_instance_method_from_rb(VALUE rb_class, VALUE rb_method);
 
 void rb_objc_register_float_from_objc(const char *name, double value);
 void rb_objc_register_integer_from_objc(const char *name, long long value);

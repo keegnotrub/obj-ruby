@@ -2244,7 +2244,7 @@ Init_obj_ext()
   @protocol(NSTokenFieldDelegate);
 
   // Ruby class methods under the ObjC Ruby module
-  // - ObjRuby.import("Foundation"): registers ObjC framework with Ruby
+  // - ObjRuby.import("Foundation"): imports an ObjC framework into Ruby
 
   rb_mRigs = rb_define_module("ObjRuby");
   rb_define_module_function(rb_mRigs, "import", rb_objc_import, 1);

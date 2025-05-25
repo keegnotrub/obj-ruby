@@ -114,16 +114,19 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
   @autoreleasepool {
     id obj;
     VALUE new_rb_object;
-   
+    NSUInteger cnt;
+    BOOL proxied;
+    Class objc_class;
+
     // get the class from the objc_class class variable now
-    Class objc_class = (Class) NUM2LL(rb_iv_get(rb_class, "@objc_class"));
+    objc_class = (Class) NUM2LL(rb_iv_get(rb_class, "@objc_class"));
 
     // This object is not released on purpose. The Ruby garbage collector
     // will take care of deallocating it by calling rb_objc_release()
 
-    NSUInteger cnt = NSCountMapTable(knownObjects);
+    cnt = NSCountMapTable(knownObjects);
     obj  = [[objc_class alloc] init];
-    BOOL proxied = cnt != NSCountMapTable(knownObjects);
+    proxied = cnt != NSCountMapTable(knownObjects);
 
     new_rb_object = (VALUE)NSMapGet(knownObjects, (void*)obj);
 

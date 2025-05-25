@@ -195,6 +195,9 @@ didStartElement:(NSString *)elementName
   NSScanner *scanner;
   NSString *structKey;
   NSString *arg;
+  NSUInteger argCount;
+  const char **args;
+  int argIndex;
 
   // skip: "struct (unnamed at ...)"
   if ([name containsString:@" "]) return;
@@ -206,10 +209,10 @@ didStartElement:(NSString *)elementName
   [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"="] intoString:NULL];
   [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\"}"] intoString:NULL];
 
-  NSUInteger argCount = [self parseStructArgCountWithType:type];
+  argCount = [self parseStructArgCountWithType:type];
 
-  const char **args = malloc(argCount * sizeof(const char *));
-  int argIndex = 0;
+  args = malloc(argCount * sizeof(const char *));
+  argIndex = 0;
   while (!scanner.atEnd) {
     [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:NULL];
     [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:&arg];
@@ -233,14 +236,16 @@ didStartElement:(NSString *)elementName
 
 - (void)parseEnumWithName:(NSString*)name value:(NSString*)value
 {
+  NSScanner *scanner;
+  long long integerResult;
+  double floatResult;
+
   if ([name isEqualToString:@"NSNotFound"]) {
     rb_objc_register_integer_from_objc([name UTF8String], NSIntegerMax);
     return;
   }
-    
-  NSScanner *scanner = [NSScanner scannerWithString:value];
-  long long integerResult;
-  double floatResult;
+
+  scanner = [NSScanner scannerWithString:value];
 
   if ([scanner scanLongLong:&integerResult] && scanner.atEnd) {
     rb_objc_register_integer_from_objc([name UTF8String], integerResult);

@@ -22,9 +22,37 @@
 #import "RIGSNSArray.h"
 #import "RIGSCore.h"
 
-@implementation NSArray ( RIGSNSArray )
+VALUE
+rb_objc_array_to_a(VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
 
-+ (id) arrayWithRubyArray: (VALUE) ruby_array
+    Data_Get_Struct(rb_self, void, rcv);
+
+    return rb_objc_array_to_rb(rcv);
+  }  
+}
+
+VALUE
+rb_objc_array_to_rb(NSArray *rcv)
+{
+  VALUE rb_array;
+  VALUE rb_elt;
+  const char idType[] = {_C_ID,'\0'};
+
+  rb_array = rb_ary_new_capa([rcv count]);
+
+  for (id objc_elt in rcv) {
+    rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt, YES);
+    rb_ary_push(rb_array, rb_elt);
+  }
+  
+  return rb_array;
+}
+
+NSArray*
+rb_objc_array_from_rb(VALUE rb_val)
 {
   NSArray *array = [NSArray alloc];
   NSArray *returnArray;
@@ -37,11 +65,11 @@
   
   // A nil value should not get there. It should be a 
   // Ruby Array in any case
-  if ( NIL_P(ruby_array) || (TYPE(ruby_array) != T_ARRAY) )
+  if ( NIL_P(rb_val) || (TYPE(rb_val) != T_ARRAY) )
     return nil;
     
   // Loop through the elements of the ruby array and generate a NSArray
-  count = rb_array_len(ruby_array);
+  count = rb_array_len(rb_val);
   objects = malloc(sizeof(id) * count);
   if (objects == NULL) {
     return nil;
@@ -51,7 +79,7 @@
   // objects (only Objects id can go into an NSArray anyway) and feed them
   // into a new NSArray
   for (i = 0; i < count; i++) {
-    rb_elt = rb_ary_entry(ruby_array, i);
+    rb_elt = rb_ary_entry(rb_val, i);
 
     if (NIL_P(rb_elt)) {
       objects[i] = [NSNull null];
@@ -67,21 +95,3 @@
 
   return returnArray;
 }
-
-- (VALUE) getRubyObject
-{
-  const char idType[] = {_C_ID,'\0'};
-  VALUE rb_array;
-  VALUE rb_elt;
-
-  rb_array = rb_ary_new_capa([self count]);
-
-  for (id objc_elt in self) {
-    rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt, YES);
-    rb_ary_push(rb_array, rb_elt);
-  }
-  
-  return rb_array;
-}
-
-@end

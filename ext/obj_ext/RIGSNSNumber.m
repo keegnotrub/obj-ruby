@@ -21,81 +21,92 @@
 
 #import "RIGSNSNumber.h"
 
-@implementation NSNumber ( RIGSNSNumber )
-
-+ (id) numberWithRubyBignum: (VALUE) rb_bignum
+VALUE
+rb_objc_number_to_i(VALUE rb_self)
 {
-  return [NSNumber numberWithLongLong:rb_big2ll(rb_bignum)];
+  @autoreleasepool {
+    id rcv;
+    const char *type;
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    type = [rcv objCType];
+
+    switch (*type) {
+    case _C_ULNG_LNG:
+      return ULL2NUM([rcv unsignedLongLongValue]);
+    case _C_LNG_LNG:
+    case _C_DBL:
+      return LL2NUM([rcv longLongValue]);
+    case _C_ULNG:
+      return ULONG2NUM([rcv unsignedLongValue]);
+    case _C_FLT:
+    case _C_LNG:
+      return LONG2NUM([rcv longValue]);
+    case _C_UINT:
+      return UINT2NUM([rcv unsignedIntValue]);
+    default:
+      return INT2FIX([rcv intValue]);
+    }
+  }
 }
 
-+ (id) numberWithRubyFixnum: (VALUE) rb_fixnum
+VALUE
+rb_objc_number_to_f(VALUE rb_self)
 {
-  return [NSNumber numberWithLong:FIX2LONG(rb_fixnum)];
+  @autoreleasepool {
+    id rcv;
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    return DBL2NUM([rcv doubleValue]);
+  }
 }
 
-+ (id) numberWithRubyFloat: (VALUE) rb_float
+VALUE
+rb_objc_number_to_rb(NSNumber *val)
 {
-  return [NSNumber numberWithDouble:RFLOAT_VALUE(rb_float)];
-}
-
-+ (id) numberWithRubyBool: (VALUE) rb_bool
-{
-  return [NSNumber numberWithBool:rb_bool == Qtrue];
-}
-
-- (VALUE) getRubyObject
-{
-  const char *type = [self objCType];
+  const char *type = [val objCType];
 
   if (*type == _C_CHR) {
-    if ([self charValue] == YES) return Qtrue;
-    if ([self charValue] == NO) return Qfalse;
+    if ([val charValue] == YES) return Qtrue;
+    if ([val charValue] == NO) return Qfalse;
   }
   
   switch (*type) {
   case _C_ULNG_LNG:
-    return ULL2NUM([self unsignedLongLongValue]);
+    return ULL2NUM([val unsignedLongLongValue]);
   case _C_LNG_LNG:
-    return LL2NUM([self longLongValue]);
+    return LL2NUM([val longLongValue]);
   case _C_DBL:
   case _C_FLT:
-    return DBL2NUM([self doubleValue]);
+    return DBL2NUM([val doubleValue]);
   case _C_ULNG:
-    return ULONG2NUM([self unsignedLongValue]);
+    return ULONG2NUM([val unsignedLongValue]);
   case _C_LNG:
-    return LONG2NUM([self longValue]);
+    return LONG2NUM([val longValue]);
   case _C_UINT:
-    return UINT2NUM([self unsignedIntValue]);
+    return UINT2NUM([val unsignedIntValue]);
   default:
-    return INT2FIX([self intValue]);
+    return INT2FIX([val intValue]);
   }
 }
 
-- (VALUE) getRubyInteger
+NSNumber*
+rb_objc_number_from_rb(VALUE rb_val)
 {
-  const char *type = [self objCType];
-
-  switch (*type) {
-  case _C_ULNG_LNG:
-    return ULL2NUM([self unsignedLongLongValue]);
-  case _C_LNG_LNG:
-  case _C_DBL:
-    return LL2NUM([self longLongValue]);
-  case _C_ULNG:
-    return ULONG2NUM([self unsignedLongValue]);
-  case _C_FLT:
-  case _C_LNG:
-    return LONG2NUM([self longValue]);
-  case _C_UINT:
-    return UINT2NUM([self unsignedIntValue]);
+  switch (TYPE(rb_val)){
+  case T_BIGNUM:
+    return [NSNumber numberWithLongLong:rb_big2ll(rb_val)];
+  case T_FIXNUM:
+    return [NSNumber numberWithLong:FIX2LONG(rb_val)];
+  case T_FLOAT:
+    return [NSNumber numberWithDouble:RFLOAT_VALUE(rb_val)];
+  case T_FALSE:
+  case T_TRUE:
+    return [NSNumber numberWithBool:rb_val == Qtrue];
   default:
-    return INT2FIX([self intValue]);
+    rb_raise(rb_eTypeError, "type 0x%02x not valid NSNumber value", TYPE(rb_val));
+    break;
   }
 }
-
-- (VALUE) getRubyFloat
-{
-  return DBL2NUM([self doubleValue]);
-}
-
-@end

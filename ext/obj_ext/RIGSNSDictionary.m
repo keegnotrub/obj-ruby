@@ -22,19 +22,54 @@
 #import "RIGSNSDictionary.h"
 #import "RIGSCore.h"
 
-static int rigs_ary_keys_i(VALUE key, VALUE value, VALUE ary) {
+static int
+rb_objc_dictionary_keys(VALUE key, VALUE value, VALUE ary) {
   rb_ary_push(ary, key);
   return ST_CONTINUE;
 }
 
-static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
+static int
+rb_objc_dictionary_values(VALUE key, VALUE value, VALUE ary) {
   rb_ary_push(ary, value);
   return ST_CONTINUE;
 }
 
-@implementation NSDictionary ( RIGSNSDictionary )
+VALUE
+rb_objc_dictionary_to_h(VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
 
-+ (id) dictionaryWithRubyHash: (VALUE) ruby_hash
+    Data_Get_Struct(rb_self, void, rcv);
+
+    return rb_objc_dictionary_to_rb(rcv);
+  }
+}
+
+VALUE
+rb_objc_dictionary_to_rb(NSDictionary *val)
+{
+  VALUE rb_hash;
+  VALUE rb_key;
+  VALUE rb_value;
+  id objc_value;
+  const char idType[] = {_C_ID,'\0'};
+
+  rb_hash = rb_hash_new();
+
+  for (id objc_key in val) {
+    objc_value = [val objectForKey:objc_key];
+    if (rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key, YES)) {
+      rb_objc_convert_to_rb((void *)&objc_value, 0, idType, &rb_value, YES);
+      rb_hash_aset(rb_hash, rb_key, rb_value);
+    }
+  }
+  
+  return rb_hash;
+}
+
+NSDictionary*
+rb_objc_dictionary_from_rb(VALUE rb_val)
 {
   NSDictionary *returnDictionary;
   long i;
@@ -51,16 +86,16 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
   
   // A nil value should not get there. It should be a 
   // Ruby Hash in any case
-  if ( NIL_P(ruby_hash) || (TYPE(ruby_hash) != T_HASH) )
+  if ( NIL_P(rb_val) || (TYPE(rb_val) != T_HASH) )
     return nil;
 
   // Loop through the elements of the ruby array and generate a NSArray
-  count = rb_hash_size_num(ruby_hash);
+  count = rb_hash_size_num(rb_val);
   ruby_keys = rb_ary_new_capa(count);
   ruby_values = rb_ary_new_capa(count);
 
-  rb_hash_foreach(ruby_hash, rigs_ary_keys_i, ruby_keys);
-  rb_hash_foreach(ruby_hash, rigs_ary_values_i, ruby_values);
+  rb_hash_foreach(rb_val, rb_objc_dictionary_keys, ruby_keys);
+  rb_hash_foreach(rb_val, rb_objc_dictionary_values, ruby_values);
   
   keyObjects = malloc(sizeof(id) * count);
   valueObjects = malloc(sizeof(id) * count);
@@ -98,26 +133,3 @@ static int rigs_ary_values_i(VALUE key, VALUE value, VALUE ary) {
 
   return returnDictionary;
 }
-
-- (VALUE) getRubyObject
-{
-  const char idType[] = {_C_ID,'\0'};
-  VALUE rb_hash;
-  VALUE rb_key;
-  VALUE rb_value;
-  id objc_value;
-
-  rb_hash = rb_hash_new();
-
-  for (id objc_key in self) {
-    objc_value = [self objectForKey:objc_key];
-    if (rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key, YES)) {
-      rb_objc_convert_to_rb((void *)&objc_value, 0, idType, &rb_value, YES);
-      rb_hash_aset(rb_hash, rb_key, rb_value);
-    }
-  }
-  
-  return rb_hash;
-}
-
-@end

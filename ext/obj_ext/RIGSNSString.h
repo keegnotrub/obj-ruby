@@ -25,14 +25,8 @@
 #import <Foundation/Foundation.h>
 #include <ruby.h>
 
-// Extend NSApplication with some finishing registration code
-@interface NSString ( RIGSNSString )
-
-+ (id) stringWithRubyString: (VALUE)rb_string;
-+ (id) stringWithRubySymbol: (VALUE)rb_symbol;
-
-- (VALUE) getRubyObject;
-
-@end
+VALUE rb_objc_string_to_s(VALUE rb_self);
+VALUE rb_objc_string_to_rb(NSString *val);
+NSString* rb_objc_string_from_rb(VALUE rb_val);
 
 #endif

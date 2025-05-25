@@ -26,13 +26,8 @@
 #include <ruby.h>
 #include <objc/runtime.h>
 
-// Extend NSArray with a couple of new methods
-@interface NSArray ( RIGSNSArray )
-
-+ (id) arrayWithRubyArray: (VALUE) ruby_array;
-
-- (VALUE) getRubyObject;
-
-@end
+VALUE rb_objc_array_to_a(VALUE rb_self);
+VALUE rb_objc_array_to_rb(NSArray *val);
+NSArray* rb_objc_array_from_rb(VALUE rb_val);
 
 #endif

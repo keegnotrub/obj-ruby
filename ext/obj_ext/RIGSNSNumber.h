@@ -26,18 +26,9 @@
 #include <ruby.h>
 #include <objc/runtime.h>
 
-// Extend NSNumber with a couple of new methods
-@interface NSNumber ( RIGSNSNumber )
-
-+ (id) numberWithRubyBignum: (VALUE) rb_bignum;
-+ (id) numberWithRubyFixnum: (VALUE) rb_fixnum;
-+ (id) numberWithRubyFloat: (VALUE) rb_float;
-+ (id) numberWithRubyBool: (VALUE) rb_bool;
-
-- (VALUE) getRubyObject;
-- (VALUE) getRubyInteger;
-- (VALUE) getRubyFloat;
-
-@end
+VALUE rb_objc_number_to_i(VALUE rb_self);
+VALUE rb_objc_number_to_f(VALUE rb_self);
+VALUE rb_objc_number_to_rb(NSNumber *val);
+NSNumber* rb_objc_number_from_rb(VALUE rb_val);
 
 #endif

@@ -21,32 +21,41 @@
 
 #import "RIGSNSDate.h"
 
-@implementation NSDate ( RIGSNSDate )
-
-+ (id) dateWithRubyTime: (VALUE) ruby_time
+VALUE
+rb_objc_date_to_time(VALUE rb_self)
 {
-  struct timespec ts;
-  uint64_t nsecs;
-  NSTimeInterval interval;
-  
-  ts = rb_time_timespec(ruby_time);
-  nsecs = ts.tv_sec * 1000000000ull + ts.tv_nsec;
-  interval = nsecs / 1E9;
+  @autoreleasepool {
+    id rcv;
 
-  return [NSDate dateWithTimeIntervalSince1970:interval];
+    Data_Get_Struct(rb_self, void, rcv);
+
+    return rb_objc_date_to_rb(rcv);
+  }
 }
 
-- (VALUE) getRubyObject
+VALUE
+rb_objc_date_to_rb(NSDate *val)
 {
   NSTimeInterval interval;
   NSTimeInterval secs;
   long nsecs;
-
-  interval = [self timeIntervalSince1970];
-
+  
+  interval = [val timeIntervalSince1970];
   nsecs = modf(interval, &secs) * 1000000000l;
 
   return rb_time_nano_new((time_t)secs, nsecs);
 }
 
-@end
+NSDate*
+rb_objc_date_from_rb(VALUE rb_val)
+{
+  struct timespec ts;
+  uint64_t nsecs;
+  NSTimeInterval interval;
+  
+  ts = rb_time_timespec(rb_val);
+  nsecs = ts.tv_sec * 1000000000ull + ts.tv_nsec;
+  interval = nsecs / 1E9;
+
+  return [NSDate dateWithTimeIntervalSince1970:interval];
+}

@@ -21,21 +21,26 @@
 
 #import "RIGSNSString.h"
 
-@implementation NSString ( RIGSNSString )
-
-+ (id) stringWithRubyString:(VALUE)rb_string
+VALUE
+rb_objc_string_to_s(VALUE rb_self)
 {
-  return [NSString stringWithUTF8String: rb_string_value_cstr(&rb_string)];
+  @autoreleasepool {
+    id rcv;
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    return rb_objc_string_to_rb(rcv);
+  }
 }
 
-+ (id) stringWithRubySymbol:(VALUE)rb_symbol
+VALUE
+rb_objc_string_to_rb(NSString *val)
 {
-  return [NSString stringWithRubyString: rb_sym_to_s(rb_symbol)];
+  return rb_str_new_cstr([val UTF8String]);
 }
 
-- (VALUE) getRubyObject
+NSString*
+rb_objc_string_from_rb(VALUE rb_val)
 {
-  return rb_str_new_cstr([self UTF8String]);
+  return [NSString stringWithUTF8String:rb_string_value_cstr(&rb_val)];
 }
-
-@end

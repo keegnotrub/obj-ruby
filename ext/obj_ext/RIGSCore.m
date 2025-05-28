@@ -577,9 +577,7 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
         d = [NSMutableData dataWithBytesNoCopy:s length:l freeWhenDone:NO];
         *(void**)where = (void*)[d mutableBytes];
       } else if (rb_obj_is_kind_of(rb_val, rb_cRigsPtr) == Qtrue) {
-        struct rb_objc_ptr *dp;
-        dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
-        *(void**)data = &(dp->cptr);
+        rb_objc_ptr_ref(rb_val, data);
       } else if (TYPE(rb_val) == T_DATA) {              
         if (strncmp(type, "^{", 2) == 0) {
           // Assume toll-free bridge
@@ -1264,7 +1262,8 @@ rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int r
     for (i=0;i<rigs_argc;i++) {
       rb_arg = rigs_argv[i];
       if (rb_obj_is_kind_of(rb_arg, rb_cRigsPtr) == Qtrue) {
-        rb_objc_ptr_retain(rb_arg);
+        // Extra call to rb_objc_convert_to_rb in order to retain object (if available)
+        rb_objc_ptr_at(rb_arg, 0);
       }
     }
     
@@ -1415,10 +1414,6 @@ rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
   }
 
   free(methods);
-
-  // Redefine the new method to point to our special rb_objc_new function
-  rb_undef_method(CLASS_OF(rb_class),"new");
-  rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
 
   return cmth_cnt;
 }
@@ -1601,11 +1596,11 @@ rb_objc_register_class_from_objc (Class objc_class)
 
     /* FIXME? A class name in Ruby must be constant and therefore start with
        A-Z character. If this is not the case the following method call will work
-       ok but the Class name will not be explicitely accessible from Ruby
-       (Rigs.import deals with Class with non Constant name to avoid NameError
-       exception */
+       ok but the Class name will not be explicitely accessible from Ruby */
     rb_class = rb_define_class_under(rb_mRigs, cname, rb_super_class);
     rb_undef_alloc_func(rb_class);
+    rb_undef_method(CLASS_OF(rb_class),"new");
+    rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
 
     cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
     imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);
@@ -1877,7 +1872,9 @@ Init_obj_ext()
   rb_undef_method(CLASS_OF(rb_cRigsPtr), "new");
   rb_define_singleton_method(rb_cRigsPtr, "new", rb_objc_ptr_new, -1);  
   rb_define_method(rb_cRigsPtr, "inspect", rb_objc_ptr_inspect, 0);
-  rb_define_method(rb_cRigsPtr, "[]", rb_objc_ptr_get, 1);
+  rb_define_method(rb_cRigsPtr, "[]", rb_objc_ptr_get, -1);
+  rb_define_alias(rb_cRigsPtr, "slice", "[]");
+  rb_define_alias(rb_cRigsPtr, "at", "[]");
 
   // Catch all Objective-C raised exceptions and direct them to Ruby
   NSSetUncaughtExceptionHandler(rb_objc_raise_exception);

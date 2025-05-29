@@ -27,8 +27,12 @@
 #include <objc/runtime.h>
 
 VALUE rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
-VALUE rb_objc_ptr_get(VALUE rb_self, VALUE index);
+VALUE rb_objc_ptr_get(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_ptr_inspect(VALUE rb_self);
-void rb_objc_ptr_retain(VALUE rb_self);
+
+VALUE rb_objc_ptr_at(VALUE rb_val, int index);
+VALUE rb_objc_ptr_slice(VALUE rb_val, int index, int length);
+
+void rb_objc_ptr_ref(VALUE rb_val, void **data);
 
 #endif

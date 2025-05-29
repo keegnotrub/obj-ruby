@@ -20,30 +20,38 @@
 */
 
 #import "RIGSPointer.h"
-#import "RIGSUtilities.h"
 #import "RIGSCore.h"
+
+struct rb_objc_ptr
+{
+  unsigned long allocated_size;
+  void *cptr;
+  const char *encoding;
+};
+
+static const char* rb_objc_ptr_types[][2] = {
+  {     "object", "@" },
+  {       "bool", "B" },
+  {       "char", "c" },
+  {      "uchar", "C" },
+  {      "short", "s" },
+  {     "ushort", "S" },
+  {        "int", "i" },
+  {       "uint", "I" },
+  {       "long", "l" },
+  {      "ulong", "L" },
+  {  "long_long", "q" },
+  { "ulong_long", "Q" },
+  {      "float", "f" },
+  {     "double", "d" },
+  {        NULL, NULL }
+};
 
 void
 rb_objc_ptr_release(struct rb_objc_ptr *dp)
 {
   @autoreleasepool {
-    id obj;
-    size_t offset;
-
     if (dp == NULL) return;
-
-    NSDebugLog(@"Call to ObjRuby::Pointer release on %p", dp);
-    
-    if (dp->retained) {
-      offset = 0;
-      while (offset < dp->allocated_size) {
-        obj = *((id*)(dp->cptr) + offset);
-        if ([obj respondsToSelector:@selector(release)]) {
-          [obj release];
-        }
-        offset += sizeof(id);
-      }        
-    }
 
     if (dp->allocated_size > 0) free(dp->cptr);
     if (dp->encoding) free((char*)dp->encoding);
@@ -51,7 +59,6 @@ rb_objc_ptr_release(struct rb_objc_ptr *dp)
     dp->allocated_size = 0;
     dp->cptr = NULL;
     dp->encoding = NULL;
-    dp->retained = NO;
 
     free(dp);
   }
@@ -104,7 +111,6 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     }
 
     dp = (struct rb_objc_ptr*)malloc(sizeof(struct rb_objc_ptr));
-    dp->retained = NO;
 
     data = malloc(sizeof(char) * (strlen(encoding) + 1));
     strcpy(data, encoding);
@@ -114,16 +120,10 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     NSGetSizeAndAlignment(encoding, &tsize, NULL);
     tsize *= rigs_argc == 2 ? FIX2INT(cnt) : 1;
 
-    if (tsize > 0) {
-      dp->cptr = (void*)malloc(tsize);
-      memset(dp->cptr, 0, tsize);
-      dp->allocated_size = tsize;
-    }
-    else {
-      dp->cptr = NULL;
-      dp->allocated_size = 0;
-    }
-    
+    dp->cptr = (void*)malloc(tsize);
+    memset(dp->cptr, 0, tsize);
+    dp->allocated_size = tsize;
+
     obj = Data_Wrap_Struct(rb_class, 0, rb_objc_ptr_release, dp);
 
     return obj;
@@ -131,35 +131,25 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
 }
 
 VALUE
-rb_objc_ptr_get(VALUE rb_self, VALUE index)
+rb_objc_ptr_get(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 {
   @autoreleasepool {
-    NSUInteger offset;
-    struct rb_objc_ptr *dp;
-    VALUE val;
-    BOOL converted;
+    VALUE index;
+    VALUE length;
 
-    Check_Type(index, T_FIXNUM);
-  
-    dp = (struct rb_objc_ptr*)DATA_PTR(rb_self);
+    rigs_argc = rb_scan_args(rigs_argc, rigs_argv, "11", &index, &length);
 
-    converted = NO;
-    offset = 0;
-    if (dp->encoding != NULL) {
-      NSGetSizeAndAlignment(dp->encoding, &offset, NULL);
-      offset *= FIX2INT(index);
-
-      if (dp->allocated_size > 0) {
-        converted = rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val, NO);
-      }
+    switch(rigs_argc) {
+    case 1:
+      Check_Type(index, T_FIXNUM);
+      return rb_objc_ptr_at(rb_self, FIX2INT(index));
+    case 2:
+      Check_Type(index, T_FIXNUM);
+      Check_Type(length, T_FIXNUM);
+      return rb_objc_ptr_slice(rb_self, FIX2INT(index), FIX2INT(length));
+    default:
+      rb_raise(rb_eArgError, "wrong number of arguments");
     }
-
-    if (!converted) {
-      rb_raise(rb_eRuntimeError, "can't convert element of type '%s' at index %d with offset %lu",
-               dp->encoding ?: "(unknown)", FIX2INT(index), offset);
-    }
-
-    return val;
   }
 }
 
@@ -185,26 +175,77 @@ rb_objc_ptr_inspect(VALUE rb_self)
   }
 }
 
-void
-rb_objc_ptr_retain(VALUE rb_self)
+VALUE
+rb_objc_ptr_at(VALUE rb_val, int index) {
+  struct rb_objc_ptr *dp;
+  VALUE val;
+  size_t tsize;
+  size_t offset;
+  
+  dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
+
+  if (dp->allocated_size == 0) return Qnil;
+  if (dp->encoding == NULL) return Qnil;
+
+  tsize = 0;
+  NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
+  offset = tsize * index;
+
+  if (offset < 0) offset += dp->allocated_size;
+
+  if (tsize == 0) return Qnil;
+  if (offset < 0) return Qnil;
+  if (offset + tsize > dp->allocated_size) return Qnil;
+
+  rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val, NO);
+
+  return val;
+}
+
+VALUE
+rb_objc_ptr_slice(VALUE rb_val, int index, int length)
 {
   struct rb_objc_ptr *dp;
-  id obj;
-  size_t offset = 0;
+  VALUE rb_array;
+  VALUE rb_elt;
+  size_t tsize;
+  size_t offset;
 
-  dp = (struct rb_objc_ptr*)DATA_PTR(rb_self);
+  if (length < 0) return Qnil;
 
-  if (dp->allocated_size == 0) return;
-  if (dp->encoding == NULL) return;
-  if (*(dp->encoding) != _C_ID) return;
+  dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
 
-  while (offset < dp->allocated_size) {
-    obj = *((id*)(dp->cptr) + offset);
-    if ([obj respondsToSelector:@selector(retain)]) {
-      [obj retain];
-    }
-    offset += sizeof(id);
+  if (dp->allocated_size == 0) return Qnil;
+  if (dp->encoding == NULL) return Qnil;
+
+  tsize = 0;
+  NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
+  offset = tsize * index;
+  
+  if (offset < 0) offset += dp->allocated_size;
+
+  if (tsize == 0) return Qnil;
+  if (offset < 0) return Qnil;
+  if (offset + tsize > dp->allocated_size) return Qnil;
+
+  rb_array = rb_ary_new();
+
+  while(length-- > 0 && offset < dp->allocated_size) {
+    rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &rb_elt, NO);
+    rb_ary_push(rb_array, rb_elt);
+
+    offset += tsize;
   }
 
-  dp->retained = YES;
+  return rb_array;
+}
+
+void
+rb_objc_ptr_ref(VALUE rb_val, void **data)
+{
+  struct rb_objc_ptr *dp;
+
+  dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
+
+  *(void**)data = &(dp->cptr);
 }

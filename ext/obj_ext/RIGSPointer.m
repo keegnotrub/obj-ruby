@@ -27,6 +27,7 @@ struct rb_objc_ptr
   unsigned long allocated_size;
   void *cptr;
   const char *encoding;
+  BOOL tainted;
 };
 
 static const char* rb_objc_ptr_types[][2] = {
@@ -59,6 +60,7 @@ rb_objc_ptr_release(struct rb_objc_ptr *dp)
     dp->allocated_size = 0;
     dp->cptr = NULL;
     dp->encoding = NULL;
+    dp->tainted = NO;
 
     free(dp);
   }
@@ -123,6 +125,7 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     dp->cptr = (void*)malloc(tsize);
     memset(dp->cptr, 0, tsize);
     dp->allocated_size = tsize;
+    dp->tainted = NO;
 
     obj = Data_Wrap_Struct(rb_class, 0, rb_objc_ptr_release, dp);
 
@@ -181,20 +184,26 @@ rb_objc_ptr_at(VALUE rb_val, int index) {
   VALUE val;
   size_t tsize;
   size_t offset;
+  long ioffset;
   
   dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
 
   if (dp->allocated_size == 0) return Qnil;
   if (dp->encoding == NULL) return Qnil;
+  if (dp->tainted == NO) return Qnil;
 
   tsize = 0;
   NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
-  offset = tsize * index;
-
-  if (offset < 0) offset += dp->allocated_size;
 
   if (tsize == 0) return Qnil;
-  if (offset < 0) return Qnil;
+  
+  ioffset = tsize * index;
+
+  if (ioffset < 0) ioffset += dp->allocated_size;
+  if (ioffset < 0) return Qnil;
+
+  offset = (size_t)ioffset;
+  
   if (offset + tsize > dp->allocated_size) return Qnil;
 
   rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val, NO);
@@ -210,6 +219,7 @@ rb_objc_ptr_slice(VALUE rb_val, int index, int length)
   VALUE rb_elt;
   size_t tsize;
   size_t offset;
+  long ioffset;
 
   if (length < 0) return Qnil;
 
@@ -217,15 +227,20 @@ rb_objc_ptr_slice(VALUE rb_val, int index, int length)
 
   if (dp->allocated_size == 0) return Qnil;
   if (dp->encoding == NULL) return Qnil;
+  if (dp->tainted == NO) return Qnil;
 
   tsize = 0;
   NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
-  offset = tsize * index;
-  
-  if (offset < 0) offset += dp->allocated_size;
 
   if (tsize == 0) return Qnil;
-  if (offset < 0) return Qnil;
+  
+  ioffset = tsize * index;
+  
+  if (ioffset < 0) ioffset += dp->allocated_size;
+  if (ioffset < 0) return Qnil;
+
+  offset = (size_t)ioffset;
+  
   if (offset + tsize > dp->allocated_size) return Qnil;
 
   rb_array = rb_ary_new();
@@ -248,4 +263,5 @@ rb_objc_ptr_ref(VALUE rb_val, void **data)
   dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
 
   *(void**)data = &(dp->cptr);
+  dp->tainted = YES;
 }

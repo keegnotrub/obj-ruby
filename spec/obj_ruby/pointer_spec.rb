@@ -25,6 +25,31 @@ RSpec.describe ObjRuby::Pointer do
     end
   end
 
+  describe "when accessing a pointer that hasn't been set yet" do
+    it "returns nil" do
+      ptrs = [
+        described_class.new(:object),
+        described_class.new(:bool),
+        described_class.new(:char),
+        described_class.new(:uchar),
+        described_class.new(:short),
+        described_class.new(:ushort),
+        described_class.new(:int),
+        described_class.new(:uint),
+        described_class.new(:long),
+        described_class.new(:ulong),
+        described_class.new(:long_long),
+        described_class.new(:ulong_long),
+        described_class.new(:float),
+        described_class.new(:double)
+      ]
+
+      ptrs.each do |ptr|
+        expect(ptr[0]).to be_nil
+      end
+    end
+  end
+
   describe "when passing pointer as a param" do
     it "sets NSError data for an object pointer" do
       error_ptr = described_class.new(:object)
@@ -33,22 +58,18 @@ RSpec.describe ObjRuby::Pointer do
 
       expect(result).to be_nil
 
-      error = error_ptr.at(0)
+      error = error_ptr[0]
 
       expect(error).not_to be_nil
       expect(error).to be_a ObjRuby::NSError
       expect(error.localizedDescription).to eq(
         "The file “not-a-path” couldn’t be opened because there is no such file."
       )
-      expect(error_ptr[0]).to eq error
-
-      array = error_ptr.slice(0, 1)
-
-      expect(array[0]).to eq error
-      expect(error_ptr[0, 1]).to eq array
+      expect(error_ptr[-1]).to eq error
+      expect(error_ptr[1]).to be_nil
     end
 
-    it "sets CGFloat data for a value pointers" do
+    it "sets CGFloat data for a value pointer" do
       red = described_class.new(:double)
       green = described_class.new(:double)
       blue = described_class.new(:double)
@@ -62,6 +83,34 @@ RSpec.describe ObjRuby::Pointer do
       expect(green[0]).to eq(0.0)
       expect(blue[0]).to eq(0.0)
       expect(alpha[0]).to eq(1.0)
+    end
+
+    it "sets a block of CGFloat data for an array of value pointers" do
+      components = described_class.new(:double, 4)
+
+      color = ObjRuby::NSColor.greenColor
+
+      color.getComponents(components)
+
+      expect(components[0]).to eq(0.0)
+      expect(components[1]).to eq(1.0)
+      expect(components[2]).to eq(0.0)
+      expect(components[3]).to eq(1.0)
+      expect(components[4]).to be_nil
+
+      expect(components[-1]).to eq(components[3])
+      expect(components[-2]).to eq(components[2])
+      expect(components[-3]).to eq(components[1])
+      expect(components[-4]).to eq(components[0])
+      expect(components[-5]).to be_nil
+
+      expect(components[0, 4]).to eq([0.0, 1.0, 0.0, 1.0])
+      expect(components[0, 9]).to eq([0.0, 1.0, 0.0, 1.0])
+      expect(components[1, 2]).to eq([1.0, 0.0])
+      expect(components[-1, 1]).to eq([1.0])
+      expect(components[-1, 9]).to eq([1.0])
+      expect(components[1, 0]).to eq([])
+      expect(components[5, 1]).to be_nil
     end
   end
 end

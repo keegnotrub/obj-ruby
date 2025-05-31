@@ -52,9 +52,13 @@ rb_objc_method_to_sel(const char* name, int argc)
 
   if (argc > nbArgs) {
     selName[i++] = ':';
+    nbArgs++;
   }
   selName[i++] = '\0';
 
+  if (argc < nbArgs) {
+    return NULL;
+  }
   return sel_getUid(selName);
 }
 

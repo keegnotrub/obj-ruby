@@ -41,22 +41,48 @@ RSpec.describe ObjRuby::NSObject do
       expect(obj).not_to be_nil
     end
 
-    it "can call subclass methods from Ruby" do
+    it "can call subclass methods without args from the Objective-C runtime" do
       obj = TestMyObject.new
 
-      result = obj.myStringMethod
-
-      expect(result).to be_a String
-      expect(result).to eq "expected string"
-    end
-
-    it "can call subclass methods from Objective-C runtime" do
-      obj = TestMyObject.new
-
-      result = obj.performSelector(:myStringMethod)
+      result = obj.performSelector(:myObjcMethod)
 
       expect(result).to be_a ObjRuby::NSString
-      expect(result).to eq "expected string"
+      expect(result).to eq "expected myObjcMethod return"
+      expect(obj.respondsToSelector("myObjcMethod")).to be(true)
+    end
+
+    it "can call subclass methods with one arg from the Objective-C runtime" do
+      obj = TestMyObject.new
+
+      result = obj.performSelector_withObject("myObjcMethodWithArg:", "1")
+
+      expect(result).to be_a ObjRuby::NSString
+      expect(result).to eq "expected myObjcMethodWithArg(1) return"
+      expect(obj.respondsToSelector("myObjcMethodWithArg")).to be(false)
+      expect(obj.respondsToSelector("myObjcMethodWithArg:")).to be(true)
+    end
+
+    it "can call subclass methods with two args from the Objective-C runtime" do
+      obj = TestMyObject.new
+
+      result = obj.performSelector_withObject_withObject("myObjcMethodWithArg1:andArg2:", "1", "2")
+
+      expect(result).to be_a ObjRuby::NSString
+      expect(result).to eq "expected myObjcMethodWithArg1_andArg2(1, 2) return"
+      expect(obj.respondsToSelector("myObjcMethodWithArg1_andArg2")).to be(false)
+      expect(obj.respondsToSelector("myObjcMethodWithArg1_andArg2:")).to be(false)
+      expect(obj.respondsToSelector("myObjcMethodWithArg1:andArg2:")).to be(true)
+    end
+
+    it "doesn't expose non-conforming ruby methods to the Objective-C runtime" do
+      obj = TestMyObject.new
+
+      expect(obj.respondsToSelector("my_method")).to be(false)
+      expect(obj.respondsToSelector("my_method:")).to be(false)
+      expect(obj.respondsToSelector("my:method:")).to be(false)
+      expect(obj.respondsToSelector("my_argmethod")).to be(false)
+      expect(obj.respondsToSelector("my_argmethod:")).to be(false)
+      expect(obj.respondsToSelector("my:argmethod:")).to be(false)
     end
   end
 end

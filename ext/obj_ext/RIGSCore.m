@@ -1323,10 +1323,13 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     }
 
     sel = rb_objc_method_to_sel(method, our_argc);
-    signature = [rcv methodSignatureForSelector:sel];
+    if (sel == NULL) {
+      rb_raise(rb_eTypeError, "method %s is not valid for type 0x%02x", method, TYPE(rb_self));
+    }
 
+    signature = [rcv methodSignatureForSelector:sel];
     if (!signature) {
-      return Qnil;
+      rb_raise(rb_eTypeError, "method %s is missing a signature for type 0x%02x", method, TYPE(rb_self));
     }
 
     return rb_objc_dispatch(rcv, sel_getName(sel), signature, our_argc, our_argv);
@@ -1677,6 +1680,11 @@ rb_objc_register_instance_method_from_rb(VALUE rb_class, VALUE rb_method)
   
   name = rb_id2name(entry);
   objcMthSEL = rb_objc_method_to_sel(name, nbArgs);
+
+  if (objcMthSEL == NULL) {
+    return Qfalse;
+  }
+  
   objcTypes = rb_objc_types_for_selector(objcMthSEL, nbArgs);
 
   hash = rb_objc_hash(objcTypes);

@@ -9,6 +9,13 @@ RSpec.describe ObjRuby::NSView do
     expect(view).to be_a described_class
   end
 
+  it "can call methods that are aliased" do
+    view = described_class.new
+
+    view.hidden = true
+    expect(view.hidden?).to be(true)
+  end
+
   it "can call a method that returns a struct" do
     view = described_class.new
 

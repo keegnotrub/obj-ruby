@@ -23,6 +23,29 @@
 #import "RIGSCore.h"
 
 VALUE
+rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
+{
+  @autoreleasepool {
+    id rcv;
+    id val;
+    void *data;
+    const char idType[] = {_C_ID,'\0'};
+
+    Check_Type(rb_idx, T_FIXNUM);
+    
+    Data_Get_Struct(rb_self, void, rcv);
+
+    data = alloca(sizeof(id));
+    data = &val;
+    rb_objc_convert_to_objc(rb_val, &data, 0, idType);
+
+    [rcv setObject:val atIndexedSubscript:FIX2LONG(rb_idx)];
+           
+    return Qnil;
+  }
+}
+
+VALUE
 rb_objc_array_to_a(VALUE rb_self)
 {
   @autoreleasepool {
@@ -54,19 +77,15 @@ rb_objc_array_to_rb(NSArray *rcv)
 NSArray*
 rb_objc_array_from_rb(VALUE rb_val)
 {
-  NSArray *array = [NSArray alloc];
-  NSArray *returnArray;
+  NSArray *array;
   long i;
   long count;
   id *objects;
   VALUE rb_elt;
   void *data;
   const char idType[] = {_C_ID,'\0' };
-  
-  // A nil value should not get there. It should be a 
-  // Ruby Array in any case
-  if ( NIL_P(rb_val) || (TYPE(rb_val) != T_ARRAY) )
-    return nil;
+
+  Check_Type(rb_val, T_ARRAY);
     
   // Loop through the elements of the ruby array and generate a NSArray
   count = rb_array_len(rb_val);
@@ -81,17 +100,12 @@ rb_objc_array_from_rb(VALUE rb_val)
   for (i = 0; i < count; i++) {
     rb_elt = rb_ary_entry(rb_val, i);
 
-    if (NIL_P(rb_elt)) {
-      objects[i] = [NSNull null];
-    }
-    else {
-      data = &objects[i];
-      rb_objc_convert_to_objc(rb_elt, &data, 0, idType);
-    }
+    data = &objects[i];
+    rb_objc_convert_to_objc(rb_elt, &data, 0, idType);
   }
 
-  returnArray = [array initWithObjects:objects count:count];
+  array = [NSArray arrayWithObjects:objects count:count];
   free(objects);
 
-  return returnArray;
+  return array;
 }

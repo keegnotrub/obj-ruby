@@ -10,7 +10,7 @@ RSpec.describe ObjRuby::NSXMLParser do
     parser = described_class.alloc.initWithData(data)
 
     delegate = TestXMLParserDelegate.new
-    parser.setDelegate(delegate)
+    parser.delegate = delegate
 
     result = parser.parse
 

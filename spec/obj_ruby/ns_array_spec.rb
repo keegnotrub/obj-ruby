@@ -10,7 +10,19 @@ RSpec.describe ObjRuby::NSArray do
     expect(array).to be_a described_class
   end
 
-  it "can call instance methods" do
+  it "can receive a Ruby array" do
+    array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+
+    expect(array.count).to eq 5
+    expect(array.indexOfObject(1)).to eq 0
+    expect(array.indexOfObject(2)).to eq 1
+    expect(array.indexOfObject(3)).to eq 2
+    expect(array.indexOfObject(4)).to eq 3
+    expect(array.indexOfObject(5)).to eq 4
+    expect(array.indexOfObject_inRange(1, ObjRuby::NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
+  end
+
+  it "can receive a variable argument list" do
     array = described_class.arrayWithObjects("here", "there", "everywhere", nil)
 
     expect(array.count).to eq 3
@@ -24,31 +36,28 @@ RSpec.describe ObjRuby::NSArray do
     expect(array.indexOfObject("not here")).to eq ObjRuby::NSNotFound
   end
 
-  it "can receive a Ruby array" do
-    array = described_class.arrayWithArray([1, nil, 3, 4, 5])
-
-    expect(array.count).to eq 5
-    expect(array.indexOfObject(1)).to eq 0
-    expect(array.indexOfObject(ObjRuby::NSNull.null)).to eq 1
-    expect(array.indexOfObject_inRange(1, ObjRuby::NSRange.new(1, array.count - 1))).to eq ObjRuby::NSNotFound
-  end
-
-  it "can receive a variable argument list" do
+  it "is equal when what it received was equal" do
     array = described_class.arrayWithArray([1, 2, 3, 4, 5])
-    manual_array = described_class.arrayWithArray([1, 2, 3, 4, 5])
+    manual_array = described_class.arrayWithObjects(1, 2, 3, 4, 5, nil)
 
     expect(array.isEqualToArray(manual_array)).to be true
   end
 
+  it "can be indexed with a subscript" do
+    array = described_class.arrayWithArray([1, 2, "hi", 4, 5])
+
+    expect(array[1]).to eq(2)
+    expect(array[2]).to eq("hi")
+  end
+
   it "can be transformed into a Ruby array" do
-    array = described_class.arrayWithArray([1, nil, 3, 4, 5])
+    array = described_class.arrayWithArray([1, 2, 3, 4, 5])
 
     result = array.to_a
 
     expect(result).to be_a Array
     expect(result.size).to eq 5
     expect(result[0]).to eq 1
-    expect(result[1]).to be_nil
   end
 
   it "can use a block method" do

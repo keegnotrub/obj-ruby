@@ -42,5 +42,7 @@ rb_objc_string_to_rb(NSString *val)
 NSString*
 rb_objc_string_from_rb(VALUE rb_val)
 {
+  Check_Type(rb_val, T_STRING);
+  
   return [NSString stringWithUTF8String:rb_string_value_cstr(&rb_val)];
 }

@@ -35,6 +35,32 @@ rb_objc_dictionary_values(VALUE key, VALUE value, VALUE ary) {
 }
 
 VALUE
+rb_objc_dictionary_store(VALUE rb_self, VALUE rb_key, VALUE rb_val)
+{
+  @autoreleasepool {
+    id rcv;
+    id key;
+    id val;
+    void *data;
+    const char idType[] = {_C_ID,'\0'};
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    data = alloca(sizeof(id));
+
+    data = &key;
+    rb_objc_convert_to_objc(rb_key, &data, 0, idType);
+
+    data = &val;
+    rb_objc_convert_to_objc(rb_val, &data, 0, idType);
+
+    [rcv setObject:val forKeyedSubscript:key];
+
+    return Qnil;
+  }
+}
+
+VALUE
 rb_objc_dictionary_to_h(VALUE rb_self)
 {
   @autoreleasepool {
@@ -71,7 +97,7 @@ rb_objc_dictionary_to_rb(NSDictionary *val)
 NSDictionary*
 rb_objc_dictionary_from_rb(VALUE rb_val)
 {
-  NSDictionary *returnDictionary;
+  NSDictionary *dictionary;
   long i;
   long count;
   void *keyData;
@@ -83,11 +109,8 @@ rb_objc_dictionary_from_rb(VALUE rb_val)
   VALUE ruby_keys;
   VALUE ruby_values;
   const char idType[] = {_C_ID,'\0' };
-  
-  // A nil value should not get there. It should be a 
-  // Ruby Hash in any case
-  if ( NIL_P(rb_val) || (TYPE(rb_val) != T_HASH) )
-    return nil;
+
+  Check_Type(rb_val, T_HASH);
 
   // Loop through the elements of the ruby array and generate a NSArray
   count = rb_hash_size_num(rb_val);
@@ -110,26 +133,16 @@ rb_objc_dictionary_from_rb(VALUE rb_val)
     rb_key = rb_ary_entry(ruby_keys, i);
     rb_value = rb_ary_entry(ruby_values, i);
 
-    if (NIL_P(rb_key)) {
-      keyObjects[i] = [NSNull null];
-    }
-    else {
-      keyData = &keyObjects[i];
-      rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
-    }
+    keyData = &keyObjects[i];
+    rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
 
-    if (NIL_P(rb_value)) {
-      valueObjects[i] = [NSNull null];
-    }
-    else {
-      valueData = &valueObjects[i];
-      rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
-    }
+    valueData = &valueObjects[i];
+    rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
   }
 
-  returnDictionary = [NSDictionary dictionaryWithObjects:valueObjects forKeys:keyObjects count:count];
+  dictionary = [NSDictionary dictionaryWithObjects:valueObjects forKeys:keyObjects count:count];
   free(keyObjects);
   free(valueObjects);
 
-  return returnDictionary;
+  return dictionary;
 }

@@ -26,6 +26,7 @@
 #include <ruby.h>
 #include <objc/runtime.h>
 
+VALUE rb_objc_dictionary_store(VALUE rb_self, VALUE rb_key, VALUE rb_val);
 VALUE rb_objc_dictionary_to_h(VALUE rb_self);
 VALUE rb_objc_dictionary_to_rb(NSDictionary *val);
 NSDictionary* rb_objc_dictionary_from_rb(VALUE rb_val);

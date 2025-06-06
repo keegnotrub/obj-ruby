@@ -17,6 +17,16 @@ RSpec.describe ObjRuby::NSNumber do
     expect(number.doubleValue).to eq 3.0
   end
 
+  it "can be compared to a Ruby numeric or bool" do
+    number = described_class.numberWithInt(3)
+
+    expect(number.isEqualToNumber(3)).to be true
+    expect(number.isEqualToNumber(4)).to be false
+    expect(number.isEqualToNumber(3.1)).to be false
+    expect(number.isEqualToNumber(false)).to be false
+    expect(number.isEqualToNumber(true)).to be false
+  end
+
   it "can be transformed into a Ruby integer" do
     number = described_class.numberWithInt(3)
 

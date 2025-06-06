@@ -37,7 +37,7 @@ rb_objc_method_to_sel(const char* name, int argc)
   size_t length;
   
   length = strlen(name);
-  selName = alloca(length + 2);
+  selName = alloca(sizeof(char) * (length + 2));
   nbArgs = 0;
   
   for (i=0;i<length;i++) {
@@ -72,10 +72,14 @@ rb_objc_sel_to_method(SEL sel)
 
   selName = sel_getName(sel);
   length = strlen(selName);
-  name = malloc(length + 1);
+  name = malloc(sizeof(char) * (length + 1));
 
   for (i=0;i<length;i++) {
-    if (selName[i] == ':') {
+    if (selName[i] == '_') {
+      free(name);
+      return NULL;
+    }
+    else if (selName[i] == ':') {
       if (i == length - 1) break;
       name[i] = '_';
     }
@@ -87,6 +91,91 @@ rb_objc_sel_to_method(SEL sel)
   name[i++] = '\0';
   
   return name;
+}
+
+char *
+rb_objc_sel_to_alias(SEL sel)
+{
+  const char *selName;
+  char *name;
+  char *alias;
+  size_t i;
+  size_t length;
+
+  if (sel_isEqual(sel, @selector(objectAtIndexedSubscript:)) ||
+      sel_isEqual(sel, @selector(objectForKeyedSubscript:))) {
+    name = malloc(sizeof(char) * 3);
+    alias = name;
+    *name++ = '[';
+    *name++ = ']';
+    *name++ = '\0';
+    return alias;
+  }
+
+  selName = sel_getName(sel);
+  length = strlen(selName);
+
+  if (length > 3 &&
+      selName[0] == 'i' &&
+      selName[1] == 's' &&
+      selName[2] == toupper(selName[2]) &&
+      selName[length - 1] != ':') {
+    name = malloc(sizeof(char) * (length + 1));
+    alias = name;
+    *name++ = selName[3] == toupper(selName[3]) ?
+      selName[2] :
+      tolower(selName[2]);
+    for (i=3;i<length;i++) {
+      if (selName[i] == ':' || selName[i] == '_') {
+        free(alias);
+        return NULL;
+      }
+      *name++ = selName[i];
+    }
+    *name++ = '?';
+    *name++ = '\0';
+    return alias;
+  }
+  else if (length > 4 &&
+           selName[0] == 's' &&
+           selName[1] == 'e' &&
+           selName[2] == 't' &&
+           selName[3] == toupper(selName[3]) &&
+           selName[length - 1] == ':') {
+    if (length > 6 &&
+        selName[3] == 'W' &&
+        selName[4] == 'i' &&
+        selName[5] == 't' &&
+        selName[6] == 'h') {
+      // + NS{Mutable}Set setWith[Array,Object,etc]
+      return NULL;
+    }
+    if (length > 6 &&
+        selName[3] == 'B' &&
+        selName[4] == 'y' &&
+        selName[5] == 'A' &&
+        selName[6] == 'd') {
+      // - NS{Mutable}Set setByAdding[Object,Objects,etc]
+      return NULL;
+    }
+    name = malloc(sizeof(char) * (length + 1));
+    alias = name;
+    *name++ = selName[4] == toupper(selName[4]) ?
+      selName[3] :
+      tolower(selName[3]);
+    for (i=4;i<length-1;i++) {
+      if (selName[i] == ':' || selName[i] == '_') {
+        free(alias);
+        return NULL;
+      }
+      *name++ = selName[i];
+    }
+    *name++ = '=';
+    *name++ = '\0';
+    return alias;
+  }
+  
+  return NULL;
 }
 
 

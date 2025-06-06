@@ -51,6 +51,14 @@ RSpec.describe ObjRuby::NSObject do
       expect(obj.respondsToSelector("myObjcMethod")).to be(true)
     end
 
+    it "can call subclass methods that raise" do
+      obj = TestMyObject.new
+
+      expect do
+        obj.performSelector(:myDangerousObjcMethod)
+      end.to raise_error RuntimeError, "expected myDangerousObjcMethod message"
+    end
+
     it "can call subclass methods with one arg from the Objective-C runtime" do
       obj = TestMyObject.new
 

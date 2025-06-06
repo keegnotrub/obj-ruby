@@ -55,6 +55,7 @@ struct rb_objc_block {
 
 SEL rb_objc_method_to_sel(const char* name, int argc);
 char *rb_objc_sel_to_method(SEL sel);
+char *rb_objc_sel_to_alias(SEL sel);
 
 unsigned long rb_objc_hash(const char* value);
 const char *objc_skip_type_qualifiers (const char *type);

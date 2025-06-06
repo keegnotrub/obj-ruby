@@ -38,14 +38,13 @@ earlier_date = date.earlierDate(other_date)
 
 Note you are allowed to mix some Ruby and Objective-C types. The following Ruby types will automatically bridge to these Objective-C types:
 
-| Ruby          | Objective-C   |
-| ------------- | ------------- |
-| String        | NSString      |
-| Array         | NSArray       |
-| Hash          | NSDictionary  |
-| Time          | NSDate        |
-| Numeric       | NSNumber      |
-| Nil           | NSNull        |
+| Ruby          | Objective-C            |
+| ------------- | ---------------------- |
+| String        | NSString               |
+| Array         | NS{Mutable}Array       |
+| Hash          | NS{Mutable}Dictionary  |
+| Time          | NSDate                 |
+| Numeric       | NSNumber               |
 
 ``` ruby
 require "obj_ruby"

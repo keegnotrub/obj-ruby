@@ -65,6 +65,9 @@ static NSHashTable *knownFrameworks = 0;
 // Rigs Ruby module
 static VALUE rb_mRigs = Qnil;
 
+// Rigs Ruby Runtime Error class
+static VALUE rb_eRigsRuntimeError = Qnil;
+
 // Rigs Ruby Ptr class
 static VALUE rb_cRigsPtr = Qnil;
 
@@ -675,7 +678,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       {
       case _C_ID: {
         id val = *(id*)where;
-        if (val == nil || (autoconvert && val == [NSNull null])) {
+        if (val == nil) {
           rb_val = Qnil;                  
         } else if ( autoconvert && [[val classForCoder] isSubclassOfClass:[NSString class]] ) {
           rb_val = rb_objc_string_to_rb(val);
@@ -690,7 +693,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
         } else if ( (rb_val = (VALUE) NSMapGet(knownObjects,(void *)val)) )  {
           NSDebugLog(@"ObjC object already wrapped in an existing Ruby value (%p)", (void*)rb_val);
         } else {
-                  
+
           /* Retain the value otherwise ObjC releases it and Ruby crashes
              It's Ruby garbage collector job to indirectly release the ObjC 
              object by calling rb_objc_release() */
@@ -702,11 +705,11 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
           if (retClass != [val class] && strncmp(object_getClassName(val), "NSConcrete", 10) == 0) {
             retClass = [val class];
           }
-                  
+
           NSDebugLog(@"Class of arg transmitted to Ruby = %@", NSStringFromClass(retClass));
 
           rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
-                  
+
           // if the class of the returned object is unknown to Ruby
           // then register the new class with Ruby first
           if (rb_class == Qfalse) {
@@ -1332,7 +1335,12 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
       rb_raise(rb_eTypeError, "method %s is missing a signature for type 0x%02x", method, TYPE(rb_self));
     }
 
-    return rb_objc_dispatch(rcv, sel_getName(sel), signature, our_argc, our_argv);
+    @try {
+      return rb_objc_dispatch(rcv, sel_getName(sel), signature, our_argc, our_argv);
+    }
+    @catch (NSException *exception) {
+      rb_objc_raise_exception(exception);
+    }
   }
 }
 
@@ -1359,7 +1367,12 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
       return Qnil;
     }
 
-    return rb_objc_dispatch(nil, method, signature, rigs_argc, rigs_argv);
+    @try {
+      return rb_objc_dispatch(nil, method, signature, rigs_argc, rigs_argv);
+    }
+    @catch (NSException *exception) {
+      rb_objc_raise_exception(exception);
+    }
   }  
 }
 
@@ -1368,6 +1381,7 @@ rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
   SEL mthSel;
   char *mthRubyName;
+  char *mthRubyAlias;
   unsigned int imth_cnt;
   unsigned int i;
   Method *methods;
@@ -1381,8 +1395,16 @@ rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
   for (i=0;i<imth_cnt;i++) {
     mthSel = method_getName(methods[i]);
     mthRubyName = rb_objc_sel_to_method(mthSel);
-      
+
+    if (mthRubyName == NULL) continue;
+
     rb_define_method(rb_class, mthRubyName, rb_objc_send, -1);
+
+    mthRubyAlias = rb_objc_sel_to_alias(mthSel);
+    if (mthRubyAlias != NULL) {
+      rb_define_alias(rb_class, mthRubyAlias, mthRubyName);
+      free(mthRubyAlias);
+    }
 
     free(mthRubyName);
   }
@@ -1397,21 +1419,32 @@ rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 {
   SEL mthSel;
   char *mthRubyName;
+  char *mthRubyAlias;
   Class objc_meta_class;
   unsigned int cmth_cnt;
   unsigned int i;
   Method *methods;
+  VALUE rb_singleton;
 
   objc_meta_class = objc_getMetaClass(class_getName(objc_class));
     
   /* Define all Ruby Class (singleton) methods for this Class */
   methods = class_copyMethodList(objc_meta_class, &cmth_cnt);
+  rb_singleton = rb_singleton_class(rb_class);
 
   for (i=0;i<cmth_cnt;i++) {
     mthSel = method_getName(methods[i]);
     mthRubyName = rb_objc_sel_to_method(mthSel);
-      
-    rb_define_singleton_method(rb_class, mthRubyName, rb_objc_send, -1);
+
+    if (mthRubyName == NULL) continue;
+    
+    rb_define_method(rb_singleton, mthRubyName, rb_objc_send, -1);
+
+    mthRubyAlias = rb_objc_sel_to_alias(mthSel);
+    if (mthRubyAlias != NULL) {
+      rb_define_alias(rb_singleton, mthRubyAlias, mthRubyName);
+      free(mthRubyAlias);
+    }
 
     free(mthRubyName);
   }
@@ -1570,84 +1603,98 @@ rb_objc_register_struct_from_objc(const char *key, const char *name, const char 
 VALUE
 rb_objc_register_class_from_objc (Class objc_class)
 {
-  @autoreleasepool {
-    const char *cname = class_getName(objc_class);
+  const char *cname = class_getName(objc_class);
 
-    Class objc_super_class = class_getSuperclass(objc_class);
-    VALUE rb_class;
-    VALUE rb_super_class = Qnil;
-    unsigned int imth_cnt;
-    unsigned int cmth_cnt;
+  Class objc_super_class = class_getSuperclass(objc_class);
+  VALUE rb_class;
+  VALUE rb_super_class = Qnil;
+  unsigned int imth_cnt;
+  unsigned int cmth_cnt;
 
-    NSDebugLog(@"Request to register ObjC Class %s (ObjC id = %p)", cname, objc_class);
+  NSDebugLog(@"Request to register ObjC Class %s (ObjC id = %p)", cname, objc_class);
 
-    // If this class has already been registered then return existing
-    // Ruby class VALUE
-    rb_class = (VALUE) NSMapGet(knownClasses, (void *)objc_class);
+  // If this class has already been registered then return existing
+  // Ruby class VALUE
+  rb_class = (VALUE) NSMapGet(knownClasses, (void *)objc_class);
 
-    if (rb_class != Qfalse) {
-      NSDebugLog(@"Class %s already registered (VALUE %p)", cname, (void*)rb_class);
-      return rb_class;
-    }
-
-    // If it is not the mother of all classes then create the
-    // Ruby super class first
-    if ((objc_class == [NSObject class]) || (objc_super_class == Nil)) 
-      rb_super_class = rb_cBasicObject;
-    else
-      rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
-
-    /* FIXME? A class name in Ruby must be constant and therefore start with
-       A-Z character. If this is not the case the following method call will work
-       ok but the Class name will not be explicitely accessible from Ruby */
-    rb_class = rb_define_class_under(rb_mRigs, cname, rb_super_class);
-    rb_undef_alloc_func(rb_class);
-    rb_undef_method(CLASS_OF(rb_class),"new");
-    rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
-
-    cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
-    imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);
-
-    NSDebugLog(@"%d instance and %d class methods defined for class %s", imth_cnt, cmth_cnt, cname);
-
-    // Extend any extra Ruby specific support to Objective-C classes
-    if (objc_class == [NSObject class]) {
-      rb_define_alias(rb_class, "==", "isEqual");
-      rb_define_alias(rb_class, "eql?", "isEqual");
-      rb_define_method(rb_class, "to_s", rb_objc_object_to_s, 0);
-      rb_define_method(rb_class, "inspect", rb_objc_object_inspect, 0);
-      rb_define_method(rb_class, "pretty_print", rb_objc_object_pretty_print, 1);
-      rb_define_method(rb_class, "nil?", rb_objc_object_is_nil, 0);
-      rb_define_method(rb_class, "instance_of?", rb_objc_object_is_instance_of, 1);
-      rb_define_method(rb_class, "kind_of?", rb_objc_object_is_kind_of, 1);
-      rb_define_alias(rb_class, "is_a?", "kind_of?");
-      rb_define_singleton_method(rb_class, "inherited", rb_objc_object_inherited, 1);
-      rb_define_singleton_method(rb_class, "method_added", rb_objc_object_method_added, 1);
-    }
-    else if (objc_class == [NSString class]) {
-      rb_define_method(rb_class, "to_s", rb_objc_string_to_s, 0);
-    }
-    else if (objc_class == [NSArray class]) {
-      rb_define_method(rb_class, "to_a", rb_objc_array_to_a, 0);
-    }
-    else if (objc_class == [NSDictionary class]) {
-      rb_define_method(rb_class, "to_h", rb_objc_dictionary_to_h, 0);
-    }
-    else if (objc_class == [NSDate class]) {
-      rb_define_method(rb_class, "to_time", rb_objc_date_to_time, 0);
-    }
-    else if (objc_class == [NSNumber class]) {
-      rb_define_method(rb_class, "to_i", rb_objc_number_to_i, 0);
-      rb_define_method(rb_class, "to_f", rb_objc_number_to_f, 0);
-    }
-    
-    // Remember that this class is now defined in Ruby
-    NSMapInsertKnownAbsent(knownClasses, (void*)objc_class, (void*)rb_class);
-    
-    NSDebugLog(@"VALUE for new Ruby Class %s = %p", cname, (void*)rb_class);
-
+  if (rb_class != Qfalse) {
+    NSDebugLog(@"Class %s already registered (VALUE %p)", cname, (void*)rb_class);
     return rb_class;
   }
+
+  // If it is not the mother of all classes then create the
+  // Ruby super class first
+  if ((objc_class == [NSObject class]) || (objc_super_class == Nil)) 
+    rb_super_class = rb_cBasicObject;
+  else
+    rb_super_class = rb_objc_register_class_from_objc(objc_super_class);
+
+  /* FIXME? A class name in Ruby must be constant and therefore start with
+     A-Z character. If this is not the case the following method call will work
+     ok but the Class name will not be explicitely accessible from Ruby */
+  rb_class = rb_define_class_under(rb_mRigs, cname, rb_super_class);
+  rb_undef_alloc_func(rb_class);
+  rb_undef_method(CLASS_OF(rb_class),"new");
+  rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
+
+  cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
+  imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);
+
+  NSDebugLog(@"%d instance and %d class methods defined for class %s", imth_cnt, cmth_cnt, cname);
+
+  // Extend any extra Ruby specific support to Objective-C classes
+  if (objc_class == [NSObject class]) {
+    rb_define_alias(rb_class, "==", "isEqual");
+    rb_define_alias(rb_class, "eql?", "isEqual");
+    rb_define_method(rb_class, "to_s", rb_objc_object_to_s, 0);
+    rb_define_method(rb_class, "inspect", rb_objc_object_inspect, 0);
+    rb_define_method(rb_class, "pretty_print", rb_objc_object_pretty_print, 1);
+    rb_define_method(rb_class, "nil?", rb_objc_object_is_nil, 0);
+    rb_define_method(rb_class, "instance_of?", rb_objc_object_is_instance_of, 1);
+    rb_define_method(rb_class, "kind_of?", rb_objc_object_is_kind_of, 1);
+    rb_define_alias(rb_class, "is_a?", "kind_of?");
+    rb_define_singleton_method(rb_class, "inherited", rb_objc_object_inherited, 1);
+    rb_define_singleton_method(rb_class, "method_added", rb_objc_object_method_added, 1);
+  }
+  else if (objc_class == [NSString class]) {
+    rb_define_method(rb_class, "to_s", rb_objc_string_to_s, 0);
+  }
+  else if (objc_class == [NSMutableString class]) {
+    rb_define_alias(rb_class, "<<", "appendString");
+  }
+  else if (objc_class == [NSArray class]) {
+    rb_define_method(rb_class, "to_a", rb_objc_array_to_a, 0);
+  }
+  else if (objc_class == [NSMutableArray class]) {
+    rb_define_method(rb_class, "[]=", rb_objc_array_store, 2);
+    rb_define_alias(rb_class, "<<", "addObject");
+  }
+  else if (objc_class == [NSMutableOrderedSet class]) {
+    rb_define_method(rb_class, "[]=", rb_objc_array_store, 2);
+  }
+  else if (objc_class == [NSDictionary class]) {
+    rb_define_method(rb_class, "to_h", rb_objc_dictionary_to_h, 0);
+  }
+  else if (objc_class == [NSMutableDictionary class]) {
+    rb_define_method(rb_class, "[]=", rb_objc_dictionary_store, 2);
+  }
+  else if (objc_class == [NSDate class]) {
+    rb_define_method(rb_class, "to_time", rb_objc_date_to_time, 0);
+  }
+  else if (objc_class == [NSNumber class]) {
+    rb_define_method(rb_class, "to_i", rb_objc_number_to_i, 0);
+    rb_define_method(rb_class, "to_f", rb_objc_number_to_f, 0);
+  }
+  else if (objc_class == [NSMutableData class]) {
+    rb_define_alias(rb_class, "<<", "appendData");
+  }
+    
+  // Remember that this class is now defined in Ruby
+  NSMapInsertKnownAbsent(knownClasses, (void*)objc_class, (void*)rb_class);
+    
+  NSDebugLog(@"VALUE for new Ruby Class %s = %p", cname, (void*)rb_class);
+
+  return rb_class;
 }
 
 VALUE
@@ -1764,74 +1811,85 @@ rb_objc_register_class_from_rb(VALUE rb_class)
   }
 }
 
+BOOL
+rb_objc_register_framework_from_objc(char *framework, const char *root)
+{
+  NSString *path;
+  NSURL *url;
+  NSBundle *bundle;
+  NSXMLParser *parser;
+  RIGSBridgeSupportParser *delegate;
+  BOOL parsed;
+
+  path = [NSString stringWithFormat:@"%s/Frameworks/%s.framework/", root, framework];
+  url = [NSURL fileURLWithPath:path];
+  bundle = [NSBundle bundleWithURL:url];
+
+  if (bundle == nil) {
+    return NO;
+  }
+
+  path = [NSString stringWithFormat:@"BridgeSupport/%s.dylib", framework];
+  url = [[bundle resourceURL] URLByAppendingPathComponent:path];
+
+  dlopen([url fileSystemRepresentation], RTLD_LAZY);
+
+#ifdef __aarch64__
+  path = [NSString stringWithFormat:@"BridgeSupport/%s.arm64e.bridgesupport", framework];
+#else
+  path = [NSString stringWithFormat:@"BridgeSupport/%s.bridgesupport", framework];
+#endif
+  url = [[bundle resourceURL] URLByAppendingPathComponent:path];
+
+  parser = [[NSXMLParser alloc] initWithContentsOfURL:url];
+  delegate = [[RIGSBridgeSupportParser alloc] init];
+
+  parser.delegate = delegate;
+
+  parsed = [parser parse];
+
+  [parser release];
+  [delegate release];
+
+  return parsed;
+}
+
 VALUE
 rb_objc_import(VALUE rb_self, VALUE rb_name)
 {
   @autoreleasepool {
+    char *framework;
     unsigned long hash;
-    char *cname;
-    NSString *path;
-    NSURL *url;
-    NSBundle *bundle;
+    VALUE rb_support;
 
-    cname = rb_string_value_cstr(&rb_name);
-    hash = rb_objc_hash(cname);
+    framework = rb_string_value_cstr(&rb_name);
+    hash = rb_objc_hash(framework);
 
     if (NSHashGet(knownFrameworks, (void*)hash)) {
       return Qfalse;
     }
 
-    path = [NSString stringWithFormat:@"/System/Library/Frameworks/%s.framework/", cname];
-    url = [NSURL fileURLWithPath:path];
-    bundle = [NSBundle bundleWithURL:url];
-
-    if (bundle == nil) {
-      rb_raise(rb_eLoadError, "cannot load such framework -- %s", cname);
-    }
-
-    path = [NSString stringWithFormat:@"BridgeSupport/%s.dylib", cname];
-    url = [[bundle resourceURL] URLByAppendingPathComponent:path];
-
-    dlopen([url fileSystemRepresentation], RTLD_LAZY);
-
-#ifdef __aarch64__
-    path = [NSString stringWithFormat:@"BridgeSupport/%s.arm64e.bridgesupport", cname];
-#else
-    path = [NSString stringWithFormat:@"BridgeSupport/%s.bridgesupport", cname];
-#endif
-    url = [[bundle resourceURL] URLByAppendingPathComponent:path];
-
-    NSXMLParser *parser = [[NSXMLParser alloc] initWithContentsOfURL:url];
-    RIGSBridgeSupportParser *delegate = [[RIGSBridgeSupportParser alloc] init];
-
-    parser.delegate = delegate;
-
-    BOOL parsed = [parser parse];
-
-    [parser release];
-    [delegate release];
-
-    if (parsed) {
+    if (rb_objc_register_framework_from_objc(framework, "/System/Library")) {
       NSHashInsertKnownAbsent(knownFrameworks, (void*)hash);
+      rb_support = rb_const_get(rb_mRigs, rb_intern("SUPPORT"));
+      rb_objc_register_framework_from_objc(framework, rb_string_value_cstr(&rb_support));
       return Qtrue;
     }
-    rb_raise(rb_eLoadError, "cannot parse such framework -- %s", cname);
+
+    rb_raise(rb_eLoadError, "cannot load such framework -- %s", framework);
   }
 }
 
 void __attribute__((noreturn))
   rb_objc_raise_exception(NSException *exception)
 {
-  const char *class_name;
-  const char *message;
-  VALUE rb_exception;
+  const char *name;
+  const char *reason;
 
-  class_name = [[[exception name] stringByReplacingOccurrencesOfString:@"Exception"
-                                                            withString:@"Error"] UTF8String];
-  message = [[exception reason] UTF8String];
-    
-  rb_exception = rb_define_class_under(rb_mRigs, class_name, rb_eRuntimeError);
-  rb_raise(rb_exception, "%s", message);
+  name = [[exception name] UTF8String];
+  reason = [[exception reason] UTF8String];
+
+  rb_raise(rb_eRigsRuntimeError, "%s (%s)", reason, name);
 }
 
 /* Called when require 'obj_ext' is executed in Ruby */
@@ -1869,7 +1927,6 @@ Init_obj_ext()
 
   // Ruby class methods under the ObjC Ruby module
   // - ObjRuby.import("Foundation"): imports an ObjC framework into Ruby
-
   rb_mRigs = rb_define_module("ObjRuby");
   rb_define_module_function(rb_mRigs, "import", rb_objc_import, 1);
 
@@ -1884,9 +1941,7 @@ Init_obj_ext()
   rb_define_alias(rb_cRigsPtr, "slice", "[]");
   rb_define_alias(rb_cRigsPtr, "at", "[]");
 
-  // Catch all Objective-C raised exceptions and direct them to Ruby
-  NSSetUncaughtExceptionHandler(rb_objc_raise_exception);
-
-  // Preload NSObject and NSNull
-  rb_objc_register_class_from_objc([NSNull class]);
+  // Ruby error class for raising all Objective-C runtime exceptions
+  // - rescue ObjRuby::RuntimeError: error raised from Objective-C
+  rb_eRigsRuntimeError = rb_define_class_under(rb_mRigs, "RuntimeError", rb_eRuntimeError);
 }

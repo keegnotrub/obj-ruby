@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
 
   s.metadata = { "rubygems_mfa_required" => "true" }
 
-  s.files = `git ls-files -- {ext,lib}/*`.split("\n")
+  s.files = `git ls-files -- {ext,lib,support}/*`.split("\n")
   s.require_paths = ["lib"]
   s.extensions = ["ext/obj_ext/extconf.rb"]
 

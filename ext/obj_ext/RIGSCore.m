@@ -1662,7 +1662,7 @@ VALUE
 rb_objc_register_instance_method_from_rb(VALUE rb_class, VALUE rb_method)
 {
   VALUE rb_class_iv;
-	ID entry;
+  ID entry;
   const char *name;
   int nbArgs;
   SEL objcMthSEL;

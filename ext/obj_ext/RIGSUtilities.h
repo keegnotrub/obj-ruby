@@ -60,7 +60,5 @@ char *rb_objc_sel_to_alias(SEL sel);
 unsigned long rb_objc_hash(const char* value);
 const char *objc_skip_type_qualifiers (const char *type);
 const char *objc_skip_typespec (const char *type);
-const char *objc_skip_offset (const char *type);
-const char *objc_skip_argspec (const char *type);
 
 #endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

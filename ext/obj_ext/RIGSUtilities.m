@@ -312,22 +312,3 @@ objc_skip_typespec(const char *type)
     }
   }
 }
-
-
-inline const char *
-objc_skip_offset(const char *type)
-{
-  if (*type == '+')
-    type++;
-  while (isdigit((unsigned char) *++type))
-    /* do nothing */;
-  return type;
-}
-
-const char *
-objc_skip_argspec(const char *type)
-{
-  type = objc_skip_typespec(type);
-  type = objc_skip_offset(type);
-  return type;
-}

@@ -42,7 +42,7 @@ void rb_objc_register_format_string_from_objc(const char *selector, size_t index
 void rb_objc_register_block_from_objc(const char *selector, size_t index, const char *objcTypes);
 void rb_objc_register_constant_from_objc(const char *name, const char *type);
 void rb_objc_register_function_from_objc(const char *name, const char *objcTypes);
-void rb_objc_register_protocol_from_objc(const char *protocolName);
+void rb_objc_register_protocol_from_objc(const char *selector, const char *objcTypes);
 
 BOOL rb_objc_register_framework_from_objc(char *framework, const char *root);
 

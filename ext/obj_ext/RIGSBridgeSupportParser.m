@@ -47,7 +47,8 @@ didStartElement:(NSString *)elementName
     [self parseProtocolWithName:[attributeDict objectForKey:@"name"]];
   }
   else if ([elementName isEqualToString:@"method"]) {
-    [self parseMethodWithName:[attributeDict objectForKey:@"selector"]];
+    [self parseMethodWithName:[attributeDict objectForKey:@"selector"]
+                         type:[attributeDict objectForKey:@"type64"]];
   }
   else if ([elementName isEqualToString:@"function"]) {
     [self parseFunctionWithName:[attributeDict objectForKey:@"name"]];
@@ -78,7 +79,10 @@ didStartElement:(NSString *)elementName
  didEndElement:(NSString *)elementName 
   namespaceURI:(NSString *)namespaceURI 
  qualifiedName:(NSString *)qName {
-  if ([elementName isEqualToString:@"method"]) {
+  if ([elementName isEqualToString:@"informal_protocol"]) {
+    [self finalizeProtocol];
+  }
+  else if ([elementName isEqualToString:@"method"]) {
     [self finalizeMethod];
   }
   else if ([elementName isEqualToString:@"function"]) {
@@ -87,54 +91,6 @@ didStartElement:(NSString *)elementName
   else if ([elementName isEqualToString:@"arg"] || [elementName isEqualToString:@"retval"]) {
     [self finalizeArg];
   }
-}
-
-- (void)finalizeArg
-{
-  _argDepth--;
-
-  if (_argDepth > 0) return;
-  
-  if (_blockIndex != -1) {
-    if (_methodName) {
-      rb_objc_register_block_from_objc([_methodName UTF8String], _blockIndex, [_objcTypes UTF8String]);
-    }
-
-    _blockIndex = -1;
-    [_objcTypes release];
-    _objcTypes = nil;
-  }
-
-  if (_formatStringIndex != -1) {
-    if (_methodName) {
-      rb_objc_register_format_string_from_objc([_methodName UTF8String], _formatStringIndex);
-    }
-    else if (_functionName) {
-      rb_objc_register_format_string_from_objc([_functionName UTF8String], _formatStringIndex);
-    }
-    _formatStringIndex = -1;
-  }
-}
-
-- (void)finalizeFunction
-{
-  rb_objc_register_function_from_objc([_functionName UTF8String], [_objcTypes UTF8String]);
-  
-  [_objcTypes release];
-  _objcTypes = nil;
-  [_functionName release];
-  _functionName = nil;
-}
-
-- (void)finalizeMethod
-{
-  [_methodName release];
-  _methodName = nil;
-}
-
-- (void)parseProtocolWithName:(NSString*)name
-{
-  rb_objc_register_protocol_from_objc([name UTF8String]);
 }
 
 - (void)parseFunctionWithName:(NSString*)name
@@ -147,9 +103,36 @@ didStartElement:(NSString *)elementName
   _argDepth = 0;
 }
 
-- (void)parseMethodWithName:(NSString*)selector
+- (void)parseMethodWithName:(NSString*)selector type:(NSString*)type
 {
+  NSMethodSignature *signature;
+  NSUInteger nbArgs;
+  NSUInteger i;
+  
   _methodName = [selector retain];
+  if (type) {
+    if ([type isEqualToString:@"TB,R"] || [type isEqualToString:@"TB,?,R"]) {
+      _objcTypes = [[NSMutableString stringWithString:@"B@:"] retain];
+    }
+    else {
+      signature = [NSMethodSignature signatureWithObjCTypes:[type UTF8String]];
+      nbArgs = [signature numberOfArguments];
+      _objcTypes = [[NSMutableString stringWithCapacity:128] retain];
+      [_objcTypes appendFormat: @"%s", [signature methodReturnType]];
+      for (i=0;i<nbArgs;i++) {
+        [_objcTypes appendFormat: @"%s", [signature getArgumentTypeAtIndex:i]];
+      }
+    }
+  }
+  _formatStringIndex = -1;
+  _blockIndex = -1;
+  _argIndex = 0;
+  _argDepth = 0;
+}
+
+- (void)parseProtocolWithName:(NSString*)name
+{
+  _protocolName = [name retain];
   _formatStringIndex = -1;
   _blockIndex = -1;
   _argIndex = 0;
@@ -273,6 +256,61 @@ didStartElement:(NSString *)elementName
                                                       range:NSMakeRange(0, [type length])];
 
   return quoteCount / 2;
+}
+
+- (void)finalizeProtocol
+{
+  [_protocolName release];
+  _protocolName = nil;
+}
+
+- (void)finalizeMethod
+{
+  if (_protocolName) {
+    rb_objc_register_protocol_from_objc([_methodName UTF8String], [_objcTypes UTF8String]);
+  }
+
+  [_objcTypes release];
+  _objcTypes = nil;
+  [_methodName release];
+  _methodName = nil;
+}
+
+- (void)finalizeFunction
+{
+  rb_objc_register_function_from_objc([_functionName UTF8String], [_objcTypes UTF8String]);
+  
+  [_objcTypes release];
+  _objcTypes = nil;
+  [_functionName release];
+  _functionName = nil;
+}
+
+- (void)finalizeArg
+{
+  _argDepth--;
+
+  if (_argDepth > 0) return;
+  
+  if (_blockIndex != -1) {
+    if (_methodName) {
+      rb_objc_register_block_from_objc([_methodName UTF8String], _blockIndex, [_objcTypes UTF8String]);
+    }
+
+    _blockIndex = -1;
+    [_objcTypes release];
+    _objcTypes = nil;
+  }
+
+  if (_formatStringIndex != -1) {
+    if (_methodName) {
+      rb_objc_register_format_string_from_objc([_methodName UTF8String], _formatStringIndex);
+    }
+    else if (_functionName) {
+      rb_objc_register_format_string_from_objc([_functionName UTF8String], _formatStringIndex);
+    }
+    _formatStringIndex = -1;
+  }
 }
 
 @end

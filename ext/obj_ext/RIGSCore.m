@@ -85,27 +85,6 @@ rb_objc_release(id objc_object)
   }
 }
 
-const char *
-rb_objc_sanitize_objc_types(const char *objcTypes)
-{
-  NSMethodSignature *signature;
-  NSMutableString	*str;
-  NSUInteger nbArgs;
-  NSUInteger i;
-  
-  signature = [NSMethodSignature signatureWithObjCTypes:objcTypes];
-  
-  str = [NSMutableString stringWithCapacity:128];
-  [str appendFormat: @"%s", [signature methodReturnType]];
-  nbArgs = [signature numberOfArguments];
-  
-  for (i=0;i<nbArgs;i++) {
-    [str appendFormat: @"%s", [signature getArgumentTypeAtIndex:i]];
-  }
-  
-  return [str UTF8String];  
-}
-
 /* 
    Normally new method has no arg in objective C. 
    If you want it to have arguments when using new from Ruby then
@@ -1455,36 +1434,18 @@ rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 }
 
 void
-rb_objc_register_protocol_from_objc(const char *protocolName)
+rb_objc_register_protocol_from_objc(const char *selector, const char *objcTypes)
 {
-  Protocol *proto;
-  struct objc_method_description *descriptions;
-  unsigned int i;
-  unsigned int numDescriptions;
   unsigned long hash;
   char *data;
-  const char *objcTypes;
 
-  proto = objc_getProtocol(protocolName);
+  hash = rb_objc_hash(selector);
 
-  if (proto == NULL) {
-    NSDebugLog(@"Could not find objc protocol for %s", protocolName);
-    return;
+  if (!NSMapGet(knownProtocols, (void*)hash)) {
+    data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
+    strcpy(data, objcTypes);
+    NSMapInsertKnownAbsent(knownProtocols, (void*)hash, (void*)data);
   }
-
-  descriptions = protocol_copyMethodDescriptionList(proto, NO, YES, &numDescriptions);
-
-  for (i=0;i<numDescriptions;i++) {
-    hash = rb_objc_hash(sel_getName(descriptions[i].name));
-    if (!NSMapGet(knownProtocols, (void*)hash)) {
-      objcTypes = rb_objc_sanitize_objc_types(descriptions[i].types);
-      data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
-      strcpy(data, objcTypes);
-      NSMapInsertKnownAbsent(knownProtocols, (void*)hash, (void*)data);
-    }
-  }
-
-  free(descriptions);
 }
 
 void
@@ -1906,24 +1867,6 @@ Init_obj_ext()
   knownImplementations = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
   knownFrameworks = NSCreateHashTable(NSIntegerHashCallBacks, 0);
-
-  // reference protocols so objc_getProtocol sees them
-  @protocol(NSApplicationDelegate);
-  @protocol(NSConnectionDelegate);
-  @protocol(NSURLDownloadDelegate);
-  @protocol(NSUserNotificationCenterDelegate);
-  @protocol(NSAlertDelegate);
-  @protocol(NSBrowserDelegate);
-  @protocol(NSDrawerDelegate);
-  @protocol(NSOutlineViewDataSource);
-  @protocol(NSOutlineViewDelegate);
-  @protocol(NSPathControlDelegate);
-  @protocol(NSServicesMenuRequestor);
-  @protocol(NSTextContentManagerDelegate);
-  @protocol(NSTextFinderClient);
-  @protocol(NSTextLayoutManagerDelegate);
-  @protocol(NSTokenFieldCellDelegate);
-  @protocol(NSTokenFieldDelegate);
 
   // Ruby class methods under the ObjC Ruby module
   // - ObjRuby.import("Foundation"): imports an ObjC framework into Ruby

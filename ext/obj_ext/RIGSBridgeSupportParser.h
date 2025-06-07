@@ -27,6 +27,7 @@
 {
   NSString *_methodName;
   NSString *_functionName;
+  NSString *_protocolName;
   NSMutableString *_objcTypes;
   NSInteger _formatStringIndex;
   NSInteger _blockIndex;

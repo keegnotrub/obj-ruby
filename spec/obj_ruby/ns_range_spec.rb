@@ -16,7 +16,7 @@ RSpec.describe ObjRuby::NSRange do
     expect(range2.length).to eq 10
   end
 
-  it "can detect a numbe in range" do
+  it "can detect a number in range" do
     range = ObjRuby::NSMakeRange(0, 5)
 
     expect(ObjRuby::NSLocationInRange(-1, range)).to be false

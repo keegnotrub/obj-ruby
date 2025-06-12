@@ -26,9 +26,12 @@
 #include <ruby.h>
 #include <objc/runtime.h>
 
+VALUE rb_objc_array_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_array_m_convert(VALUE rb_module, VALUE rb_val);
+
+VALUE rb_objc_array_each(VALUE rb_self);
 VALUE rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val);
-VALUE rb_objc_array_to_a(VALUE rb_self);
-VALUE rb_objc_array_to_rb(NSArray *val);
-NSArray* rb_objc_array_from_rb(VALUE rb_val);
+
+id rb_objc_array_from_rb(VALUE rb_val, VALUE rb_frozen);
 
 #endif

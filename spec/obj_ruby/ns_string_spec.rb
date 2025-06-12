@@ -14,21 +14,21 @@ RSpec.describe ObjRuby::NSString do
     string = described_class.stringWithFormat("one %d three %@ %d", 2, "four", 5)
 
     expect(string.length).to eq 18
-    expect(string).to eq "one 2 three four 5"
+    expect(string).to eq ObjRuby::NSString("one 2 three four 5")
   end
 
   it "can reeceive a C string" do
     string = described_class.stringWithCString("hello")
 
     expect(string.length).to eq 5
-    expect(string).to eq "hello"
+    expect(string).to eq ObjRuby::NSString("hello")
   end
 
   it "can receive a Ruby string" do
     string = described_class.stringWithString("hello")
 
     expect(string.length).to eq 5
-    expect(string).to eq "hello"
+    expect(string).to eq ObjRuby::NSString("hello")
   end
 
   it "can be transformed to a Ruby string" do

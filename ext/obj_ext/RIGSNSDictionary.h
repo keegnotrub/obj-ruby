@@ -26,9 +26,13 @@
 #include <ruby.h>
 #include <objc/runtime.h>
 
+VALUE rb_objc_dictionary_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_dictionary_m_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_dictionary_each_key(VALUE rb_self);
+VALUE rb_objc_dictionary_each_value(VALUE rb_self);
+VALUE rb_objc_dictionary_each_pair(VALUE rb_self);
 VALUE rb_objc_dictionary_store(VALUE rb_self, VALUE rb_key, VALUE rb_val);
-VALUE rb_objc_dictionary_to_h(VALUE rb_self);
-VALUE rb_objc_dictionary_to_rb(NSDictionary *val);
-NSDictionary* rb_objc_dictionary_from_rb(VALUE rb_val);
+
+id rb_objc_dictionary_from_rb(VALUE rb_val, VALUE rb_frozen);
 
 #endif

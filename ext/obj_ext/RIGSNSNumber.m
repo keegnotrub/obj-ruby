@@ -20,6 +20,62 @@
 */
 
 #import "RIGSNSNumber.h"
+#import "RIGSCore.h"
+
+VALUE
+rb_objc_number_convert(VALUE rb_module, VALUE rb_val)
+{
+  @autoreleasepool {
+    NSNumber *objc_num;
+    VALUE rb_num;
+    const char idType[] = {_C_ID,'\0'};
+
+    objc_num = rb_objc_number_from_rb(rb_val);
+
+    rb_objc_convert_to_rb((void *)&objc_num, 0, idType, &rb_num);
+
+    return rb_num;
+  }  
+}
+
+
+VALUE
+rb_objc_number_compare(VALUE rb_self, VALUE rb_val)
+{
+  @autoreleasepool {
+    id rcv;
+    id objc_val;
+    Class objc_class;
+    VALUE iv;
+
+    if (NIL_P(rb_val)) {
+      return Qnil;
+    }
+
+    if (rb_self == rb_val) {
+      return INT2FIX(0);
+    }
+
+    iv = rb_iv_get(CLASS_OF(rb_val), "@objc_class");
+    if (iv == Qnil) {
+      return Qnil;
+    }
+
+    objc_class = (Class)NUM2LL(iv);
+    if (![objc_class isSubclassOfClass:[NSNumber class]]) {
+      return Qnil;
+    }
+
+    Data_Get_Struct(rb_self, void, rcv);
+    Data_Get_Struct(rb_val, void, objc_val);
+
+    if (rcv == objc_val) {
+      return INT2FIX(0);
+    }
+
+    return INT2FIX([rcv compare:objc_val]);
+  }
+}
 
 VALUE
 rb_objc_number_to_i(VALUE rb_self)
@@ -40,13 +96,10 @@ rb_objc_number_to_i(VALUE rb_self)
       return LL2NUM([rcv longLongValue]);
     case _C_ULNG:
       return ULONG2NUM([rcv unsignedLongValue]);
-    case _C_FLT:
-    case _C_LNG:
-      return LONG2NUM([rcv longValue]);
     case _C_UINT:
       return UINT2NUM([rcv unsignedIntValue]);
     default:
-      return INT2FIX([rcv intValue]);
+      return INT2FIX([rcv longValue]);
     }
   }
 }
@@ -59,36 +112,7 @@ rb_objc_number_to_f(VALUE rb_self)
 
     Data_Get_Struct(rb_self, void, rcv);
 
-    return DBL2NUM([rcv doubleValue]);
-  }
-}
-
-VALUE
-rb_objc_number_to_rb(NSNumber *val)
-{
-  const char *type = [val objCType];
-
-  if (*type == _C_CHR) {
-    if ([val charValue] == YES) return Qtrue;
-    if ([val charValue] == NO) return Qfalse;
-  }
-  
-  switch (*type) {
-  case _C_ULNG_LNG:
-    return ULL2NUM([val unsignedLongLongValue]);
-  case _C_LNG_LNG:
-    return LL2NUM([val longLongValue]);
-  case _C_DBL:
-  case _C_FLT:
-    return DBL2NUM([val doubleValue]);
-  case _C_ULNG:
-    return ULONG2NUM([val unsignedLongValue]);
-  case _C_LNG:
-    return LONG2NUM([val longValue]);
-  case _C_UINT:
-    return UINT2NUM([val unsignedIntValue]);
-  default:
-    return INT2FIX([val intValue]);
+    return rb_float_new([rcv doubleValue]);
   }
 }
 
@@ -99,9 +123,9 @@ rb_objc_number_from_rb(VALUE rb_val)
   case T_BIGNUM:
     return [NSNumber numberWithLongLong:rb_big2ll(rb_val)];
   case T_FIXNUM:
-    return [NSNumber numberWithLong:FIX2LONG(rb_val)];
+    return [NSNumber numberWithLong:rb_fix2long(rb_val)];
   case T_FLOAT:
-    return [NSNumber numberWithDouble:RFLOAT_VALUE(rb_val)];
+    return [NSNumber numberWithDouble:rb_float_value(rb_val)];
   case T_FALSE:
   case T_TRUE:
     return [NSNumber numberWithBool:rb_val == Qtrue];

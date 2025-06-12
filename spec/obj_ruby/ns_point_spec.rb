@@ -42,6 +42,6 @@ RSpec.describe ObjRuby::NSPoint do
     result = ObjRuby::NSStringFromPoint(point)
 
     expect(result).to be_a ObjRuby::NSString
-    expect(result).to eq "{1, 2}"
+    expect(result).to eq ObjRuby::NSString("{1, 2}")
   end
 end

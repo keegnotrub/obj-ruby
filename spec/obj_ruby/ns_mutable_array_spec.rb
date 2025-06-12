@@ -19,9 +19,9 @@ RSpec.describe ObjRuby::NSMutableArray do
       array << "three"
     end.to change(array, :count).by(3)
 
-    expect(array[0]).to eq("one")
-    expect(array[1]).to eq("two")
-    expect(array[2]).to eq("three")
+    expect(array[0]).to eq ObjRuby::NSString("one")
+    expect(array[1]).to eq ObjRuby::NSString("two")
+    expect(array[2]).to eq ObjRuby::NSString("three")
   end
 
   it "can add objects by indexed subscript" do
@@ -33,9 +33,9 @@ RSpec.describe ObjRuby::NSMutableArray do
       array[2] = "three"
     end.to change(array, :count).by(3)
 
-    expect(array[0]).to eq("one")
-    expect(array[1]).to eq("two")
-    expect(array[2]).to eq("three")
+    expect(array[0]).to eq ObjRuby::NSString("one")
+    expect(array[1]).to eq ObjRuby::NSString("two")
+    expect(array[2]).to eq ObjRuby::NSString("three")
   end
 
   it "can replace objects" do
@@ -47,9 +47,9 @@ RSpec.describe ObjRuby::NSMutableArray do
       array.replaceObjectAtIndex_withObject(2, "three")
     end.not_to change(array, :count)
 
-    expect(array[0]).to eq("one")
-    expect(array[1]).to eq("two")
-    expect(array[2]).to eq("three")
+    expect(array[0]).to eq ObjRuby::NSString("one")
+    expect(array[1]).to eq ObjRuby::NSString("two")
+    expect(array[2]).to eq ObjRuby::NSString("three")
   end
 
   it "can replace objects by indexed subscript" do
@@ -61,9 +61,9 @@ RSpec.describe ObjRuby::NSMutableArray do
       array[2] = "three"
     end.not_to change(array, :count)
 
-    expect(array[0]).to eq("one")
-    expect(array[1]).to eq("two")
-    expect(array[2]).to eq("three")
+    expect(array[0]).to eq ObjRuby::NSString("one")
+    expect(array[1]).to eq ObjRuby::NSString("two")
+    expect(array[2]).to eq ObjRuby::NSString("three")
   end
 
   it "can remove objects" do
@@ -73,7 +73,7 @@ RSpec.describe ObjRuby::NSMutableArray do
       array.removeObject(2)
     end.to change(array, :count).by(-1)
 
-    expect(array[0]).to eq(1)
-    expect(array[1]).to eq(3)
+    expect(array[0]).to eq ObjRuby::NSNumber(1)
+    expect(array[1]).to eq ObjRuby::NSNumber(3)
   end
 end

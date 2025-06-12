@@ -46,8 +46,8 @@ RSpec.describe ObjRuby::NSArray do
   it "can be indexed with a subscript" do
     array = described_class.arrayWithArray([1, 2, "hi", 4, 5])
 
-    expect(array[1]).to eq(2)
-    expect(array[2]).to eq("hi")
+    expect(array[1]).to eq ObjRuby::NSNumber(2)
+    expect(array[2]).to eq ObjRuby::NSString("hi")
   end
 
   it "can be transformed into a Ruby array" do
@@ -57,7 +57,7 @@ RSpec.describe ObjRuby::NSArray do
 
     expect(result).to be_a Array
     expect(result.size).to eq 5
-    expect(result[0]).to eq 1
+    expect(result[0]).to eq ObjRuby::NSNumber(1)
   end
 
   it "can use a block method" do
@@ -80,7 +80,7 @@ RSpec.describe ObjRuby::NSArray do
     end
 
     expect(result.hasChanges).to be true
-    expect(result.insertions.count).to be 2
-    expect(result.removals.count).to be 2
+    expect(result.insertions.count).to eq 2
+    expect(result.removals.count).to eq 2
   end
 end

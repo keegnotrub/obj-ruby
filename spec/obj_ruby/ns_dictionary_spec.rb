@@ -14,8 +14,8 @@ RSpec.describe ObjRuby::NSDictionary do
     dict = described_class.dictionaryWithDictionary(key1: "value1", key2: "value2")
 
     expect(dict.count).to eq 2
-    expect(dict.objectForKey(:key1)).to eq "value1"
-    expect(dict.objectForKey(:key2)).to eq "value2"
+    expect(dict.objectForKey(:key1)).to eq ObjRuby::NSString("value1")
+    expect(dict.objectForKey(:key2)).to eq ObjRuby::NSString("value2")
     expect(dict.objectForKey(:not_key)).to be_nil
   end
 
@@ -23,8 +23,8 @@ RSpec.describe ObjRuby::NSDictionary do
     dict = described_class.dictionaryWithObjectsAndKeys("value1", :key1, "value2", :key2, nil)
 
     expect(dict.count).to eq 2
-    expect(dict.objectForKey(:key1)).to eq "value1"
-    expect(dict.objectForKey(:key2)).to eq "value2"
+    expect(dict.objectForKey(:key1)).to eq ObjRuby::NSString("value1")
+    expect(dict.objectForKey(:key2)).to eq ObjRuby::NSString("value2")
     expect(dict.objectForKey(:not_key)).to be_nil
   end
 
@@ -38,8 +38,8 @@ RSpec.describe ObjRuby::NSDictionary do
   it "can be keyed with a subscript" do
     dict = described_class.dictionaryWithDictionary(key1: "value1", key2: "value2")
 
-    expect(dict[:key1]).to eq("value1")
-    expect(dict[:key2]).to eq("value2")
+    expect(dict[:key1]).to eq ObjRuby::NSString("value1")
+    expect(dict[:key2]).to eq ObjRuby::NSString("value2")
   end
 
   it "can be transformed into a Ruby hash" do
@@ -48,7 +48,7 @@ RSpec.describe ObjRuby::NSDictionary do
     hash = dict.to_h
 
     expect(hash).to be_a Hash
-    expect(hash["key1"]).to eq "value1"
-    expect(hash["key2"]).to eq "value2"
+    expect(hash[ObjRuby::NSString("key1")]).to eq ObjRuby::NSString("value1")
+    expect(hash[ObjRuby::NSString("key2")]).to eq ObjRuby::NSString("value2")
   end
 end

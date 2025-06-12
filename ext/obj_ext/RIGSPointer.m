@@ -206,7 +206,7 @@ rb_objc_ptr_at(VALUE rb_val, int index) {
   
   if (offset + tsize > dp->allocated_size) return Qnil;
 
-  rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val, NO);
+  rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &val);
 
   return val;
 }
@@ -246,7 +246,7 @@ rb_objc_ptr_slice(VALUE rb_val, int index, int length)
   rb_array = rb_ary_new();
 
   while(length-- > 0 && offset < dp->allocated_size) {
-    rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &rb_elt, NO);
+    rb_objc_convert_to_rb(dp->cptr, offset, dp->encoding, &rb_elt);
     rb_ary_push(rb_array, rb_elt);
 
     offset += tsize;

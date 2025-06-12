@@ -20,30 +20,78 @@
 */
 
 #import "RIGSNSDate.h"
+#import "RIGSCore.h"
+
+VALUE
+rb_objc_date_convert(VALUE rb_module, VALUE rb_val)
+{
+  @autoreleasepool {
+    NSDate *objc_date;
+    VALUE rb_date;
+    const char idType[] = {_C_ID,'\0'};
+
+    objc_date = rb_objc_date_from_rb(rb_val);
+
+    rb_objc_convert_to_rb((void *)&objc_date, 0, idType, &rb_date);
+
+    return rb_date;
+  }  
+}
+
+VALUE
+rb_objc_date_compare(VALUE rb_self, VALUE rb_val)
+{
+  @autoreleasepool {
+    id rcv;
+    id objc_val;
+    Class objc_class;
+    VALUE iv;
+
+    if (NIL_P(rb_val)) {
+      return Qnil;
+    }
+
+    if (rb_self == rb_val) {
+      return INT2FIX(0);
+    }
+
+    iv = rb_iv_get(CLASS_OF(rb_val), "@objc_class");
+    if (iv == Qnil) {
+      return Qnil;
+    }
+
+    objc_class = (Class)NUM2LL(iv);
+    if (![objc_class isSubclassOfClass:[NSDate class]]) {
+      return Qnil;
+    }
+
+    Data_Get_Struct(rb_self, void, rcv);
+    Data_Get_Struct(rb_val, void, objc_val);
+
+    if (rcv == objc_val) {
+      return INT2FIX(0);
+    }
+
+    return INT2FIX([rcv compare:objc_val]);
+  }
+}
 
 VALUE
 rb_objc_date_to_time(VALUE rb_self)
 {
   @autoreleasepool {
     id rcv;
-
-    Data_Get_Struct(rb_self, void, rcv);
-
-    return rb_objc_date_to_rb(rcv);
-  }
-}
-
-VALUE
-rb_objc_date_to_rb(NSDate *val)
-{
-  NSTimeInterval interval;
-  NSTimeInterval secs;
-  long nsecs;
+    NSTimeInterval interval;
+    NSTimeInterval secs;
+    long nsecs;
   
-  interval = [val timeIntervalSince1970];
-  nsecs = modf(interval, &secs) * 1000000000l;
+    Data_Get_Struct(rb_self, void, rcv);
+    
+    interval = [rcv timeIntervalSince1970];
+    nsecs = modf(interval, &secs) * 1000000000l;
 
-  return rb_time_nano_new((time_t)secs, nsecs);
+    return rb_time_nano_new((time_t)secs, nsecs);
+  }
 }
 
 NSDate*

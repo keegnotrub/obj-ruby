@@ -19,9 +19,9 @@ RSpec.describe ObjRuby::NSMutableDictionary do
       dict.setObject_forKey(3, "three")
     end.to change(dict, :count).by(3)
 
-    expect(dict["one"]).to eq(1)
-    expect(dict["two"]).to eq(2)
-    expect(dict["three"]).to eq(3)
+    expect(dict["one"]).to eq ObjRuby::NSNumber(1)
+    expect(dict["two"]).to eq ObjRuby::NSNumber(2)
+    expect(dict["three"]).to eq ObjRuby::NSNumber(3)
   end
 
   it "can add entries by keyed subscript" do
@@ -33,9 +33,9 @@ RSpec.describe ObjRuby::NSMutableDictionary do
       dict["three"] = 3
     end.to change(dict, :count).by(3)
 
-    expect(dict["one"]).to eq(1)
-    expect(dict["two"]).to eq(2)
-    expect(dict["three"]).to eq(3)
+    expect(dict["one"]).to eq ObjRuby::NSNumber(1)
+    expect(dict["two"]).to eq ObjRuby::NSNumber(2)
+    expect(dict["three"]).to eq ObjRuby::NSNumber(3)
   end
 
   it "can replace entries" do
@@ -46,8 +46,8 @@ RSpec.describe ObjRuby::NSMutableDictionary do
       dict.setObject_forKey("value2!", :key2)
     end.not_to change(dict, :count)
 
-    expect(dict[:key1]).to eq("value1!")
-    expect(dict[:key2]).to eq("value2!")
+    expect(dict[:key1]).to eq ObjRuby::NSString("value1!")
+    expect(dict[:key2]).to eq ObjRuby::NSString("value2!")
   end
 
   it "can replace entries by keyed subscript" do
@@ -58,8 +58,8 @@ RSpec.describe ObjRuby::NSMutableDictionary do
       dict[:key2] = "value2!"
     end.not_to change(dict, :count)
 
-    expect(dict[:key1]).to eq("value1!")
-    expect(dict[:key2]).to eq("value2!")
+    expect(dict[:key1]).to eq ObjRuby::NSString("value1!")
+    expect(dict[:key2]).to eq ObjRuby::NSString("value2!")
   end
 
   it "can remove entries" do
@@ -70,6 +70,6 @@ RSpec.describe ObjRuby::NSMutableDictionary do
     end.to change(dict, :count).by(-1)
 
     expect(dict[:key1]).to be_nil
-    expect(dict[:key2]).to eq("value2")
+    expect(dict[:key2]).to eq ObjRuby::NSString("value2")
   end
 end

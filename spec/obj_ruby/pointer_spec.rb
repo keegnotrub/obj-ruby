@@ -63,7 +63,7 @@ RSpec.describe ObjRuby::Pointer do
       expect(error).not_to be_nil
       expect(error).to be_a ObjRuby::NSError
       expect(error.localizedDescription).to eq(
-        "The file “not-a-path” couldn’t be opened because there is no such file."
+        ObjRuby::NSString("The file “not-a-path” couldn’t be opened because there is no such file.")
       )
       expect(error_ptr[-1]).to eq error
       expect(error_ptr[1]).to be_nil

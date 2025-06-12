@@ -1,8 +1,8 @@
-/* RIGSNSString.h - Some additional stuff to properly wrap the
-   NSString class in Ruby
+/* RIGSNSSet.h - Some additional to properly wrap the
+   NSSet class in Ruby and provide some new methods
 
    Written by: Ryan Krug <keegnotrub@icloud.com>
-   Date: April 2023
+   Date: June 2025
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -19,17 +19,15 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 */ 
 
-#ifndef __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
-#define __RIGSNSString_h_GNUSTEP_RUBY_INCLUDE
+#ifndef __RIGSNSSet_h_GNUSTEP_RUBY_INCLUDE
+#define __RIGSNSSet_h_GNUSTEP_RUBY_INCLUDE
 
 #import <Foundation/Foundation.h>
 #include <ruby.h>
 
-VALUE rb_objc_string_convert(VALUE rb_module, VALUE rb_val);
-VALUE rb_objc_string_m_convert(VALUE rb_module, VALUE rb_val);
-VALUE rb_objc_string_compare(VALUE rb_self, VALUE rb_val);
-VALUE rb_objc_string_to_s(VALUE rb_self);
+VALUE rb_objc_set_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_set_m_convert(VALUE rb_module, VALUE rb_val);
 
-id rb_objc_string_from_rb(VALUE rb_val, VALUE rb_frozen);
+id rb_objc_set_from_rb(VALUE rb_val, VALUE rb_frozen);
 
 #endif

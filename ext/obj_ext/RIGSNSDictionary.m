@@ -189,10 +189,12 @@ id
 rb_objc_dictionary_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
   NSMutableDictionary *dict;
+  long size;
 
   Check_Type(rb_val, T_HASH);
-
-  dict = [NSMutableDictionary dictionary];
+  
+  size = rb_hash_size(rb_val);
+  dict = [NSMutableDictionary dictionaryWithCapacity:size];
   
   rb_hash_foreach(rb_val, rb_objc_dictionary_i_convert, (VALUE)dict);
 

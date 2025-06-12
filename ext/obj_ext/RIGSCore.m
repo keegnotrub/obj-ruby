@@ -1365,9 +1365,6 @@ rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
   unsigned int i;
   Method *methods;
 
-  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
-  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)objc_class));
-    
   /* Define all Ruby Instance methods for this Class */
   methods = class_copyMethodList(objc_class, &imth_cnt);
 
@@ -1597,6 +1594,9 @@ rb_objc_register_class_from_objc (Class objc_class)
   rb_undef_alloc_func(rb_class);
   rb_undef_method(CLASS_OF(rb_class),"new");
   rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
+
+  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
+  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)objc_class));
 
   cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
   imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);

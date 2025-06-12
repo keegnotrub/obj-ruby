@@ -43,13 +43,11 @@ rb_objc_array_i_convert(VALUE i, VALUE memo)
 static VALUE
 rb_objc_array_enum_size(VALUE ary, VALUE args, VALUE eobj)
 {
-  @autoreleasepool {
-    id rcv;
+  id rcv;
 
-    Data_Get_Struct(ary, void, rcv);
+  Data_Get_Struct(ary, void, rcv);
 
-    return ULONG2NUM([rcv count]);
-  }  
+  return ULONG2NUM([rcv count]);
 }
 
 VALUE

@@ -25,38 +25,34 @@
 static int
 rb_objc_dictionary_i_convert(VALUE k, VALUE v, VALUE memo)
 {
-  @autoreleasepool {
-    NSMutableDictionary *dict;
-    id key;
-    id val;
-    void *data;
-    const char idType[] = {_C_ID,'\0'};
+  NSMutableDictionary *dict;
+  id key;
+  id val;
+  void *data;
+  const char idType[] = {_C_ID,'\0'};
 
-    dict = (NSMutableDictionary *)memo;
+  dict = (NSMutableDictionary *)memo;
 
-    data = alloca(sizeof(id));
+  data = alloca(sizeof(id));
 
-    data = &key;
-    rb_objc_convert_to_objc(k, &data, 0, idType);
-    data = &val;
-    rb_objc_convert_to_objc(v, &data, 0, idType);
+  data = &key;
+  rb_objc_convert_to_objc(k, &data, 0, idType);
+  data = &val;
+  rb_objc_convert_to_objc(v, &data, 0, idType);
 
-    dict[key] = val;
+  dict[key] = val;
     
-    return ST_CONTINUE;
-  }  
+  return ST_CONTINUE;
 }
 
 static VALUE
 rb_objc_dictionary_enum_size(VALUE ary, VALUE args, VALUE eobj)
 {
-  @autoreleasepool {
-    id rcv;
+  id rcv;
 
-    Data_Get_Struct(ary, void, rcv);
+  Data_Get_Struct(ary, void, rcv);
 
-    return ULONG2NUM([rcv count]);
-  }  
+  return ULONG2NUM([rcv count]);
 }
 
 VALUE
@@ -189,15 +185,17 @@ id
 rb_objc_dictionary_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
   NSMutableDictionary *dict;
+  long size;
 
   Check_Type(rb_val, T_HASH);
-
-  dict = [NSMutableDictionary dictionary];
+  
+  size = rb_hash_size(rb_val);
+  dict = [NSMutableDictionary dictionaryWithCapacity:size];
   
   rb_hash_foreach(rb_val, rb_objc_dictionary_i_convert, (VALUE)dict);
 
   if (rb_frozen == Qtrue) {
-    return [dict copy];
+    return [[dict copy] autorelease];
   }
   
   return dict;

@@ -134,7 +134,7 @@ rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
   }
 }
 
-ffi_type*
+static ffi_type*
 rb_objc_ffi_type_for_type(const char *type)
 {
   ffi_type *inStruct = NULL;
@@ -210,7 +210,7 @@ rb_objc_ffi_type_for_type(const char *type)
   }
 }
 
-ffi_status
+static ffi_status
 rb_objc_build_closure_cif(ffi_cif *cif, const char *objcTypes)
 {
   NSMethodSignature *signature;
@@ -237,7 +237,7 @@ rb_objc_build_closure_cif(ffi_cif *cif, const char *objcTypes)
   return ffi_prep_cif(cif, FFI_DEFAULT_ABI, nbArgs, ret_type, arg_types);
 }
 
-const char *
+static const char *
 rb_objc_types_for_selector(SEL sel, size_t nbArgs) {
   char *objcTypes;
   unsigned long hash;
@@ -900,7 +900,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
 
 }
 
-NSMethodSignature*
+static NSMethodSignature*
 rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *formatString, int nbArgsExtra)
 {
   char objcTypes[128];
@@ -991,7 +991,7 @@ rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *f
   return [NSMethodSignature signatureWithObjCTypes:objcTypes];
 }
 
-void
+static void
 rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   @autoreleasepool {
     id val;
@@ -1049,7 +1049,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   }
 }
 
-void
+static void
 rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   @autoreleasepool {
     struct rb_objc_block *block;
@@ -1091,7 +1091,7 @@ rb_objc_block_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   }
 }
 
-VALUE
+static VALUE
 rb_objc_dispatch(id rcv, const char *method, NSMethodSignature *signature, int rigs_argc, VALUE *rigs_argv)
 {
   void *sym;
@@ -1355,7 +1355,7 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
   }  
 }
 
-unsigned int
+static unsigned int
 rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
   SEL mthSel;
@@ -1365,9 +1365,6 @@ rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
   unsigned int i;
   Method *methods;
 
-  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
-  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)objc_class));
-    
   /* Define all Ruby Instance methods for this Class */
   methods = class_copyMethodList(objc_class, &imth_cnt);
 
@@ -1393,7 +1390,7 @@ rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
   return imth_cnt;    
 }
 
-unsigned int
+static unsigned int
 rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
 {
   SEL mthSel;
@@ -1597,6 +1594,9 @@ rb_objc_register_class_from_objc (Class objc_class)
   rb_undef_alloc_func(rb_class);
   rb_undef_method(CLASS_OF(rb_class),"new");
   rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
+
+  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
+  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)objc_class));
 
   cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
   imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);

@@ -22,36 +22,30 @@
 #import "RIGSNSArray.h"
 #import "RIGSCore.h"
 
-static VALUE
-rb_objc_array_i_convert(RB_BLOCK_CALL_FUNC_ARGLIST(i, memo))
+static int
+rb_objc_array_i_convert(VALUE i, NSMutableArray *ary)
 {
-  @autoreleasepool {
-    NSMutableArray *ary;
-    id elt;
-    void *data;
-    const char idType[] = {_C_ID,'\0'};
+  id elt;
+  void *data;
+  const char idType[] = {_C_ID,'\0'};
 
-    ary = (NSMutableArray *)memo;
-    data = alloca(sizeof(id));
-    data = &elt;
+  data = alloca(sizeof(id));
+  data = &elt;
 
-    rb_objc_convert_to_objc(i, &data, 0, idType);
-    [ary addObject:elt];
+  rb_objc_convert_to_objc(i, &data, 0, idType);
+  [ary addObject:elt];
 
-    return Qnil;
-  }  
+  return ST_CONTINUE;
 }
 
 static VALUE
 rb_objc_array_enum_size(VALUE ary, VALUE args, VALUE eobj)
 {
-  @autoreleasepool {
-    id rcv;
+  id rcv;
 
-    Data_Get_Struct(ary, void, rcv);
+  Data_Get_Struct(ary, void, rcv);
 
-    return ULONG2NUM([rcv count]);
-  }  
+  return ULONG2NUM([rcv count]);
 }
 
 VALUE
@@ -134,12 +128,20 @@ id
 rb_objc_array_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
   NSMutableArray *ary;
+  long length;
+  long i;
 
-  ary = [NSMutableArray array];
-  rb_block_call(rb_val, rb_intern("each"), 0, 0, rb_objc_array_i_convert, (VALUE)ary);
+  Check_Type(rb_val, T_ARRAY);
+
+  length = RARRAY_LEN(rb_val);
+  ary = [NSMutableArray arrayWithCapacity:length];
+
+  for(i=0;i<length;i++) {
+    rb_objc_array_i_convert(rb_ary_entry(rb_val, i), ary);
+  }
 
   if (rb_frozen == Qtrue) {
-    return [ary copy];
+    return [[ary copy] autorelease];
   }
 
   return ary;

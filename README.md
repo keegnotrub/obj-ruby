@@ -40,14 +40,14 @@ puts earlier_date.isEqualToDate(date) # true
 
 Note you are allowed to mix some Ruby and Objective-C types. The following Ruby types will automatically bridge to these Objective-C types:
 
-| Ruby          | Objective-C            |
-| ------------- | ---------------------- |
-| String        | NSString               |
-| Numeric       | Immediate or NSNumber  |
-| Time          | NSDate                 |
-| Array         | NS{Mutable}Array       |
-| Hash          | NS{Mutable}Dictionary  |
-| Set           | NS{Mutable}Set         |
+| Ruby                 | Objective-C            |
+| -------------------- | ---------------------- |
+| String               | NSString               |
+| Numeric, True, False | Immediate or NSNumber  |
+| Time                 | NSDate                 |
+| Array                | NS{Mutable}Array       |
+| Hash                 | NS{Mutable}Dictionary  |
+| Set                  | NS{Mutable}Set         |
 
 ``` ruby
 require "obj_ruby"

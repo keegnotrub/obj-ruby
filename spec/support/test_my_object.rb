@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class TestMyObject < ObjRuby::NSObject
-  include ::Kernel
-
   def myObjcMethod
     "expected myObjcMethod return"
   end

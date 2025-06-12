@@ -23,6 +23,74 @@
 #import "RIGSCore.h"
 
 VALUE
+rb_objc_object_compare(VALUE rb_self, VALUE rb_val)
+{
+  @autoreleasepool {
+    id rcv;
+    id objc_val;
+
+    if (NIL_P(rb_val)) {
+      return Qnil;
+    }
+    
+    if (rb_self == rb_val) {
+      return INT2FIX(0);
+    }
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") == Qnil) {
+      return Qnil;
+    }
+
+    Data_Get_Struct(rb_self, void, rcv);
+    Data_Get_Struct(rb_val, void, objc_val);
+
+    if (rcv == objc_val) {
+      return INT2FIX(0);
+    }
+
+    if ([rcv isEqual:objc_val]) {
+      return INT2FIX(0);
+    }
+
+    return Qnil;
+  }
+}
+
+VALUE
+rb_objc_object_equal(VALUE rb_self, VALUE rb_val)
+{
+  @autoreleasepool {
+    id rcv;
+    id objc_val;
+
+    if (NIL_P(rb_val)) {
+      return Qfalse;
+    }
+    
+    if (rb_self == rb_val) {
+      return Qtrue;
+    }
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") == Qnil) {
+      return Qfalse;
+    }
+
+    Data_Get_Struct(rb_self, void, rcv);
+    Data_Get_Struct(rb_val, void, objc_val);
+
+    if (rcv == objc_val) {
+      return Qtrue;
+    }
+
+    if ([rcv isEqual:objc_val]) {
+      return Qtrue;
+    }
+
+    return Qfalse;
+  }
+}
+
+VALUE
 rb_objc_object_to_s(VALUE rb_self)
 {
   @autoreleasepool {
@@ -62,35 +130,19 @@ rb_objc_object_pretty_print(VALUE rb_self, VALUE rb_pp)
 }
 
 VALUE
-rb_objc_object_is_nil(VALUE rb_self)
-{
-  @autoreleasepool {
-    id rcv;
-  
-    Data_Get_Struct(rb_self, void, rcv);
-
-    if (rcv == nil) {
-      return Qtrue;
-    }
-
-    return Qfalse;
-  }
-}
-
-VALUE
 rb_objc_object_is_kind_of(VALUE rb_self, VALUE rb_class)
 {
   @autoreleasepool {
     id rcv;
-    VALUE iv;
     Class objc_class;
+    VALUE iv;
 
     iv = rb_iv_get(rb_class, "@objc_class");
     if (iv == Qnil) {
       return Qfalse;
     }
 
-    objc_class = (Class) NUM2LL(iv);
+    objc_class = (Class)NUM2LL(iv);
     Data_Get_Struct(rb_self, void, rcv);
 
     if ([[rcv classForCoder] isSubclassOfClass:objc_class]) {
@@ -106,15 +158,15 @@ rb_objc_object_is_instance_of(VALUE rb_self, VALUE rb_class)
 {
   @autoreleasepool {
     id rcv;
-    VALUE iv;
     Class objc_class;
+    VALUE iv;
 
     iv = rb_iv_get(rb_class, "@objc_class");
     if (iv == Qnil) {
       return Qfalse;
     }
 
-    objc_class = (Class) NUM2LL(iv);
+    objc_class = (Class)NUM2LL(iv);
     Data_Get_Struct(rb_self, void, rcv);
 
     if ([rcv classForCoder] == objc_class) {

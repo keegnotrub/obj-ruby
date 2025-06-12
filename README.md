@@ -34,6 +34,8 @@ require "obj_ruby/foundation"
 date = ObjRuby::NSDate.dateWithTimeIntervalSince1970(42424242)
 other_date = date.addTimeInterval(1000)
 earlier_date = date.earlierDate(other_date)
+
+puts earlier_date.isEqualToDate(date) # true
 ```
 
 Note you are allowed to mix some Ruby and Objective-C types. The following Ruby types will automatically bridge to these Objective-C types:
@@ -41,17 +43,30 @@ Note you are allowed to mix some Ruby and Objective-C types. The following Ruby 
 | Ruby          | Objective-C            |
 | ------------- | ---------------------- |
 | String        | NSString               |
+| Numeric       | Immediate or NSNumber  |
+| Time          | NSDate                 |
 | Array         | NS{Mutable}Array       |
 | Hash          | NS{Mutable}Dictionary  |
-| Time          | NSDate                 |
-| Numeric       | NSNumber               |
+| Set           | NS{Mutable}Set         |
 
 ``` ruby
 require "obj_ruby"
 require "obj_ruby/foundation"
 
-dict = ObjRuby::NSMutableDictionary.new
-dict.setObject_forKey(Time.now, "Hello!")
+# bridging manually
+ary1 = ObjRuby::NSMutableArray.arrayWithObjects(
+  ObjRuby::NSNumber.numberWithInt(1),
+  ObjRuby::NSNumber.numberWithInt(2),
+  ObjRuby::NSNumber.numberWithInt(3),
+  nil
+)
+ary1.addObject(ObjRuby::NSNumber.numberWithInt(4))
+
+# bridging with coercion helpers
+ary2 = ObjRuby::NSMutableArray([1,2,3])
+ary2 << 4
+
+puts ary1 == ary2 # true
 ```
 
 Other frameworks, like the [AppKit framework](https://developer.apple.com/documentation/appkit?language=objc) for graphical user interfaces, are also supported.
@@ -61,11 +76,11 @@ require "obj_ruby"
 require "obj_ruby/app_kit"
 
 app = ObjRuby::NSApplication.sharedApplication
-app.setActivationPolicy ObjRuby::NSApplicationActivationPolicyRegular
+app.activationPolicy = ObjRuby::NSApplicationActivationPolicyRegular
 app.activateIgnoringOtherApps(true)
 
 alert = ObjRuby::NSAlert.new
-alert.setMessageText("Hello world!")
+alert.messageText = "Hello world!"
 alert.runModal
 ```
 

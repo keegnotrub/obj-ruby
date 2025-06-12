@@ -22,6 +22,91 @@
 #import "RIGSNSArray.h"
 #import "RIGSCore.h"
 
+static VALUE
+rb_objc_array_i_convert(RB_BLOCK_CALL_FUNC_ARGLIST(i, memo))
+{
+  @autoreleasepool {
+    NSMutableArray *ary;
+    id elt;
+    void *data;
+    const char idType[] = {_C_ID,'\0'};
+
+    ary = (NSMutableArray *)memo;
+    data = alloca(sizeof(id));
+    data = &elt;
+
+    rb_objc_convert_to_objc(i, &data, 0, idType);
+    [ary addObject:elt];
+
+    return Qnil;
+  }  
+}
+
+static VALUE
+rb_objc_array_enum_size(VALUE ary, VALUE args, VALUE eobj)
+{
+  @autoreleasepool {
+    id rcv;
+
+    Data_Get_Struct(ary, void, rcv);
+
+    return ULONG2NUM([rcv count]);
+  }  
+}
+
+VALUE
+rb_objc_array_convert(VALUE rb_module, VALUE rb_val)
+{
+  @autoreleasepool {
+    NSArray *objc_ary;
+    VALUE rb_ary;
+    const char idType[] = {_C_ID,'\0'};
+
+    objc_ary = rb_objc_array_from_rb(rb_val, Qtrue);
+
+    rb_objc_convert_to_rb((void *)&objc_ary, 0, idType, &rb_ary);
+
+    return rb_ary;
+  }
+}
+
+VALUE
+rb_objc_array_m_convert(VALUE rb_module, VALUE rb_val)
+{
+  @autoreleasepool {
+    NSMutableArray *objc_ary;
+    VALUE rb_ary;
+    const char idType[] = {_C_ID,'\0'};
+
+    objc_ary = rb_objc_array_from_rb(rb_val, Qfalse);
+
+    rb_objc_convert_to_rb((void *)&objc_ary, 0, idType, &rb_ary);
+
+    return rb_ary;
+  }
+}
+
+VALUE
+rb_objc_array_each(VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
+    VALUE rb_elt;
+    const char idType[] = {_C_ID,'\0'};
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    RETURN_SIZED_ENUMERATOR(rb_self, 0, 0, rb_objc_array_enum_size);
+
+    for (id objc_elt in rcv) {
+      rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt);
+      rb_yield(rb_elt);
+    }
+
+    return rb_self;
+  }  
+}
+
 VALUE
 rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
 {
@@ -39,73 +124,23 @@ rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
     data = &val;
     rb_objc_convert_to_objc(rb_val, &data, 0, idType);
 
-    [rcv setObject:val atIndexedSubscript:FIX2LONG(rb_idx)];
+    [rcv setObject:val atIndexedSubscript:rb_fix2long(rb_idx)];
            
     return Qnil;
   }
 }
 
-VALUE
-rb_objc_array_to_a(VALUE rb_self)
+id
+rb_objc_array_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
-  @autoreleasepool {
-    id rcv;
+  NSMutableArray *ary;
 
-    Data_Get_Struct(rb_self, void, rcv);
+  ary = [NSMutableArray array];
+  rb_block_call(rb_val, rb_intern("each"), 0, 0, rb_objc_array_i_convert, (VALUE)ary);
 
-    return rb_objc_array_to_rb(rcv);
-  }  
-}
-
-VALUE
-rb_objc_array_to_rb(NSArray *rcv)
-{
-  VALUE rb_array;
-  VALUE rb_elt;
-  const char idType[] = {_C_ID,'\0'};
-
-  rb_array = rb_ary_new_capa([rcv count]);
-
-  for (id objc_elt in rcv) {
-    rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt, YES);
-    rb_ary_push(rb_array, rb_elt);
-  }
-  
-  return rb_array;
-}
-
-NSArray*
-rb_objc_array_from_rb(VALUE rb_val)
-{
-  NSArray *array;
-  long i;
-  long count;
-  id *objects;
-  VALUE rb_elt;
-  void *data;
-  const char idType[] = {_C_ID,'\0' };
-
-  Check_Type(rb_val, T_ARRAY);
-    
-  // Loop through the elements of the ruby array and generate a NSArray
-  count = rb_array_len(rb_val);
-  objects = malloc(sizeof(id) * count);
-  if (objects == NULL) {
-    return nil;
+  if (rb_frozen == Qtrue) {
+    return [ary copy];
   }
 
-  // Loop through the elements of the ruby array, convert them to Objective-C
-  // objects (only Objects id can go into an NSArray anyway) and feed them
-  // into a new NSArray
-  for (i = 0; i < count; i++) {
-    rb_elt = rb_ary_entry(rb_val, i);
-
-    data = &objects[i];
-    rb_objc_convert_to_objc(rb_elt, &data, 0, idType);
-  }
-
-  array = [NSArray arrayWithObjects:objects count:count];
-  free(objects);
-
-  return array;
+  return ary;
 }

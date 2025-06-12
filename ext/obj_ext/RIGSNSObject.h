@@ -25,10 +25,11 @@
 #import <Foundation/Foundation.h>
 #include <ruby.h>
 
+VALUE rb_objc_object_compare(VALUE rb_self, VALUE rb_val);
+VALUE rb_objc_object_equal(VALUE rb_self, VALUE rb_val);
 VALUE rb_objc_object_to_s(VALUE rb_self);
 VALUE rb_objc_object_inspect(VALUE rb_self);
 VALUE rb_objc_object_pretty_print(VALUE rb_self, VALUE rb_pp);
-VALUE rb_objc_object_is_nil(VALUE rb_self);
 VALUE rb_objc_object_is_kind_of(VALUE rb_self, VALUE rb_class);
 VALUE rb_objc_object_is_instance_of(VALUE rb_self, VALUE rb_class);
 VALUE rb_objc_object_inherited(VALUE rb_class, VALUE rb_subclass);

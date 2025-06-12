@@ -27,8 +27,10 @@
 #include <math.h>
 #include <time.h>
 
+VALUE rb_objc_date_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_date_compare(VALUE rb_self, VALUE rb_val);
 VALUE rb_objc_date_to_time(VALUE rb_self);
-VALUE rb_objc_date_to_rb(NSDate *val);
+
 NSDate* rb_objc_date_from_rb(VALUE rb_val);
 
 #endif

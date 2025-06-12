@@ -47,7 +47,7 @@ RSpec.describe ObjRuby::NSObject do
       result = obj.performSelector(:myObjcMethod)
 
       expect(result).to be_a ObjRuby::NSString
-      expect(result).to eq "expected myObjcMethod return"
+      expect(result).to eq ObjRuby::NSString("expected myObjcMethod return")
       expect(obj.respondsToSelector("myObjcMethod")).to be(true)
     end
 
@@ -65,7 +65,7 @@ RSpec.describe ObjRuby::NSObject do
       result = obj.performSelector_withObject("myObjcMethodWithArg:", "1")
 
       expect(result).to be_a ObjRuby::NSString
-      expect(result).to eq "expected myObjcMethodWithArg(1) return"
+      expect(result).to eq ObjRuby::NSString("expected myObjcMethodWithArg(1) return")
       expect(obj.respondsToSelector("myObjcMethodWithArg")).to be(false)
       expect(obj.respondsToSelector("myObjcMethodWithArg:")).to be(true)
     end
@@ -76,7 +76,7 @@ RSpec.describe ObjRuby::NSObject do
       result = obj.performSelector_withObject_withObject("myObjcMethodWithArg1:andArg2:", "1", "2")
 
       expect(result).to be_a ObjRuby::NSString
-      expect(result).to eq "expected myObjcMethodWithArg1_andArg2(1, 2) return"
+      expect(result).to eq ObjRuby::NSString("expected myObjcMethodWithArg1_andArg2(1, 2) return")
       expect(obj.respondsToSelector("myObjcMethodWithArg1_andArg2")).to be(false)
       expect(obj.respondsToSelector("myObjcMethodWithArg1_andArg2:")).to be(false)
       expect(obj.respondsToSelector("myObjcMethodWithArg1:andArg2:")).to be(true)

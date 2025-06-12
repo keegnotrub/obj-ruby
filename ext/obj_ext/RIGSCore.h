@@ -29,7 +29,9 @@
 #include <ffi/ffi.h>
 
 BOOL rb_objc_convert_to_objc(VALUE rb_val, void **data, size_t offset, const char *type);
-BOOL rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val_ptr, BOOL autoconvert);
+BOOL rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val_ptr);
+
+BOOL rb_objc_register_framework_from_objc(char *framework, const char *root);
 
 VALUE rb_objc_register_class_from_objc(Class objc_class);
 VALUE rb_objc_register_class_from_rb(VALUE rb_class);
@@ -44,12 +46,11 @@ void rb_objc_register_constant_from_objc(const char *name, const char *type);
 void rb_objc_register_function_from_objc(const char *name, const char *objcTypes);
 void rb_objc_register_protocol_from_objc(const char *selector, const char *objcTypes);
 
-BOOL rb_objc_register_framework_from_objc(char *framework, const char *root);
-
 VALUE rb_objc_import(VALUE rb_self, VALUE rb_name);
 VALUE rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
 VALUE rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
 VALUE rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
+VALUE rb_objc_false(VALUE rb_self);
 
 void rb_objc_raise_exception(NSException *exception);
 

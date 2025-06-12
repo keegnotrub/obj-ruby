@@ -35,14 +35,18 @@ RSpec.describe ObjRuby do
       expect(described_class.const_get(:NSNotFound)).to eq (2**63) - 1
       expect(described_class.const_get(:NSOrderedSame)).to eq 0
       expect(described_class.const_get(:NSASCIIStringEncoding)).to eq 1
-      expect(described_class.const_get(:NSWeekDayNameArray)).to eq "NSWeekDayNameArray"
+      expect(described_class.const_get(:NSWeekDayNameArray)).to eq(
+        described_class::NSString("NSWeekDayNameArray")
+      )
       expect(described_class.const_get(:NSZombieEnabled)).to be false
     end
 
     it "defines bridged CoreData Objective-C constants" do
       described_class.import("CoreData")
 
-      expect(described_class.const_get(:NSAffectedObjectsErrorKey)).to eq "NSAffectedObjectsErrorKey"
+      expect(described_class.const_get(:NSAffectedObjectsErrorKey)).to eq(
+        described_class::NSString("NSAffectedObjectsErrorKey")
+      )
     end
 
     it "defines bridged AppKit Objective-C constants" do

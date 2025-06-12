@@ -26,9 +26,11 @@
 #include <ruby.h>
 #include <objc/runtime.h>
 
+VALUE rb_objc_number_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_number_compare(VALUE rb_self, VALUE rb_val);
 VALUE rb_objc_number_to_i(VALUE rb_self);
 VALUE rb_objc_number_to_f(VALUE rb_self);
-VALUE rb_objc_number_to_rb(NSNumber *val);
+
 NSNumber* rb_objc_number_from_rb(VALUE rb_val);
 
 #endif

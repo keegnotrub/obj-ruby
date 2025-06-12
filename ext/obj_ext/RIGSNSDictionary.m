@@ -23,15 +23,140 @@
 #import "RIGSCore.h"
 
 static int
-rb_objc_dictionary_keys(VALUE key, VALUE value, VALUE ary) {
-  rb_ary_push(ary, key);
-  return ST_CONTINUE;
+rb_objc_dictionary_i_convert(VALUE k, VALUE v, VALUE memo)
+{
+  @autoreleasepool {
+    NSMutableDictionary *dict;
+    id key;
+    id val;
+    void *data;
+    const char idType[] = {_C_ID,'\0'};
+
+    dict = (NSMutableDictionary *)memo;
+
+    data = alloca(sizeof(id));
+
+    data = &key;
+    rb_objc_convert_to_objc(k, &data, 0, idType);
+    data = &val;
+    rb_objc_convert_to_objc(v, &data, 0, idType);
+
+    dict[key] = val;
+    
+    return ST_CONTINUE;
+  }  
 }
 
-static int
-rb_objc_dictionary_values(VALUE key, VALUE value, VALUE ary) {
-  rb_ary_push(ary, value);
-  return ST_CONTINUE;
+static VALUE
+rb_objc_dictionary_enum_size(VALUE ary, VALUE args, VALUE eobj)
+{
+  @autoreleasepool {
+    id rcv;
+
+    Data_Get_Struct(ary, void, rcv);
+
+    return ULONG2NUM([rcv count]);
+  }  
+}
+
+VALUE
+rb_objc_dictionary_convert(VALUE rb_module, VALUE rb_val)
+{
+  @autoreleasepool {
+    NSDictionary *objc_dict;
+    VALUE rb_dict;
+    const char idType[] = {_C_ID,'\0'};
+
+    objc_dict = rb_objc_dictionary_from_rb(rb_val, Qtrue);
+
+    rb_objc_convert_to_rb((void *)&objc_dict, 0, idType, &rb_dict);
+
+    return rb_dict;
+  }  
+}
+
+VALUE
+rb_objc_dictionary_m_convert(VALUE rb_module, VALUE rb_val)
+{
+  @autoreleasepool {
+    NSDictionary *objc_dict;
+    VALUE rb_dict;
+    const char idType[] = {_C_ID,'\0'};
+
+    objc_dict = rb_objc_dictionary_from_rb(rb_val, Qfalse);
+
+    rb_objc_convert_to_rb((void *)&objc_dict, 0, idType, &rb_dict);
+
+    return rb_dict;
+  }  
+}
+
+VALUE
+rb_objc_dictionary_each_key(VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
+    VALUE rb_key;
+    const char idType[] = {_C_ID,'\0'};
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    RETURN_SIZED_ENUMERATOR(rb_self, 0, 0, rb_objc_dictionary_enum_size);
+
+    for (id objc_key in rcv) {
+      rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key);
+      rb_yield(rb_key);
+    }
+
+    return rb_self;
+  }  
+}
+
+VALUE
+rb_objc_dictionary_each_value(VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
+    id objc_val;
+    VALUE rb_val;
+    const char idType[] = {_C_ID,'\0'};
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    RETURN_SIZED_ENUMERATOR(rb_self, 0, 0, rb_objc_dictionary_enum_size);
+
+    for (id objc_key in rcv) {
+      objc_val = rcv[objc_key];
+      rb_objc_convert_to_rb((void *)&objc_val, 0, idType, &rb_val);
+      rb_yield(rb_val);
+    }
+
+    return rb_self;
+  }  
+}
+
+VALUE rb_objc_dictionary_each_pair(VALUE rb_self)
+{
+  @autoreleasepool {
+    id rcv;
+    id objc_val;
+    VALUE rb_key;
+    VALUE rb_val;
+    const char idType[] = {_C_ID,'\0'};
+
+    Data_Get_Struct(rb_self, void, rcv);
+
+    RETURN_SIZED_ENUMERATOR(rb_self, 0, 0, rb_objc_dictionary_enum_size);
+
+    for (id objc_key in rcv) {
+      objc_val = rcv[objc_key];
+      rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key);
+      rb_objc_convert_to_rb((void *)&objc_val, 0, idType, &rb_val);
+      rb_yield_values(2, rb_key, rb_val);
+    }
+
+    return rb_self;
+  }  
 }
 
 VALUE
@@ -60,89 +185,20 @@ rb_objc_dictionary_store(VALUE rb_self, VALUE rb_key, VALUE rb_val)
   }
 }
 
-VALUE
-rb_objc_dictionary_to_h(VALUE rb_self)
+id
+rb_objc_dictionary_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
-  @autoreleasepool {
-    id rcv;
-
-    Data_Get_Struct(rb_self, void, rcv);
-
-    return rb_objc_dictionary_to_rb(rcv);
-  }
-}
-
-VALUE
-rb_objc_dictionary_to_rb(NSDictionary *val)
-{
-  VALUE rb_hash;
-  VALUE rb_key;
-  VALUE rb_value;
-  id objc_value;
-  const char idType[] = {_C_ID,'\0'};
-
-  rb_hash = rb_hash_new();
-
-  for (id objc_key in val) {
-    objc_value = [val objectForKey:objc_key];
-    if (rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key, YES)) {
-      rb_objc_convert_to_rb((void *)&objc_value, 0, idType, &rb_value, YES);
-      rb_hash_aset(rb_hash, rb_key, rb_value);
-    }
-  }
-  
-  return rb_hash;
-}
-
-NSDictionary*
-rb_objc_dictionary_from_rb(VALUE rb_val)
-{
-  NSDictionary *dictionary;
-  long i;
-  long count;
-  void *keyData;
-  void *valueData;
-  id *keyObjects;
-  id *valueObjects;
-  VALUE rb_key;
-  VALUE rb_value;
-  VALUE ruby_keys;
-  VALUE ruby_values;
-  const char idType[] = {_C_ID,'\0' };
+  NSMutableDictionary *dict;
 
   Check_Type(rb_val, T_HASH);
 
-  // Loop through the elements of the ruby array and generate a NSArray
-  count = rb_hash_size_num(rb_val);
-  ruby_keys = rb_ary_new_capa(count);
-  ruby_values = rb_ary_new_capa(count);
-
-  rb_hash_foreach(rb_val, rb_objc_dictionary_keys, ruby_keys);
-  rb_hash_foreach(rb_val, rb_objc_dictionary_values, ruby_values);
+  dict = [NSMutableDictionary dictionary];
   
-  keyObjects = malloc(sizeof(id) * count);
-  valueObjects = malloc(sizeof(id) * count);
-  if (keyObjects == NULL || valueObjects == NULL) {
-    return nil;
+  rb_hash_foreach(rb_val, rb_objc_dictionary_i_convert, (VALUE)dict);
+
+  if (rb_frozen == Qtrue) {
+    return [dict copy];
   }
-
-  // Loop through the elements of the ruby hash, convert them to Objective-C
-  // objects (only Objects id can go into an NSArray anyway) and feed them
-  // into a new NSDictionary
-  for (i = 0; i < count; i++) {
-    rb_key = rb_ary_entry(ruby_keys, i);
-    rb_value = rb_ary_entry(ruby_values, i);
-
-    keyData = &keyObjects[i];
-    rb_objc_convert_to_objc(rb_key, &keyData, 0, idType);
-
-    valueData = &valueObjects[i];
-    rb_objc_convert_to_objc(rb_value, &valueData, 0, idType);
-  }
-
-  dictionary = [NSDictionary dictionaryWithObjects:valueObjects forKeys:keyObjects count:count];
-  free(keyObjects);
-  free(valueObjects);
-
-  return dictionary;
+  
+  return dict;
 }

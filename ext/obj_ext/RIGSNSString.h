@@ -25,8 +25,11 @@
 #import <Foundation/Foundation.h>
 #include <ruby.h>
 
+VALUE rb_objc_string_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_string_m_convert(VALUE rb_module, VALUE rb_val);
+VALUE rb_objc_string_compare(VALUE rb_self, VALUE rb_val);
 VALUE rb_objc_string_to_s(VALUE rb_self);
-VALUE rb_objc_string_to_rb(NSString *val);
-NSString* rb_objc_string_from_rb(VALUE rb_val);
+
+id rb_objc_string_from_rb(VALUE rb_val, VALUE rb_frozen);
 
 #endif

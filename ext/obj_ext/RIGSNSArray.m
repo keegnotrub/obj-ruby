@@ -62,13 +62,6 @@ rb_objc_array_convert(VALUE rb_module, VALUE rb_val)
     VALUE rb_ary;
     const char idType[] = {_C_ID,'\0'};
 
-    // rb_check_hash_type
-    // rb_check_string_type
-    // rb_check_array_type
-    // VALUE tmp = rb_check_array_type(obj);
-    // if (!NIL_P(tmp)) return tmp;
-    // return rb_ary_new3(1, obj);
-
     objc_ary = rb_objc_array_from_rb(rb_val, Qtrue);
 
     rb_objc_convert_to_rb((void *)&objc_ary, 0, idType, &rb_ary);

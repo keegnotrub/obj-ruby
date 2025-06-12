@@ -25,21 +25,19 @@
 static VALUE
 rb_objc_set_i_convert(RB_BLOCK_CALL_FUNC_ARGLIST(i, memo))
 {
-  @autoreleasepool {
-    NSMutableSet *set;
-    id elt;
-    void *data;
-    const char idType[] = {_C_ID,'\0'};
+  NSMutableSet *set;
+  id elt;
+  void *data;
+  const char idType[] = {_C_ID,'\0'};
 
-    set = (NSMutableSet *)memo;
-    data = alloca(sizeof(id));
-    data = &elt;
+  set = (NSMutableSet *)memo;
+  data = alloca(sizeof(id));
+  data = &elt;
 
-    rb_objc_convert_to_objc(i, &data, 0, idType);
-    [set addObject:elt];
+  rb_objc_convert_to_objc(i, &data, 0, idType);
+  [set addObject:elt];
 
-    return Qnil;
-  }  
+  return Qnil;
 }
 
 VALUE
@@ -83,7 +81,7 @@ rb_objc_set_from_rb(VALUE rb_val, VALUE rb_frozen)
   rb_block_call(rb_val, rb_intern("each"), 0, 0, rb_objc_set_i_convert, (VALUE)set);
 
   if (rb_frozen == Qtrue) {
-    return [set copy];
+    return [[set copy] autorelease];
   }
 
   return set;

@@ -23,14 +23,12 @@
 #import "RIGSCore.h"
 
 static int
-rb_objc_array_i_convert(VALUE i, VALUE memo)
+rb_objc_array_i_convert(VALUE i, NSMutableArray *ary)
 {
-  NSMutableArray *ary;
   id elt;
   void *data;
   const char idType[] = {_C_ID,'\0'};
 
-  ary = (NSMutableArray *)memo;
   data = alloca(sizeof(id));
   data = &elt;
 
@@ -139,11 +137,11 @@ rb_objc_array_from_rb(VALUE rb_val, VALUE rb_frozen)
   ary = [NSMutableArray arrayWithCapacity:length];
 
   for(i=0;i<length;i++) {
-    rb_objc_array_i_convert(rb_ary_entry(rb_val, i), (VALUE)ary);
+    rb_objc_array_i_convert(rb_ary_entry(rb_val, i), ary);
   }
 
   if (rb_frozen == Qtrue) {
-    return [ary copy];
+    return [[ary copy] autorelease];
   }
 
   return ary;

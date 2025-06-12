@@ -195,7 +195,7 @@ rb_objc_dictionary_from_rb(VALUE rb_val, VALUE rb_frozen)
   rb_hash_foreach(rb_val, rb_objc_dictionary_i_convert, (VALUE)dict);
 
   if (rb_frozen == Qtrue) {
-    return [dict copy];
+    return [[dict copy] autorelease];
   }
   
   return dict;

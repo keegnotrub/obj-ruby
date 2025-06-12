@@ -124,7 +124,7 @@ rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
     data = &val;
     rb_objc_convert_to_objc(rb_val, &data, 0, idType);
 
-    [rcv setObject:val atIndexedSubscript:FIX2LONG(rb_idx)];
+    [rcv setObject:val atIndexedSubscript:rb_fix2long(rb_idx)];
            
     return Qnil;
   }

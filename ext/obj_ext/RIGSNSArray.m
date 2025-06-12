@@ -25,21 +25,19 @@
 static int
 rb_objc_array_i_convert(VALUE i, VALUE memo)
 {
-  @autoreleasepool {
-    NSMutableArray *ary;
-    id elt;
-    void *data;
-    const char idType[] = {_C_ID,'\0'};
+  NSMutableArray *ary;
+  id elt;
+  void *data;
+  const char idType[] = {_C_ID,'\0'};
 
-    ary = (NSMutableArray *)memo;
-    data = alloca(sizeof(id));
-    data = &elt;
+  ary = (NSMutableArray *)memo;
+  data = alloca(sizeof(id));
+  data = &elt;
 
-    rb_objc_convert_to_objc(i, &data, 0, idType);
-    [ary addObject:elt];
+  rb_objc_convert_to_objc(i, &data, 0, idType);
+  [ary addObject:elt];
 
-    return ST_CONTINUE;
-  }  
+  return ST_CONTINUE;
 }
 
 static VALUE

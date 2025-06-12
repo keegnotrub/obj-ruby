@@ -1928,6 +1928,4 @@ Init_obj_ext()
 
   // rb_cSet doesn't have a C API
   rb_cSet = rb_const_get(rb_cObject, rb_intern("Set"));
-
-  rb_objc_register_class_from_objc([NSObject class]);
 }

@@ -26,12 +26,19 @@ VALUE
 rb_objc_string_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSString *objc_str;
+    id objc_str;
     VALUE rb_str;
     const char idType[] = {_C_ID,'\0'};
 
-    objc_str = rb_objc_string_from_rb(rb_val, Qtrue);
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_str);
+      if ([objc_str classForCoder] == [NSString class]) {
+        return rb_val;
+      }
+    }
 
+    objc_str = rb_objc_string_from_rb(rb_val, Qtrue);
+    
     rb_objc_convert_to_rb((void *)&objc_str, 0, idType, &rb_str);
 
     return rb_str;
@@ -42,9 +49,16 @@ VALUE
 rb_objc_string_m_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSMutableString *objc_str;
+    id objc_str;
     VALUE rb_str;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_str);
+      if ([objc_str classForCoder] == [NSMutableString class]) {
+        return rb_val;
+      }
+    }
 
     objc_str = rb_objc_string_from_rb(rb_val, Qfalse);
 
@@ -113,13 +127,20 @@ rb_objc_string_from_rb(VALUE rb_val, VALUE rb_frozen)
   klass = rb_frozen == Qtrue ? [NSString class] : [NSMutableString class];
 
   switch (TYPE(rb_val)) {
+  case T_STRING:
+    rb_tmp = rb_val;
+    break;
   case T_SYMBOL:
     rb_tmp = rb_sym_to_s(rb_val);
-    return [klass stringWithUTF8String:rb_string_value_cstr(&rb_tmp)];
-  case T_STRING:
-    return [klass stringWithUTF8String:rb_string_value_cstr(&rb_val)];
+    break;
   default:
-    rb_raise(rb_eTypeError, "type 0x%02x not valid NSString value", TYPE(rb_val));
+    rb_tmp = rb_check_string_type(rb_val);
     break;
   }
+
+  if (NIL_P(rb_tmp)) {
+    rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into %s", rb_val, class_getName(klass));
+  }
+
+  return [klass stringWithUTF8String:rb_string_value_cstr(&rb_tmp)];
 }

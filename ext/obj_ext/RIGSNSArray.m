@@ -52,9 +52,16 @@ VALUE
 rb_objc_array_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSArray *objc_ary;
+    id objc_ary;
     VALUE rb_ary;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_ary);
+      if ([objc_ary classForCoder] == [NSArray class]) {
+        return rb_val;
+      }
+    }
 
     objc_ary = rb_objc_array_from_rb(rb_val, Qtrue);
 
@@ -68,10 +75,17 @@ VALUE
 rb_objc_array_m_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSMutableArray *objc_ary;
+    id objc_ary;
     VALUE rb_ary;
     const char idType[] = {_C_ID,'\0'};
 
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_ary);
+      if ([objc_ary classForCoder] == [NSMutableArray class]) {
+        return rb_val;
+      }
+    }
+    
     objc_ary = rb_objc_array_from_rb(rb_val, Qfalse);
 
     rb_objc_convert_to_rb((void *)&objc_ary, 0, idType, &rb_ary);
@@ -128,16 +142,20 @@ id
 rb_objc_array_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
   NSMutableArray *ary;
+  VALUE rb_tmp;
   long length;
   long i;
 
-  Check_Type(rb_val, T_ARRAY);
+  rb_tmp = rb_check_array_type(rb_val);
+  if (NIL_P(rb_tmp)) {
+    rb_tmp = rb_ary_new3(1, rb_val);
+  }
 
-  length = RARRAY_LEN(rb_val);
+  length = RARRAY_LEN(rb_tmp);
   ary = [NSMutableArray arrayWithCapacity:length];
 
   for(i=0;i<length;i++) {
-    rb_objc_array_i_convert(rb_ary_entry(rb_val, i), ary);
+    rb_objc_array_i_convert(rb_ary_entry(rb_tmp, i), ary);
   }
 
   if (rb_frozen == Qtrue) {

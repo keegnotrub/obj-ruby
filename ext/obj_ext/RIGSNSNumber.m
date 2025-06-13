@@ -26,9 +26,16 @@ VALUE
 rb_objc_number_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSNumber *objc_num;
+    id objc_num;
     VALUE rb_num;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_num);
+      if ([objc_num classForCoder] == [NSNumber class]) {
+        return rb_val;
+      }
+    }
 
     objc_num = rb_objc_number_from_rb(rb_val);
 
@@ -119,18 +126,26 @@ rb_objc_number_to_f(VALUE rb_self)
 NSNumber*
 rb_objc_number_from_rb(VALUE rb_val)
 {
-  switch (TYPE(rb_val)){
-  case T_BIGNUM:
-    return [NSNumber numberWithLongLong:rb_big2ll(rb_val)];
-  case T_FIXNUM:
-    return [NSNumber numberWithLong:rb_fix2long(rb_val)];
+  VALUE rb_tmp;
+
+  switch (TYPE(rb_val)) {
   case T_FLOAT:
     return [NSNumber numberWithDouble:rb_float_value(rb_val)];
   case T_FALSE:
   case T_TRUE:
     return [NSNumber numberWithBool:rb_val == Qtrue];
   default:
-    rb_raise(rb_eTypeError, "type 0x%02x not valid NSNumber value", TYPE(rb_val));
+    rb_tmp = rb_check_to_int(rb_val);
+    break;
+  }
+
+  switch (TYPE(rb_tmp)) {
+  case T_BIGNUM:
+    return [NSNumber numberWithLongLong:rb_big2ll(rb_tmp)];
+  case T_FIXNUM:
+    return [NSNumber numberWithLong:rb_fix2long(rb_tmp)];
+  default:
+    rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into NSNumber", rb_val);
     break;
   }
 }

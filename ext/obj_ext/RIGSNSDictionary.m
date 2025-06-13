@@ -59,9 +59,16 @@ VALUE
 rb_objc_dictionary_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSDictionary *objc_dict;
+    id objc_dict;
     VALUE rb_dict;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_dict);
+      if ([objc_dict classForCoder] == [NSDictionary class]) {
+        return rb_val;
+      }
+    }
 
     objc_dict = rb_objc_dictionary_from_rb(rb_val, Qtrue);
 
@@ -75,9 +82,16 @@ VALUE
 rb_objc_dictionary_m_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSDictionary *objc_dict;
+    id objc_dict;
     VALUE rb_dict;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_dict);
+      if ([objc_dict classForCoder] == [NSMutableDictionary class]) {
+        return rb_val;
+      }
+    }
 
     objc_dict = rb_objc_dictionary_from_rb(rb_val, Qfalse);
 
@@ -185,14 +199,20 @@ id
 rb_objc_dictionary_from_rb(VALUE rb_val, VALUE rb_frozen)
 {
   NSMutableDictionary *dict;
+  VALUE rb_tmp;
+  const char *cname;
   long size;
 
-  Check_Type(rb_val, T_HASH);
-  
-  size = rb_hash_size(rb_val);
+  rb_tmp = rb_check_hash_type(rb_val);
+  if (NIL_P(rb_tmp)) {
+    cname = rb_frozen == Qtrue ? "NSDictionary" : "NSMutableDictionary";
+    rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into %s", rb_val, cname);
+  }
+
+  size = rb_hash_size(rb_tmp);
   dict = [NSMutableDictionary dictionaryWithCapacity:size];
   
-  rb_hash_foreach(rb_val, rb_objc_dictionary_i_convert, (VALUE)dict);
+  rb_hash_foreach(rb_tmp, rb_objc_dictionary_i_convert, (VALUE)dict);
 
   if (rb_frozen == Qtrue) {
     return [[dict copy] autorelease];

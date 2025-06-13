@@ -352,7 +352,6 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
             *(id*)where = rb_objc_set_from_rb(rb_val, RB_OBJ_FROZEN(rb_val));
           }
           else {
-            // TODO: check coercion (ie: rb_check_string_type)
             ret = NO;
           }
           break;
@@ -608,8 +607,7 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
   
   if (ret == NO) {
     /* raise exception - Don't know how to handle this type of argument */
-    rb_raise(rb_eTypeError, "don't know how to convert Ruby (type 0x%02x) from ObjC (encoding %c)",
-             TYPE(rb_thing), *type);
+    rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into Objective-C", rb_thing);
   }
 
   return ret;  
@@ -1869,7 +1867,7 @@ rb_objc_import(VALUE rb_self, VALUE rb_name)
       return Qtrue;
     }
 
-    rb_raise(rb_eLoadError, "cannot load such framework -- %s", framework);
+    rb_raise(rb_eLoadError, "can't import the '%s' framework", framework);
   }
 }
 

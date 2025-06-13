@@ -44,9 +44,16 @@ VALUE
 rb_objc_set_convert(VALUE rb_module, VALUE rb_val)
 {
   @autoreleasepool {
-    NSSet *objc_set;
+    id objc_set;
     VALUE rb_set;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_set);
+      if ([objc_set classForCoder] == [NSSet class]) {
+        return rb_val;
+      }
+    }
 
     objc_set = rb_objc_set_from_rb(rb_val, Qtrue);
 
@@ -63,6 +70,13 @@ rb_objc_set_m_convert(VALUE rb_module, VALUE rb_val)
     NSSet *objc_set;
     VALUE rb_set;
     const char idType[] = {_C_ID,'\0'};
+
+    if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+      Data_Get_Struct(rb_val, void, objc_set);
+      if ([objc_set classForCoder] == [NSMutableSet class]) {
+        return rb_val;
+      }
+    }
 
     objc_set = rb_objc_set_from_rb(rb_val, Qfalse);
 

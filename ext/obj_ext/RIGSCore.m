@@ -753,9 +753,9 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       case _C_CHR:
         // Assume that if YES or NO then it's a BOOLean
         if (__OBJC_BOOL_IS_BOOL != 1 && *(char *)where == YES) 
-          rb_val = CHR2FIX(*(char *)where);
+          rb_val = Qtrue;
         else if (__OBJC_BOOL_IS_BOOL != 1 && *(char *)where == NO)
-          rb_val = CHR2FIX(*(char *)where);
+          rb_val = Qfalse;
         else
           rb_val = CHR2FIX(*(char *)where);
         break;

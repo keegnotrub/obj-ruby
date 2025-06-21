@@ -34,7 +34,7 @@ jobs:
     - name: Install devtools
       run: sudo xcode-select --reset
     - name: Install json
-      run: sudo gem install json -v 2.10.2
+      run: sudo gem install json -v 2.7.6
     - name: Install dependencies
       run: bundle install
     - name: Compile extension

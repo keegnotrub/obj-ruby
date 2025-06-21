@@ -28,6 +28,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Ruby (default) / ${{ matrix.os }}
     steps:
+    - uses: actions/checkout@v4
     - name: Install dependencies
       run: bundle install
       env:

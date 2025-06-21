@@ -26,31 +26,51 @@ RSpec.describe ObjRuby::Pointer do
   end
 
   describe "when accessing a pointer that hasn't been set yet" do
-    it "returns nil" do
-      ptrs = [
-        described_class.new(:object),
-        described_class.new(:bool),
-        described_class.new(:char),
-        described_class.new(:uchar),
-        described_class.new(:short),
-        described_class.new(:ushort),
-        described_class.new(:int),
-        described_class.new(:uint),
-        described_class.new(:long),
-        described_class.new(:ulong),
-        described_class.new(:long_long),
-        described_class.new(:ulong_long),
-        described_class.new(:float),
-        described_class.new(:double)
-      ]
+    it "returns nil for an object" do
+      expect(described_class.new(:object)[0]).to be_nil
+    end
 
-      ptrs.each do |ptr|
-        expect(ptr[0]).to be_nil
-      end
+    it "returns false for a bool" do
+      expect(described_class.new(:bool)[0]).to be false
+    end
+
+    it "returns zero or false for a char (platform dependent)" do
+      expect(described_class.new(:char)[0]).to eq(0).or be(false)
+    end
+
+    it "returns zero for numerics" do
+      expect(described_class.new(:uchar)[0]).to eq 0
+      expect(described_class.new(:short)[0]).to eq 0
+      expect(described_class.new(:ushort)[0]).to eq 0
+      expect(described_class.new(:int)[0]).to eq 0
+      expect(described_class.new(:uint)[0]).to eq 0
+      expect(described_class.new(:long)[0]).to eq 0
+      expect(described_class.new(:ulong)[0]).to eq 0
+      expect(described_class.new(:long_long)[0]).to eq 0
+      expect(described_class.new(:ulong_long)[0]).to eq 0
+      expect(described_class.new(:float)[0]).to eq 0
+      expect(described_class.new(:double)[0]).to eq 0
     end
   end
 
-  describe "when passing pointer as a param" do
+  describe "when passing a pointer as a param" do
+    it "passes the supplied data as intended" do
+      ptr = described_class.new(:ulong, 3)
+
+      ptr[0] = 8
+      ptr[1] = 9
+      ptr[2] = 10
+
+      index_path = ObjRuby::NSIndexPath.alloc.initWithIndexes_length(ptr, 3)
+
+      expect(index_path.length).to eq 3
+      expect(index_path.indexAtPosition(0)).to eq 8
+      expect(index_path.indexAtPosition(1)).to eq 9
+      expect(index_path.indexAtPosition(2)).to eq 10
+    end
+  end
+
+  describe "when passing pointer as an out param" do
     it "sets NSError data for an object pointer" do
       error_ptr = described_class.new(:object)
 

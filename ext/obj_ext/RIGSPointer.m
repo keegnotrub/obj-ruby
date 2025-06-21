@@ -27,24 +27,23 @@ struct rb_objc_ptr
   unsigned long allocated_size;
   void *cptr;
   const char *encoding;
-  BOOL tainted;
 };
 
 static const char* rb_objc_ptr_types[][2] = {
-  {     "object", "@" },
-  {       "bool", "B" },
-  {       "char", "c" },
-  {      "uchar", "C" },
-  {      "short", "s" },
-  {     "ushort", "S" },
-  {        "int", "i" },
-  {       "uint", "I" },
-  {       "long", "l" },
-  {      "ulong", "L" },
-  {  "long_long", "q" },
-  { "ulong_long", "Q" },
-  {      "float", "f" },
-  {     "double", "d" },
+  {     "object", @encode(id) },
+  {       "bool", @encode(BOOL) },
+  {       "char", @encode(char) },
+  {      "uchar", @encode(unsigned char) },
+  {      "short", @encode(short) },
+  {     "ushort", @encode(unsigned short) },
+  {        "int", @encode(int) },
+  {       "uint", @encode(unsigned int) },
+  {       "long", @encode(long) },
+  {      "ulong", @encode(unsigned long) },
+  {  "long_long", @encode(long long) },
+  { "ulong_long", @encode(unsigned long long) },
+  {      "float", @encode(float) },
+  {     "double", @encode(double) },
   {        NULL, NULL }
 };
 
@@ -60,7 +59,6 @@ rb_objc_ptr_release(struct rb_objc_ptr *dp)
     dp->allocated_size = 0;
     dp->cptr = NULL;
     dp->encoding = NULL;
-    dp->tainted = NO;
 
     free(dp);
   }
@@ -125,7 +123,6 @@ rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class)
     dp->cptr = (void*)malloc(tsize);
     memset(dp->cptr, 0, tsize);
     dp->allocated_size = tsize;
-    dp->tainted = NO;
 
     obj = Data_Wrap_Struct(rb_class, 0, rb_objc_ptr_release, dp);
 
@@ -157,6 +154,41 @@ rb_objc_ptr_get(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 }
 
 VALUE
+rb_objc_ptr_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
+{
+  @autoreleasepool {
+    struct rb_objc_ptr *dp;
+    long index;
+    size_t tsize;
+    size_t offset;
+    long ioffset;
+    
+    Check_Type(rb_idx, T_FIXNUM);
+
+    index = FIX2INT(rb_idx);
+    dp = (struct rb_objc_ptr*)DATA_PTR(rb_self);
+
+    if (dp->allocated_size == 0) rb_raise(rb_eIndexError, "index %ld is invalid for an empty pointer", index);
+
+    tsize = 0;
+    NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
+
+    ioffset = tsize * index;
+
+    if (ioffset < 0) ioffset += dp->allocated_size;
+    if (ioffset < 0) rb_raise(rb_eIndexError, "index %ld too small for pointer", index);
+
+    offset = (size_t)ioffset;
+
+    if (offset + tsize > dp->allocated_size) rb_raise(rb_eIndexError, "index %ld too big for pointer", index);
+
+    rb_objc_convert_to_objc(rb_val, &(dp->cptr), offset, dp->encoding);
+
+    return rb_val;
+  }
+}
+
+VALUE
 rb_objc_ptr_inspect(VALUE rb_self)
 {
   @autoreleasepool {
@@ -179,7 +211,7 @@ rb_objc_ptr_inspect(VALUE rb_self)
 }
 
 VALUE
-rb_objc_ptr_at(VALUE rb_val, int index) {
+rb_objc_ptr_at(VALUE rb_val, long index) {
   struct rb_objc_ptr *dp;
   VALUE val;
   size_t tsize;
@@ -190,7 +222,6 @@ rb_objc_ptr_at(VALUE rb_val, int index) {
 
   if (dp->allocated_size == 0) return Qnil;
   if (dp->encoding == NULL) return Qnil;
-  if (dp->tainted == NO) return Qnil;
 
   tsize = 0;
   NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
@@ -212,7 +243,7 @@ rb_objc_ptr_at(VALUE rb_val, int index) {
 }
 
 VALUE
-rb_objc_ptr_slice(VALUE rb_val, int index, int length)
+rb_objc_ptr_slice(VALUE rb_val, long index, long length)
 {
   struct rb_objc_ptr *dp;
   VALUE rb_array;
@@ -227,7 +258,6 @@ rb_objc_ptr_slice(VALUE rb_val, int index, int length)
 
   if (dp->allocated_size == 0) return Qnil;
   if (dp->encoding == NULL) return Qnil;
-  if (dp->tainted == NO) return Qnil;
 
   tsize = 0;
   NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
@@ -263,5 +293,4 @@ rb_objc_ptr_ref(VALUE rb_val, void **data)
   dp = (struct rb_objc_ptr*)DATA_PTR(rb_val);
 
   *(void**)data = &(dp->cptr);
-  dp->tainted = YES;
 }

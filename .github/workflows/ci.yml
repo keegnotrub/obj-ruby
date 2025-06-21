@@ -34,7 +34,9 @@ jobs:
       env:
         PATH: "/usr/bin:/bin"
     - name: Install dependencies
-      run: /usr/bin/bundle install
+      run: bundle install
+      env:
+        PATH: "/usr/bin:/bin"
     - name: Compile extension
       run: bundle exec rake compile
       env:

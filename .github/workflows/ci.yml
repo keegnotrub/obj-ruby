@@ -20,12 +20,33 @@ jobs:
         rubygems: default
     - name: Run rubocop
       run: bundle exec rake rubocop
+  legacy-build-and-run-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-13", "macos-14", "macos-15"]
+    runs-on: ${{ matrix.os }}
+    name: Ruby (default) / ${{ matrix.os }}
+    steps:
+    - name: Install dependencies
+      run: bundle install
+      env:
+        PATH: "/usr/bin:/bin"
+    - name: Compile extension
+      run: bundle exec rake compile
+      env:
+        PATH: "/usr/bin:/bin"
+        OBJR_BUILD_DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG }}
+    - name: Run specs
+      run: bundle exec rake spec
+      env:
+        PATH: "/usr/bin:/bin"
   build-and-run-tests:
     strategy:
       fail-fast: false
       matrix:
         os: ["macos-13", "macos-14", "macos-15"]
-        ruby-version: ["2.6.10", "3.2", "3.3", "3.4"]
+        ruby-version: ["3.2", "3.3", "3.4"]
     runs-on: ${{ matrix.os }}
     name: Ruby ${{ matrix.ruby-version }} / ${{ matrix.os }}
     steps:

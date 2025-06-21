@@ -29,15 +29,13 @@ jobs:
     name: Ruby (default) / ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
-    - name: Install devtools
-      run: sudo xcode-select --reset
-      env:
-        PATH: "/usr/bin:/bin"
     - name: Install dependencies
+      run: sudo xcode-select --reset
       run: bundle install
       env:
         PATH: "/usr/bin:/bin"
     - name: Compile extension
+      run: sudo xcode-select --reset
       run: bundle exec rake compile
       env:
         PATH: "/usr/bin:/bin"

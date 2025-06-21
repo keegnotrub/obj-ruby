@@ -21,7 +21,6 @@
 
 #import "RIGSPointer.h"
 #import "RIGSCore.h"
-#import "RIGSUtilities.h"
 
 struct rb_objc_ptr
 {

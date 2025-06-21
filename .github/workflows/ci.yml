@@ -20,12 +20,40 @@ jobs:
         rubygems: default
     - name: Run rubocop
       run: bundle exec rake rubocop
+  legacy-build-and-run-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["macos-13", "macos-14", "macos-15"]
+        include:
+          - os: macos-13
+            xcode: "14.3.1"
+          - os: macos-14
+            xcode: "15.4"
+          - os: macos-15
+            xcode: "16.4"
+    runs-on: ${{ matrix.os }}
+    name: Ruby (default) / ${{ matrix.os }}
+    env:
+      PATH: "/usr/bin:/bin"
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install devtools
+      run: sudo xcode-select --switch /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+    - name: Install dependencies
+      run: bundle install
+    - name: Compile extension
+      run: bundle exec rake compile
+      env:
+        OBJR_BUILD_DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG }}
+    - name: Run specs
+      run: bundle exec rake spec
   build-and-run-tests:
     strategy:
       fail-fast: false
       matrix:
         os: ["macos-13", "macos-14", "macos-15"]
-        ruby-version: ["2.6.10", "3.2", "3.3", "3.4"]
+        ruby-version: ["3.2", "3.3", "3.4"]
     runs-on: ${{ matrix.os }}
     name: Ruby ${{ matrix.ruby-version }} / ${{ matrix.os }}
     steps:

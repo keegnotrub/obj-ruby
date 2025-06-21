@@ -752,10 +752,10 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
 
       case _C_CHR:
         // Assume that if YES or NO then it's a BOOLean
-        if ( *(char *)where == YES) 
-          rb_val = Qtrue;
-        else if ( *(char *)where == NO)
-          rb_val = Qfalse;
+        if (__OBJC_BOOL_IS_BOOL != 1 && *(char *)where == YES) 
+          rb_val = CHR2FIX(*(char *)where);
+        else if (__OBJC_BOOL_IS_BOOL != 1 && *(char *)where == NO)
+          rb_val = CHR2FIX(*(char *)where);
         else
           rb_val = CHR2FIX(*(char *)where);
         break;
@@ -1919,6 +1919,7 @@ Init_obj_ext()
   rb_define_method(rb_cRigsPtr, "[]", rb_objc_ptr_get, -1);
   rb_define_alias(rb_cRigsPtr, "slice", "[]");
   rb_define_alias(rb_cRigsPtr, "at", "[]");
+  rb_define_method(rb_cRigsPtr, "[]=", rb_objc_ptr_store, 2);
 
   // Ruby error class for raising all Objective-C runtime exceptions
   // - rescue ObjRuby::RuntimeError: error raised from Objective-C

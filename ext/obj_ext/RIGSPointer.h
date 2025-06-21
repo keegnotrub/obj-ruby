@@ -28,10 +28,11 @@
 
 VALUE rb_objc_ptr_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);
 VALUE rb_objc_ptr_get(int rigs_argc, VALUE *rigs_argv, VALUE rb_self);
+VALUE rb_objc_ptr_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val);
 VALUE rb_objc_ptr_inspect(VALUE rb_self);
 
-VALUE rb_objc_ptr_at(VALUE rb_val, int index);
-VALUE rb_objc_ptr_slice(VALUE rb_val, int index, int length);
+VALUE rb_objc_ptr_at(VALUE rb_val, long index);
+VALUE rb_objc_ptr_slice(VALUE rb_val, long index, long length);
 
 void rb_objc_ptr_ref(VALUE rb_val, void **data);
 

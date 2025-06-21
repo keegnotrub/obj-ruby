@@ -34,8 +34,11 @@ RSpec.describe ObjRuby::Pointer do
       expect(described_class.new(:bool)[0]).to be false
     end
 
+    it "returns zero or false for a char (platform dependent)" do
+      expect(described_class.new(:char)[0]).to eq(0).or be(false)
+    end
+
     it "returns zero for numerics" do
-      expect(described_class.new(:char)[0]).to eq 0
       expect(described_class.new(:uchar)[0]).to eq 0
       expect(described_class.new(:short)[0]).to eq 0
       expect(described_class.new(:ushort)[0]).to eq 0

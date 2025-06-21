@@ -169,7 +169,7 @@ rb_objc_ptr_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
     index = FIX2INT(rb_idx);
     dp = (struct rb_objc_ptr*)DATA_PTR(rb_self);
 
-    if (dp->allocated_size == 0) rb_raise(rb_eIndexError, "index %ld is invalid for an empty array", index);
+    if (dp->allocated_size == 0) rb_raise(rb_eIndexError, "index %ld is invalid for an empty pointer", index);
 
     tsize = 0;
     NSGetSizeAndAlignment(dp->encoding, &tsize, NULL);
@@ -177,11 +177,11 @@ rb_objc_ptr_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
     ioffset = tsize * index;
 
     if (ioffset < 0) ioffset += dp->allocated_size;
-    if (ioffset < 0) rb_raise(rb_eIndexError, "index %ld too small for array", index);
+    if (ioffset < 0) rb_raise(rb_eIndexError, "index %ld too small for pointer", index);
 
     offset = (size_t)ioffset;
 
-    if (offset + tsize > dp->allocated_size) rb_raise(rb_eIndexError, "index %ld too big for array", index);
+    if (offset + tsize > dp->allocated_size) rb_raise(rb_eIndexError, "index %ld too big for pointer", index);
 
     rb_objc_convert_to_objc(rb_val, &(dp->cptr), offset, dp->encoding);
 

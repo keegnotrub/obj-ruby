@@ -30,7 +30,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install devtools
-      run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      run: sudo xcode-select --reset
       env:
         PATH: "/usr/bin:/bin"
     - name: Install dependencies

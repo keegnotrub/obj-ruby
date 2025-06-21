@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["macos-14", "macos-15"]
+        os: ["macos-13", "macos-14", "macos-15"]
     runs-on: ${{ matrix.os }}
     name: Ruby (default) / ${{ matrix.os }}
     env:
@@ -32,7 +32,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install devtools
-      run: sudo xcode-select --reset
+      run: sudo xcode-select --switch /Library/Developer/CommandLineTools
     - name: Install dependencies
       run: bundle install
     - name: Compile extension

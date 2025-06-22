@@ -72,7 +72,23 @@ static VALUE rb_eRigsRuntimeError = Qnil;
 // Rigs Ruby Ptr class
 static VALUE rb_cRigsPtr = Qnil;
 
+// Ruby Set class (no C API)
 static VALUE rb_cSet = Qnil;
+
+// https://clang.llvm.org/docs/Block-ABI-Apple.html
+struct rb_objc_block_descriptor
+{
+  unsigned long reserved;
+  unsigned long size;
+  const char *signature; 
+};
+struct rb_objc_block {
+  void *isa;
+  int flags;
+  int reserved;
+  void *invoke;
+  struct rb_objc_block_descriptor *descriptor;
+};
 
 void
 rb_objc_release(id objc_object) 

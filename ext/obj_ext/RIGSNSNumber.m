@@ -28,7 +28,6 @@ rb_objc_number_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_num;
     VALUE rb_num;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_num);
@@ -39,7 +38,7 @@ rb_objc_number_convert(VALUE rb_module, VALUE rb_val)
 
     objc_num = rb_objc_number_from_rb(rb_val);
 
-    rb_objc_convert_to_rb((void *)&objc_num, 0, idType, &rb_num);
+    rb_objc_convert_to_rb((void *)&objc_num, 0, @encode(id), &rb_num);
 
     return rb_num;
   }  

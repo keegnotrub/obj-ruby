@@ -24,7 +24,6 @@
 
 #import <Foundation/Foundation.h>
 #include <ruby.h>
-#include <objc/runtime.h>
 
 VALUE rb_objc_number_convert(VALUE rb_module, VALUE rb_val);
 VALUE rb_objc_number_compare(VALUE rb_self, VALUE rb_val);

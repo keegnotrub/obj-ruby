@@ -28,13 +28,12 @@ rb_objc_set_i_convert(RB_BLOCK_CALL_FUNC_ARGLIST(i, memo))
   NSMutableSet *set;
   id elt;
   void *data;
-  const char idType[] = {_C_ID,'\0'};
 
   set = (NSMutableSet *)memo;
   data = alloca(sizeof(id));
   data = &elt;
 
-  rb_objc_convert_to_objc(i, &data, 0, idType);
+  rb_objc_convert_to_objc(i, &data, 0, @encode(id));
   [set addObject:elt];
 
   return Qnil;
@@ -46,7 +45,6 @@ rb_objc_set_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_set;
     VALUE rb_set;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_set);
@@ -57,7 +55,7 @@ rb_objc_set_convert(VALUE rb_module, VALUE rb_val)
 
     objc_set = rb_objc_set_from_rb(rb_val, Qtrue);
 
-    rb_objc_convert_to_rb((void *)&objc_set, 0, idType, &rb_set);
+    rb_objc_convert_to_rb((void *)&objc_set, 0, @encode(id), &rb_set);
 
     return rb_set;
   }
@@ -69,7 +67,6 @@ rb_objc_set_m_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     NSSet *objc_set;
     VALUE rb_set;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_set);
@@ -80,7 +77,7 @@ rb_objc_set_m_convert(VALUE rb_module, VALUE rb_val)
 
     objc_set = rb_objc_set_from_rb(rb_val, Qfalse);
 
-    rb_objc_convert_to_rb((void *)&objc_set, 0, idType, &rb_set);
+    rb_objc_convert_to_rb((void *)&objc_set, 0, @encode(id), &rb_set);
 
     return rb_set;
   }

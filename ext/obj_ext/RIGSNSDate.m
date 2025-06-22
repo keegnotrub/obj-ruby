@@ -28,7 +28,6 @@ rb_objc_date_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_date;
     VALUE rb_date;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_date);
@@ -39,7 +38,7 @@ rb_objc_date_convert(VALUE rb_module, VALUE rb_val)
     
     objc_date = rb_objc_date_from_rb(rb_val);
 
-    rb_objc_convert_to_rb((void *)&objc_date, 0, idType, &rb_date);
+    rb_objc_convert_to_rb((void *)&objc_date, 0, @encode(id), &rb_date);
 
     return rb_date;
   }  

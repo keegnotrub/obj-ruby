@@ -27,12 +27,11 @@ rb_objc_array_i_convert(VALUE i, NSMutableArray *ary)
 {
   id elt;
   void *data;
-  const char idType[] = {_C_ID,'\0'};
 
   data = alloca(sizeof(id));
   data = &elt;
 
-  rb_objc_convert_to_objc(i, &data, 0, idType);
+  rb_objc_convert_to_objc(i, &data, 0, @encode(id));
   [ary addObject:elt];
 
   return ST_CONTINUE;
@@ -54,7 +53,6 @@ rb_objc_array_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_ary;
     VALUE rb_ary;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_ary);
@@ -65,7 +63,7 @@ rb_objc_array_convert(VALUE rb_module, VALUE rb_val)
 
     objc_ary = rb_objc_array_from_rb(rb_val, Qtrue);
 
-    rb_objc_convert_to_rb((void *)&objc_ary, 0, idType, &rb_ary);
+    rb_objc_convert_to_rb((void *)&objc_ary, 0, @encode(id), &rb_ary);
 
     return rb_ary;
   }
@@ -77,7 +75,6 @@ rb_objc_array_m_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_ary;
     VALUE rb_ary;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_ary);
@@ -88,7 +85,7 @@ rb_objc_array_m_convert(VALUE rb_module, VALUE rb_val)
     
     objc_ary = rb_objc_array_from_rb(rb_val, Qfalse);
 
-    rb_objc_convert_to_rb((void *)&objc_ary, 0, idType, &rb_ary);
+    rb_objc_convert_to_rb((void *)&objc_ary, 0, @encode(id), &rb_ary);
 
     return rb_ary;
   }
@@ -100,14 +97,13 @@ rb_objc_array_each(VALUE rb_self)
   @autoreleasepool {
     id rcv;
     VALUE rb_elt;
-    const char idType[] = {_C_ID,'\0'};
 
     Data_Get_Struct(rb_self, void, rcv);
 
     RETURN_SIZED_ENUMERATOR(rb_self, 0, 0, rb_objc_array_enum_size);
 
     for (id objc_elt in rcv) {
-      rb_objc_convert_to_rb((void *)&objc_elt, 0, idType, &rb_elt);
+      rb_objc_convert_to_rb((void *)&objc_elt, 0, @encode(id), &rb_elt);
       rb_yield(rb_elt);
     }
 
@@ -122,7 +118,6 @@ rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
     id rcv;
     id val;
     void *data;
-    const char idType[] = {_C_ID,'\0'};
 
     Check_Type(rb_idx, T_FIXNUM);
     
@@ -130,7 +125,7 @@ rb_objc_array_store(VALUE rb_self, VALUE rb_idx, VALUE rb_val)
 
     data = alloca(sizeof(id));
     data = &val;
-    rb_objc_convert_to_objc(rb_val, &data, 0, idType);
+    rb_objc_convert_to_objc(rb_val, &data, 0, @encode(id));
 
     [rcv setObject:val atIndexedSubscript:rb_fix2long(rb_idx)];
            

@@ -24,7 +24,6 @@
 
 #import <Foundation/Foundation.h>
 #include <ruby.h>
-#include <objc/runtime.h>
 
 VALUE rb_objc_dictionary_convert(VALUE rb_module, VALUE rb_val);
 VALUE rb_objc_dictionary_m_convert(VALUE rb_module, VALUE rb_val);

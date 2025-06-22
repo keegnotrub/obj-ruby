@@ -28,7 +28,6 @@ rb_objc_string_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_str;
     VALUE rb_str;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_str);
@@ -39,7 +38,7 @@ rb_objc_string_convert(VALUE rb_module, VALUE rb_val)
 
     objc_str = rb_objc_string_from_rb(rb_val, Qtrue);
     
-    rb_objc_convert_to_rb((void *)&objc_str, 0, idType, &rb_str);
+    rb_objc_convert_to_rb((void *)&objc_str, 0, @encode(id), &rb_str);
 
     return rb_str;
   }  
@@ -51,7 +50,6 @@ rb_objc_string_m_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_str;
     VALUE rb_str;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_str);
@@ -62,7 +60,7 @@ rb_objc_string_m_convert(VALUE rb_module, VALUE rb_val)
 
     objc_str = rb_objc_string_from_rb(rb_val, Qfalse);
 
-    rb_objc_convert_to_rb((void *)&objc_str, 0, idType, &rb_str);
+    rb_objc_convert_to_rb((void *)&objc_str, 0, @encode(id), &rb_str);
 
     return rb_str;
   }  

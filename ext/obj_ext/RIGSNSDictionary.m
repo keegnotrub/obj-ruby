@@ -29,16 +29,15 @@ rb_objc_dictionary_i_convert(VALUE k, VALUE v, VALUE memo)
   id key;
   id val;
   void *data;
-  const char idType[] = {_C_ID,'\0'};
 
   dict = (NSMutableDictionary *)memo;
 
   data = alloca(sizeof(id));
 
   data = &key;
-  rb_objc_convert_to_objc(k, &data, 0, idType);
+  rb_objc_convert_to_objc(k, &data, 0, @encode(id));
   data = &val;
-  rb_objc_convert_to_objc(v, &data, 0, idType);
+  rb_objc_convert_to_objc(v, &data, 0, @encode(id));
 
   dict[key] = val;
     
@@ -61,7 +60,6 @@ rb_objc_dictionary_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_dict;
     VALUE rb_dict;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_dict);
@@ -72,7 +70,7 @@ rb_objc_dictionary_convert(VALUE rb_module, VALUE rb_val)
 
     objc_dict = rb_objc_dictionary_from_rb(rb_val, Qtrue);
 
-    rb_objc_convert_to_rb((void *)&objc_dict, 0, idType, &rb_dict);
+    rb_objc_convert_to_rb((void *)&objc_dict, 0, @encode(id), &rb_dict);
 
     return rb_dict;
   }  
@@ -84,7 +82,6 @@ rb_objc_dictionary_m_convert(VALUE rb_module, VALUE rb_val)
   @autoreleasepool {
     id objc_dict;
     VALUE rb_dict;
-    const char idType[] = {_C_ID,'\0'};
 
     if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
       Data_Get_Struct(rb_val, void, objc_dict);
@@ -95,7 +92,7 @@ rb_objc_dictionary_m_convert(VALUE rb_module, VALUE rb_val)
 
     objc_dict = rb_objc_dictionary_from_rb(rb_val, Qfalse);
 
-    rb_objc_convert_to_rb((void *)&objc_dict, 0, idType, &rb_dict);
+    rb_objc_convert_to_rb((void *)&objc_dict, 0, @encode(id), &rb_dict);
 
     return rb_dict;
   }  
@@ -107,14 +104,13 @@ rb_objc_dictionary_each_key(VALUE rb_self)
   @autoreleasepool {
     id rcv;
     VALUE rb_key;
-    const char idType[] = {_C_ID,'\0'};
 
     Data_Get_Struct(rb_self, void, rcv);
 
     RETURN_SIZED_ENUMERATOR(rb_self, 0, 0, rb_objc_dictionary_enum_size);
 
     for (id objc_key in rcv) {
-      rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key);
+      rb_objc_convert_to_rb((void *)&objc_key, 0, @encode(id), &rb_key);
       rb_yield(rb_key);
     }
 
@@ -129,7 +125,6 @@ rb_objc_dictionary_each_value(VALUE rb_self)
     id rcv;
     id objc_val;
     VALUE rb_val;
-    const char idType[] = {_C_ID,'\0'};
 
     Data_Get_Struct(rb_self, void, rcv);
 
@@ -137,7 +132,7 @@ rb_objc_dictionary_each_value(VALUE rb_self)
 
     for (id objc_key in rcv) {
       objc_val = rcv[objc_key];
-      rb_objc_convert_to_rb((void *)&objc_val, 0, idType, &rb_val);
+      rb_objc_convert_to_rb((void *)&objc_val, 0, @encode(id), &rb_val);
       rb_yield(rb_val);
     }
 
@@ -152,7 +147,6 @@ VALUE rb_objc_dictionary_each_pair(VALUE rb_self)
     id objc_val;
     VALUE rb_key;
     VALUE rb_val;
-    const char idType[] = {_C_ID,'\0'};
 
     Data_Get_Struct(rb_self, void, rcv);
 
@@ -160,8 +154,8 @@ VALUE rb_objc_dictionary_each_pair(VALUE rb_self)
 
     for (id objc_key in rcv) {
       objc_val = rcv[objc_key];
-      rb_objc_convert_to_rb((void *)&objc_key, 0, idType, &rb_key);
-      rb_objc_convert_to_rb((void *)&objc_val, 0, idType, &rb_val);
+      rb_objc_convert_to_rb((void *)&objc_key, 0, @encode(id), &rb_key);
+      rb_objc_convert_to_rb((void *)&objc_val, 0, @encode(id), &rb_val);
       rb_yield_values(2, rb_key, rb_val);
     }
 
@@ -177,17 +171,16 @@ rb_objc_dictionary_store(VALUE rb_self, VALUE rb_key, VALUE rb_val)
     id key;
     id val;
     void *data;
-    const char idType[] = {_C_ID,'\0'};
 
     Data_Get_Struct(rb_self, void, rcv);
 
     data = alloca(sizeof(id));
 
     data = &key;
-    rb_objc_convert_to_objc(rb_key, &data, 0, idType);
+    rb_objc_convert_to_objc(rb_key, &data, 0, @encode(id));
 
     data = &val;
-    rb_objc_convert_to_objc(rb_val, &data, 0, idType);
+    rb_objc_convert_to_objc(rb_val, &data, 0, @encode(id));
 
     [rcv setObject:val forKeyedSubscript:key];
 

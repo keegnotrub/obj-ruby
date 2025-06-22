@@ -319,7 +319,6 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
     switch (*type) {
       
     case _C_ID:
-    case _C_CLASS:
 
       switch (TYPE(rb_val))
         {
@@ -341,10 +340,6 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
 
         case T_STRING:
           *(id*)where = rb_objc_string_from_rb(rb_val, RB_OBJ_FROZEN(rb_val));
-          break;
-
-        case T_CLASS:
-          *(Class*)where = (Class)NUM2LL(rb_iv_get(rb_val, "@objc_class"));
           break;
 
         case T_OBJECT:
@@ -379,6 +374,13 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
         }
       break;
 
+    case _C_CLASS:
+      if (TYPE(rb_val) == T_CLASS)
+        *(Class*)where = (Class)NUM2LL(rb_iv_get(rb_val, "@objc_class"));
+      else
+        ret = NO;
+      break;
+      
     case _C_SEL:
       if (TYPE(rb_val) == T_STRING) {
         *(SEL*)where = sel_getUid(rb_string_value_cstr(&rb_val));
@@ -400,138 +402,56 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
       break;
 
     case _C_CHR:
-      if ((TYPE(rb_val) == T_FIXNUM) || (TYPE(rb_val) == T_STRING)) 
-        *(char*)where = (char) NUM2CHR(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
+      if (__OBJC_BOOL_IS_BOOL != 1 && TYPE(rb_val) == T_TRUE)
         *(char*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
+      else if (__OBJC_BOOL_IS_BOOL != 1 && TYPE(rb_val) == T_FALSE)
         *(char*)where = NO;
       else
-        ret = NO;
+        *(char*)where = (char) NUM2CHR(rb_val);
       break;
 
     case _C_UCHR:
-      if ( ((TYPE(rb_val) == T_FIXNUM) && FIX2INT(rb_val)>=0) ||
-           (TYPE(rb_val) == T_STRING)) 
-        *(unsigned char*)where = (unsigned char) NUM2CHR(rb_val);
-      else
-        ret = NO;
+      *(unsigned char*)where = (unsigned char) NUM2CHR(rb_val);
       break;
 
     case _C_SHT:
-      if (TYPE(rb_val) == T_FIXNUM) 
-        if (FIX2INT(rb_val) <= SHRT_MAX || FIX2INT(rb_val) >= SHRT_MIN) 
-          *(short*)where = (short) FIX2INT(rb_val);
-        else {
-          NSLog(@"*** Short overflow %d",FIX2INT(rb_val));
-          ret = NO;
-        }        
-      else
-        ret = NO;
+      *(short*)where = (short) NUM2SHORT(rb_val);
       break;
 
     case _C_USHT:
-      if (TYPE(rb_val) == T_FIXNUM) 
-        if (FIX2INT(rb_val) <= USHRT_MAX || FIX2INT(rb_val) >=0)
-          *(unsigned short*)where = (unsigned short) FIX2INT(rb_val);
-        else {
-          NSLog(@"*** Unsigned Short overflow %d",FIX2INT(rb_val));
-          ret = NO;
-        } else {
-        ret = NO;
-      }
+      *(unsigned short*)where = (unsigned short) NUM2USHORT(rb_val);
       break;
 
     case _C_INT:
-      if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
-        *(int*)where = (int) NUM2INT(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
-        *(int*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
-        *(int*)where = NO;
-      else
-        ret = NO;	  
+      *(int*)where = (int) NUM2INT(rb_val);
       break;
 
     case _C_UINT:
-      if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM)
-        *(unsigned int*)where = (unsigned int) NUM2UINT(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
-        *(unsigned int*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
-        *(unsigned int*)where = NO;
-      else
-        ret = NO;
+      *(unsigned int*)where = (unsigned int) NUM2UINT(rb_val);
       break;
 
     case _C_LNG:
-      if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
-        *(long*)where = (long) NUM2LONG(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
-        *(long*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
-        *(long*)where = NO;
-      else
-        ret = NO;	  	
+      *(long*)where = (long) NUM2LONG(rb_val);
       break;
 
     case _C_ULNG:
-      if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
-        *(unsigned long*)where = (unsigned long) NUM2ULONG(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
-        *(unsigned long*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
-        *(unsigned long*)where = NO;
-      else
-        ret = NO;	  	
+      *(unsigned long*)where = (unsigned long) NUM2ULONG(rb_val);
       break;
 
     case _C_LNG_LNG:
-      if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )
-        *(long long*)where = (long long) NUM2LL(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
-        *(long long*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
-        *(long long*)where = NO;
-      else
-        ret = NO;	  	
+      *(long long*)where = (long long) NUM2LL(rb_val);
       break;
 
     case _C_ULNG_LNG:
-      if (TYPE(rb_val) == T_FIXNUM || TYPE(rb_val) == T_BIGNUM )              
-        *(unsigned long long*)where = (unsigned long long) NUM2ULL(rb_val);
-      else if (TYPE(rb_val) == T_TRUE)
-        *(unsigned long long*)where = YES;
-      else if (TYPE(rb_val) == T_FALSE)
-        *(unsigned long long*)where = NO;
-      else
-        ret = NO;	  	
+      *(unsigned long long*)where = (unsigned long long) NUM2ULL(rb_val);
       break;
 
     case _C_FLT:
-      if ( (TYPE(rb_val) == T_FLOAT) || 
-           (TYPE(rb_val) == T_FIXNUM) ||
-           (TYPE(rb_val) == T_BIGNUM) ) {
-
-        // FIXME: possible overflow but don't know (yet) how to check it ??
-        *(float*)where = (float) NUM2DBL(rb_val);
-        NSDebugLog(@"Converting ruby value to float: %f", *(float*)where);
-      }
-      else
-        ret = NO;	  	
+      *(float*)where = (float) NUM2DBL(rb_val);
       break;
 
     case _C_DBL:
-      if ( (TYPE(rb_val) == T_FLOAT) || 
-           (TYPE(rb_val) == T_FIXNUM) ||
-           (TYPE(rb_val) == T_BIGNUM) ) {
-        
-        // FIXME: possible overflow but don't know (yet) how to check it ??
-        *(double*)where = (double) NUM2DBL(rb_val);
-        NSDebugLog(@"Converting ruby value to double: %lf", *(double*)where);
-      }
-      else
-        ret = NO;	  	
+      *(double*)where = (double) NUM2DBL(rb_val);
       break;
 
     case _C_CHARPTR:
@@ -545,10 +465,6 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
         l = strlen(s)+1;
         d = [NSMutableData dataWithBytesNoCopy:s length:l freeWhenDone:NO];
         *(char**)where = (char*)[d mutableBytes];
-      } else if (TYPE(rb_val) == T_DATA) {
-        // I guess this is the right thing to do. Pass the
-        // embedded ObjC as a blob
-        Data_Get_Struct(rb_val, char, *(char**)where);
       } else {
         ret = NO;
       }
@@ -757,7 +673,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
         else if (__OBJC_BOOL_IS_BOOL != 1 && *(char *)where == NO)
           rb_val = Qfalse;
         else
-          rb_val = CHR2FIX(*(char *)where);
+          rb_val = CHR2FIX((unsigned char) (*(char *)where));
         break;
 
       case _C_UCHR:

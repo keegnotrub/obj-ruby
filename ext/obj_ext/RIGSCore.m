@@ -1668,54 +1668,50 @@ rb_objc_register_instance_method_from_rb(VALUE rb_class, VALUE rb_method)
 VALUE
 rb_objc_register_class_from_rb(VALUE rb_class)
 {
-  @autoreleasepool {
-    VALUE rb_super_class;
-    VALUE rb_class_iv;
-    Class superClass;
-    Class class;
-    const char *rb_class_name;
+  VALUE rb_super_class;
+  VALUE rb_class_iv;
+  Class superClass;
+  Class class;
+  const char *rb_class_name;
 
-    Check_Type(rb_class, T_CLASS);
+  // FIXME: we probably need to strip "::" from modules
+  rb_class_name = rb_class2name(rb_class);
 
-    // FIXME: we probably need to strip "::" from modules
-    rb_class_name = rb_class2name(rb_class);
-
-    // If this class has already been registered with ObjC then
-    // do nothing
-    if (rb_iv_get(rb_class, "@objc_class") != Qnil) {
-      NSDebugLog(@"Class already registered with ObjC: %s", rb_class_name);
-      return Qfalse;
-    }
-
-    NSDebugLog(@"Registering Ruby class %s with the Objective-C runtime", rb_class_name);
-
-    rb_super_class = rb_class_superclass(rb_class);
-    rb_class_iv = rb_iv_get(rb_super_class, "@objc_class");
-    if (rb_class_iv == Qnil) {
-      rb_raise(rb_eTypeError, "superclass of %s was not yet registered with the Objective-C runtime", rb_class_name);
-    }
-    superClass = (Class)NUM2LL(rb_class_iv);
-    
-    class = objc_allocateClassPair(superClass, rb_class_name, 0);
-    if (class == nil) {
-      rb_raise(rb_eTypeError, "could not allocate class pair with ObjC: %s", rb_class_name);
-    }
-
-    objc_registerClassPair(class);
-
-    //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
-    rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)class));
-
-    // Remember that this class is defined in Ruby
-    NSMapInsertKnownAbsent(knownClasses, (void*)class, (void*)rb_class);
-
-    // Redefine the new method to point to our special rb_objc_new function
-    rb_undef_alloc_func(rb_class);
-    rb_undef_method(CLASS_OF(rb_class),"new");
-    rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
-
-    return Qtrue;
+  // If this class has already been registered with ObjC then
+  // do nothing
+  if (rb_iv_get(rb_class, "@objc_class") != Qnil) {
+    NSDebugLog(@"Class already registered with ObjC: %s", rb_class_name);
+    return Qfalse;
   }
+
+  NSDebugLog(@"Registering Ruby class %s with the Objective-C runtime", rb_class_name);
+
+  rb_super_class = rb_class_superclass(rb_class);
+  rb_class_iv = rb_iv_get(rb_super_class, "@objc_class");
+  if (rb_class_iv == Qnil) {
+    rb_raise(rb_eTypeError, "superclass of %s was not yet registered with the Objective-C runtime", rb_class_name);
+  }
+  superClass = (Class)NUM2LL(rb_class_iv);
+    
+  class = objc_allocateClassPair(superClass, rb_class_name, 0);
+  if (class == nil) {
+    rb_raise(rb_eTypeError, "could not allocate class pair with ObjC: %s", rb_class_name);
+  }
+
+  objc_registerClassPair(class);
+
+  //Store the ObjcC Class id in the @@objc_class Ruby Class Variable
+  rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)class));
+
+  // Remember that this class is defined in Ruby
+  NSMapInsertKnownAbsent(knownClasses, (void*)class, (void*)rb_class);
+
+  // Redefine the new method to point to our special rb_objc_new function
+  rb_undef_alloc_func(rb_class);
+  rb_undef_method(CLASS_OF(rb_class),"new");
+  rb_define_singleton_method(rb_class, "new", rb_objc_new, -1);
+
+  return Qtrue;
 }
 
 BOOL
@@ -1768,6 +1764,8 @@ rb_objc_import(VALUE rb_self, VALUE rb_name)
     char *framework;
     unsigned long hash;
     VALUE rb_support;
+
+    Check_Type(rb_name, T_STRING);
 
     framework = rb_string_value_cstr(&rb_name);
     hash = rb_objc_hash(framework);

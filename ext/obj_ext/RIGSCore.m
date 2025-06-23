@@ -284,7 +284,7 @@ rb_objc_types_for_selector(SEL sel, size_t nbArgs) {
 }
 
 static BOOL
-rb_objc_convert_object_to_ruby(void *where, VALUE *rb_val_ptr)
+rb_objc_convert_object_to_rb(void *where, VALUE *rb_val_ptr)
 {
   id val;
   Class retClass;
@@ -646,7 +646,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
     switch (*type)
       {
       case _C_ID:
-        ret = rb_objc_convert_object_to_ruby(where, &rb_val);
+        ret = rb_objc_convert_object_to_rb(where, &rb_val);
         break;
 
       case _C_CHARPTR: 
@@ -659,7 +659,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       case _C_PTR:
         // Assume toll-free bridge if pointer to struct
         if (strncmp(type, "^{", 2) == 0)
-          ret = rb_objc_convert_object_to_ruby(where, &rb_val);
+          ret = rb_objc_convert_object_to_rb(where, &rb_val);
         else
           rb_val = LL2NUM((long long) where);
         break;
@@ -907,7 +907,7 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
     const char *type;
     void *data;
 
-    rb_objc_convert_object_to_ruby(args[0], &rubyObject);
+    rb_objc_convert_object_to_rb(args[0], &rubyObject);
 
     sel = *(SEL*)args[1];
     signature = [NSMethodSignature signatureWithObjCTypes:(const char*)user_data];

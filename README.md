@@ -81,7 +81,39 @@ app.activateIgnoringOtherApps(true)
 
 alert = ObjRuby::NSAlert.new
 alert.messageText = "Hello world!"
+
 alert.runModal
+```
+
+Subclasses of `ObjRuby::NSObject` can also be used for delegates such as NSApplicationDelegate.
+
+``` ruby
+require "obj_ruby"
+require "obj_ruby/app_kit"
+
+# NSApplicationDelegate
+class AppDelegate < ObjRuby::NSObject
+  def applicationShouldTerminateAfterLastWindowClosed(_)
+    true
+  end
+end
+
+app = ObjRuby::NSApplication.sharedApplication
+app.activationPolicy = ObjRuby::NSApplicationActivationPolicyRegular
+app.delegate = AppDelegate.new
+
+window = ObjRuby::NSWindow.alloc.initWithContentRect_styleMask_backing_defer(
+  ObjRuby::NSMakeRect(0, 0, 300, 200),
+  ObjRuby::NSTitledWindowMask | ObjRuby::NSWindowStyleMaskClosable,
+  ObjRuby::NSBackingStoreBuffered,
+  false
+)
+window.cascadeTopLeftFromPoint(ObjRuby::NSMakePoint(20, 20))
+window.title = "Hello, from ObjRuby!"
+window.makeKeyAndOrderFront(nil)
+
+app.activateIgnoringOtherApps(true)
+app.run
 ```
 
 For more examples, see this projects [spec](https://github.com/keegnotrub/obj-ruby/tree/main/spec) folder.

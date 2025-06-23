@@ -35,4 +35,6 @@ VALUE rb_objc_object_is_instance_of(VALUE rb_self, VALUE rb_class);
 VALUE rb_objc_object_inherited(VALUE rb_class, VALUE rb_subclass);
 VALUE rb_objc_object_method_added(VALUE rb_class, VALUE rb_method);
 
+BOOL rb_objc_object_isa(void *where);
+
 #endif

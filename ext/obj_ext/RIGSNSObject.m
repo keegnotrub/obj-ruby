@@ -22,6 +22,12 @@
 #import "RIGSNSObject.h"
 #import "RIGSCore.h"
 
+#if __arm64__
+#define TAG_MASK (1UL<<63)
+#else
+#define TAG_MASK 1UL
+#endif
+
 VALUE
 rb_objc_object_compare(VALUE rb_self, VALUE rb_val)
 {
@@ -209,4 +215,25 @@ rb_objc_object_method_added(VALUE rb_class, VALUE rb_method)
   
     return rb_objc_register_instance_method_from_rb(rb_class, rb_method);
   }
+}
+
+BOOL
+rb_objc_object_isa(void *where)
+{
+  // Tagged pointers fast check
+  if (((intptr_t)where & TAG_MASK) == TAG_MASK) {
+    return YES;
+  }
+
+  // Pointer needs to be aligned to the uintptr_t size
+  if (((uintptr_t)where % sizeof(uintptr_t)) != 0) {
+    return NO;
+  }
+
+  // Pointer with bits 47 thru 63 high is not a valid isa
+  if(((uintptr_t)where & 0xFFFF800000000000) != 0) {
+    return NO;
+  }
+
+  return YES;
 }

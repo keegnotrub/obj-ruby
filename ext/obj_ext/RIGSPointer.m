@@ -148,7 +148,7 @@ rb_objc_ptr_get(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
       Check_Type(length, T_FIXNUM);
       return rb_objc_ptr_slice(rb_self, FIX2INT(index), FIX2INT(length));
     default:
-      rb_raise(rb_eArgError, "wrong number of arguments");
+      rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..2)", rigs_argc);
     }
   }
 }

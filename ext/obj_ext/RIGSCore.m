@@ -283,7 +283,57 @@ rb_objc_types_for_selector(SEL sel, size_t nbArgs) {
   return objcTypes;
 }
 
-BOOL
+static BOOL
+rb_objc_convert_object_to_rb(void *where, VALUE *rb_val_ptr)
+{
+  id val;
+  Class retClass;
+  VALUE rb_val;
+  VALUE rb_class;
+  BOOL ret;
+
+  val = *(id*)where;
+  ret = YES;
+
+  if (val == nil) {
+    rb_val = Qnil;                  
+  } else if ( (rb_val = (VALUE) NSMapGet(knownObjects, (void*)val)) )  {
+    /* noop */
+  } else if ( rb_objc_object_isa((void*)val) ) {
+    /* Retain the value otherwise ObjC releases it and Ruby crashes
+       It's Ruby garbage collector job to indirectly release the ObjC 
+       object by calling rb_objc_release() */
+    if ([val respondsToSelector: @selector(retain)]) {
+      [val retain];
+    }
+
+    retClass = [val classForCoder];
+    if (retClass != [val class] && strncmp(object_getClassName(val), "NSConcrete", 10) == 0) {
+      // [NSAttributedString alloc] returns NSConcreteAttributedString
+      // which is where initWithString is defined so we need it defined in Ruby
+      retClass = [val class];
+    }
+
+    rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
+
+    // if the class of the returned object is unknown to Ruby
+    // then register the new class with Ruby first
+    if (rb_class == Qfalse) {
+      rb_class = rb_objc_register_class_from_objc(retClass);
+    }
+    rb_val = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
+    NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rb_val);
+  } else {
+    rb_val = Qnil;
+    ret = NO;
+  }
+
+  *rb_val_ptr = rb_val;
+  
+  return ret;
+}
+
+void
 rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *type)
 {
   BOOL ret = YES;
@@ -295,14 +345,14 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
   //  on the ObjC type.
   if(NIL_P(rb_thing)) {
     **(id**)data = (id)nil;
-    return YES;
+    return;
   } 
     
   if (*type == _C_STRUCT_B) {
     inStruct = YES;
     while (*type != _C_STRUCT_E && *type++ != '=');
     if (*type == _C_STRUCT_E) {
-      return YES;
+      return;
     }
   }
 
@@ -516,11 +566,7 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
       {
         // We are attacking a new embedded structure in a structure
         if (TYPE(rb_val) == T_STRUCT) {
-          if ( rb_objc_convert_to_objc(rb_val, &where, 0, type) == NO) {     
-            // if something went wrong in the conversion just return Qnil
-            rb_val = Qnil;
-            ret = NO;
-          }
+          rb_objc_convert_to_objc(rb_val, &where, 0, type);
         } else {
           ret = NO;
         }
@@ -532,20 +578,20 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
       break; 
     }
 
-    // skip the component we have just processed
-    type = objc_skip_typespec(type);
+    if (inStruct) {
+      // skip the component we have just processed
+      type = objc_skip_typespec(type);
+    }
 
   } while (inStruct && *type != _C_STRUCT_E);
   
   if (ret == NO) {
     /* raise exception - Don't know how to handle this type of argument */
-    rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into Objective-C", rb_thing);
+    rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into Objective-C %s encoding", rb_thing, type);
   }
-
-  return ret;  
 }
 
-BOOL
+void
 rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val_ptr)
 {
   BOOL ret = YES;
@@ -565,10 +611,8 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       inStructHash = ((inStructHash << HASH_BITSHIFT) + inStructHash) + (*type);
     }
     if (*type == _C_STRUCT_E) {
-      // this is an empty structure !! Illegal... and we don't know
-      // what to return
       *rb_val_ptr = Qundef;
-      return NO;
+      return;
     }
   }
 
@@ -593,84 +637,23 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
 
     switch (*type)
       {
-      case _C_ID: {
-        id val = *(id*)where;
-        if (val == nil) {
-          rb_val = Qnil;                  
-        } else if ( (rb_val = (VALUE) NSMapGet(knownObjects,(void *)val)) )  {
-          NSDebugLog(@"ObjC object already wrapped in an existing Ruby value (%p)", (void*)rb_val);
-        } else {
-
-          /* Retain the value otherwise ObjC releases it and Ruby crashes
-             It's Ruby garbage collector job to indirectly release the ObjC 
-             object by calling rb_objc_release() */
-          if ([val respondsToSelector: @selector(retain)]) {
-            [val retain];
-          }
-
-          Class retClass = [val classForCoder];
-          if (retClass != [val class] && strncmp(object_getClassName(val), "NSConcrete", 10) == 0) {
-            // [NSAttributedString alloc] returns NSConcreteAttributedString
-            // which is where initWithString is defined so we need it defined in Ruby
-            retClass = [val class];
-          }
-
-          NSDebugLog(@"Class of arg transmitted to Ruby = %@", NSStringFromClass(retClass));
-
-          rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
-
-          // if the class of the returned object is unknown to Ruby
-          // then register the new class with Ruby first
-          if (rb_class == Qfalse) {
-            rb_class = rb_objc_register_class_from_objc(retClass);
-          }
-          rb_val = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
-          NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rb_val);
-        }
-      }
+      case _C_ID:
+        ret = rb_objc_convert_object_to_rb(where, &rb_val);
         break;
 
       case _C_CHARPTR: 
-        {
-          // Convert char * to ruby String
-          char *val = *(char **)where;
-          if (val)
-            rb_val = rb_str_new_cstr(val);
-          else 
-            rb_val = Qnil;
-        }
+        if (*(char **)where == NULL)
+          rb_val = Qnil;
+        else 
+          rb_val = rb_str_new_cstr(*(char **)where);
         break;
 
       case _C_PTR:
-        {
-          if (strncmp(type, "^{", 2) == 0) {
-            // Assume toll-free bridge
-              
-            id val = *(id*)where;
-            if ([val respondsToSelector: @selector(retain)]) {
-              [val retain];
-            }
-
-            Class retClass = [val classForCoder];
-                  
-            NSDebugLog(@"Class of arg transmitted to Ruby = %@", NSStringFromClass(retClass));
-
-            rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
-                  
-            // if the class of the returned object is unknown to Ruby
-            // then register the new class with Ruby first
-            if (rb_class == Qfalse) {
-              rb_class = rb_objc_register_class_from_objc(retClass);
-            }
-            rb_val = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
-            NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rb_val);
-          }
-          else {
-            // TODO: return pointers as ObjRuby::Pointer
-            // for now a pointer is returned as its integer value
-            rb_val = LL2NUM((long long) where);
-          }
-        }
+        // Assume toll-free bridge if pointer to struct
+        if (strncmp(type, "^{", 2) == 0)
+          ret = rb_objc_convert_object_to_rb(where, &rb_val);
+        else
+          rb_val = LL2NUM((long long) where);
         break;
 
       case _C_BOOL:
@@ -744,7 +727,6 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
             rb_val = Qnil;
           }
           else {
-            NSDebugLog(@"ObjC Class = %@", NSStringFromClass([val classForCoder]));
             rb_class = (VALUE) NSMapGet(knownClasses, (void *)val);
 
             // if the Class is unknown to Ruby then register it 
@@ -758,32 +740,15 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
         break;
           
       case _C_SEL: 
-        {
-          SEL val = *(SEL*)where;
-            
-          NSDebugLog(@"ObjC Selector = %s", sel_getName(val));
-
-          rb_val = rb_str_new_cstr(sel_getName(val));
-        }
+        rb_val = rb_str_new_cstr(sel_getName(*(SEL*)where));
         break;
 
       case _C_STRUCT_B: 
-        {
-
-          // We are attacking a new embedded structure in a structure
-            
-          
-          if ( rb_objc_convert_to_rb(where, 0, type, &rb_val) == NO) {
-            // if something went wrong in the conversion just return Qnil
-            rb_val = Qnil;
-            ret = NO;
-          } 
-        }
-            
+        // We are attacking a new embedded structure in a structure
+        rb_objc_convert_to_rb(where, 0, type, &rb_val);
         break; 
 
       default:
-        NSLog(@"Don't know how to convert ObjC type '%c' to Ruby VALUE",*type);
         rb_val = Qnil;
         ret = NO;
             
@@ -791,9 +756,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
       }
 
     if (inStruct) {
-
       // We are in a C structure 
-
       if (end == Qnil) {
         // first time in there so allocate a new Ruby array
         end = rb_ary_new();
@@ -804,30 +767,24 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
         // the end of the running Ruby array
         rb_ary_push(end, rb_val);
       }
-
-
-
+      // skip the type of the component we have just processed
+      type = (char*)objc_skip_typespec(type);
     } else {
       // We are not in a C structure so simply return the
       // Ruby value
       *rb_val_ptr = rb_val;
-    }
-     
-    // skip the type of the component we have just processed
-    type = (char*)objc_skip_typespec(type);
+    }   
 
- 
- 
   } while (inStruct && *type != _C_STRUCT_E);
 
   if (end != Qnil && NSMapGet(knownStructs, (void*)inStructHash) != NULL) {
     *rb_val_ptr = rb_struct_alloc((VALUE)NSMapGet(knownStructs, (void*)inStructHash), end);
   }
 
-  NSDebugLog(@"End of ObjC to Ruby conversion");
-    
-  return ret;
-
+  if (ret == NO) {
+    /* raise exception - Don't know how to handle this type of argument */
+    rb_raise(rb_eTypeError, "can't convert value using Objective-C %s encoding into Ruby", type);
+  }
 }
 
 static NSMethodSignature*
@@ -924,7 +881,6 @@ rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *f
 static void
 rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   @autoreleasepool {
-    id val;
     SEL sel;
     VALUE rubyObject;
     VALUE rubyRetVal;
@@ -935,21 +891,12 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
     const char *type;
     void *data;
 
-    val = *(id*)args[0];
+    rb_objc_convert_object_to_rb(args[0], &rubyObject);
+
     sel = *(SEL*)args[1];
     signature = [NSMethodSignature signatureWithObjCTypes:(const char*)user_data];
 
     rubyMethodName = rb_objc_sel_to_method(sel);
-    rubyObject = (VALUE) NSMapGet(knownObjects,(void *)val);
-    if (rubyObject == Qfalse) {
-      Class retClass = [val classForCoder];
-      VALUE rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);
-      if (rb_class == Qfalse) {
-        rb_class = rb_objc_register_class_from_objc(retClass);
-      }
-      rubyObject = Data_Wrap_Struct(rb_class, 0, rb_objc_release, val);
-      NSMapInsertKnownAbsent(knownObjects, (void*)val, (void*)rubyObject);
-    }    
     rubyArgs = malloc((cif->nargs - 2) * sizeof(VALUE));
 
     for (i=2;i<cif->nargs;i++) {
@@ -967,9 +914,8 @@ rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
       // Extra call to rb_objc_convert_to_rb in order to retain objects
       // when calling code is Ruby -> Objective-C -> Ruby
       // Example: rb_obj.performSelector(:proxyHandlerMethod)
-      if (rb_objc_convert_to_objc(rubyRetVal, &data, 0, type)) {
-        rb_objc_convert_to_rb(data, 0, type, &rubyRetVal);
-      }
+      rb_objc_convert_to_objc(rubyRetVal, &data, 0, type);
+      rb_objc_convert_to_rb(data, 0, type, &rubyRetVal);
 
       *(ffi_arg*)ret = *(ffi_arg*)data;
     }
@@ -1222,26 +1168,23 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     switch (TYPE(rb_self)) {
     case T_DATA:
       Data_Get_Struct(rb_self, void, rcv);
-      NSDebugLog(@"Self is Ruby instance (%p) of %@ (%p): %@)",
-                 (void*)rb_self, NSStringFromClass([rcv classForCoder]), DATA_PTR(rb_self), rcv);
       break;
     case T_CLASS:
       rcv = (Class)NUM2LL(rb_iv_get(rb_self, "@objc_class"));
-      NSDebugLog(@"Self is Ruby class (%p): %@", (void*)rb_self, NSStringFromClass([rcv classForCoder]));
       break;
     default:
-      rb_raise(rb_eTypeError, "type 0x%02x not valid self value", TYPE(rb_self));
+      rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into compatible objc_msgSend value", rb_self);
       break;
     }
 
     sel = rb_objc_method_to_sel(method, our_argc);
     if (sel == NULL) {
-      rb_raise(rb_eTypeError, "method %s is not valid for type 0x%02x", method, TYPE(rb_self));
+      rb_raise(rb_eTypeError, "method %s is not a valid Objective-C selector", method);
     }
 
     signature = [rcv methodSignatureForSelector:sel];
     if (!signature) {
-      rb_raise(rb_eTypeError, "method %s is missing a signature for type 0x%02x", method, TYPE(rb_self));
+      rb_raise(rb_eTypeError, "selector %s is missing an Objective-C signature", sel_getName(sel));
     }
 
     @try {
@@ -1398,9 +1341,8 @@ rb_objc_register_constant_from_objc(const char *name, const char *type)
   data = dlsym(RTLD_DEFAULT, name);
 
   if (data != NULL) {
-    if (rb_objc_convert_to_rb(data, 0, type, &rb_retval)) {
-      rb_define_const(rb_mRigs, name, rb_retval);
-    }
+    rb_objc_convert_to_rb(data, 0, type, &rb_retval);
+    rb_define_const(rb_mRigs, name, rb_retval);
   }
 }
 
@@ -1711,7 +1653,7 @@ rb_objc_register_class_from_rb(VALUE rb_class)
     
   class = objc_allocateClassPair(superClass, rb_class_name, 0);
   if (class == nil) {
-    rb_raise(rb_eTypeError, "could not allocate class pair with ObjC: %s", rb_class_name);
+    rb_raise(rb_eTypeError, "failed to register class %s with the Objective-C runtime", rb_class_name);
   }
 
   objc_registerClassPair(class);

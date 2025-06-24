@@ -28,8 +28,8 @@
 #include <dlfcn.h>
 #include <ffi/ffi.h>
 
-BOOL rb_objc_convert_to_objc(VALUE rb_val, void **data, size_t offset, const char *type);
-BOOL rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val_ptr);
+void rb_objc_convert_to_objc(VALUE rb_val, void **data, size_t offset, const char *type);
+void rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val_ptr);
 
 BOOL rb_objc_register_framework_from_objc(char *framework, const char *root);
 

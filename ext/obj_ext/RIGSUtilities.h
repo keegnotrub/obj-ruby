@@ -32,8 +32,6 @@
   do { if (0) NSLog(fmt, ##__VA_ARGS__); } while (0)
 #endif
 
-#define HASH_SEED 5381
-#define HASH_BITSHIFT 5
 #define ROUND(V, A)                             \
   ({ typeof(V) __v=(V); typeof(A) __a=(A);      \
     __a*((__v+__a-1)/__a); })
@@ -42,8 +40,10 @@ SEL rb_objc_method_to_sel(const char* name, int argc);
 char *rb_objc_sel_to_method(SEL sel);
 char *rb_objc_sel_to_alias(SEL sel);
 
-unsigned long rb_objc_hash(const char* value);
-const char *objc_skip_type_qualifiers (const char *type);
-const char *objc_skip_typespec (const char *type);
+unsigned long rb_objc_hash(const char *value);
+unsigned long rb_objc_hash_struct(const char *value);
+const char *rb_objc_skip_type_qualifiers(const char *type);
+const char *rb_objc_skip_type_sname(const char *type);
+const char *rb_objc_skip_typespec(const char *type);
 
 #endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

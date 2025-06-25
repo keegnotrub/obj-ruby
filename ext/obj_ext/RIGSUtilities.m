@@ -28,6 +28,9 @@
 
 #import "RIGSUtilities.h"
 
+#define HASH_SEED 5381
+#define HASH_BITSHIFT 5
+
 SEL
 rb_objc_method_to_sel(const char* name, int argc)
 {
@@ -180,7 +183,7 @@ rb_objc_sel_to_alias(SEL sel)
 
 
 unsigned long
-rb_objc_hash(const char* value)
+rb_objc_hash(const char *value)
 {
   char keyChar;
   unsigned long hash = HASH_SEED;
@@ -192,9 +195,26 @@ rb_objc_hash(const char* value)
   return hash;
 }
 
+unsigned long
+rb_objc_hash_struct(const char *value)
+{
+  char keyChar;
+  unsigned long hash = HASH_SEED;
+
+  while ((keyChar = *value++)) {
+    if (keyChar == _C_STRUCT_B) continue;
+    if (keyChar == '_') continue;
+    if (keyChar == '=') break;
+    if (keyChar == _C_STRUCT_E) break;
+    hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
+  }
+
+  return hash;
+}
+
 
 inline const char *
-objc_skip_type_qualifiers(const char *type)
+rb_objc_skip_type_qualifiers(const char *type)
 {
   while (*type == _C_CONST
          || *type == _C_IN
@@ -209,8 +229,15 @@ objc_skip_type_qualifiers(const char *type)
   return type;
 }
 
+inline const char *
+rb_objc_skip_type_sname(const char *type)
+{
+  while (*type != _C_STRUCT_E && *type++ != '=');
+  return type;
+}
+
 const char *
-objc_skip_typespec(const char *type)
+rb_objc_skip_typespec(const char *type)
 {
   /* Skip the variable name if any */
   if (*type == '"')
@@ -219,7 +246,7 @@ objc_skip_typespec(const char *type)
         /* do nothing */;
     }
 
-  type = objc_skip_type_qualifiers(type);
+  type = rb_objc_skip_type_qualifiers(type);
 
   switch (*type) {
 
@@ -263,7 +290,7 @@ objc_skip_typespec(const char *type)
 
     while (isdigit((unsigned char)*++type))
       /* do nothing */;
-    type = objc_skip_typespec(type);
+    type = rb_objc_skip_typespec(type);
     if (*type == _C_ARY_E)
       return ++type;
     else
@@ -281,12 +308,10 @@ objc_skip_typespec(const char *type)
 
   case _C_STRUCT_B:
     /* skip name, and elements until closing '}'  */
-
-    while (*type != _C_STRUCT_E && *type++ != '=')
-      /* do nothing */;
+    type = rb_objc_skip_type_sname(type);
     while (*type != _C_STRUCT_E)
       {
-        type = objc_skip_typespec(type);
+        type = rb_objc_skip_typespec(type);
       }
     return ++type;
 
@@ -297,14 +322,14 @@ objc_skip_typespec(const char *type)
       /* do nothing */;
     while (*type != _C_UNION_E)
       {
-        type = objc_skip_typespec(type);
+        type = rb_objc_skip_typespec(type);
       }
     return ++type;
 
   case _C_PTR:
     /* Just skip the following typespec */
 
-    return objc_skip_typespec(++type);
+    return rb_objc_skip_typespec(++type);
 
   default:
     {

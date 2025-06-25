@@ -177,17 +177,21 @@ didStartElement:(NSString *)elementName
 {
   NSScanner *scanner;
   NSString *structKey;
-  NSString *arg;
+  NSString *argName;
+  NSString *argType;
   NSUInteger argCount;
   const char **args;
   int argIndex;
+  BOOL supported;
 
   // skip: "struct (unnamed at ...)"
   if ([name containsString:@" "]) return;
-  
+
   scanner = [NSScanner scannerWithString:type];
+  supported = YES;
 
   [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"{"] intoString:NULL];
+  [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"_"] intoString:NULL];
   [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"="] intoString:&structKey];
   [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"="] intoString:NULL];
   [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\"}"] intoString:NULL];
@@ -198,16 +202,24 @@ didStartElement:(NSString *)elementName
   argIndex = 0;
   while (!scanner.atEnd) {
     [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:NULL];
-    [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:&arg];
+    [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:&argName];
 
     [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:NULL];
+    [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\""] intoString:&argType];
     [scanner scanUpToCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"\"}"] intoString:NULL];
     [scanner scanCharactersFromSet:[NSCharacterSet characterSetWithCharactersInString:@"}"] intoString:NULL];
 
-    args[argIndex++] = [arg UTF8String];
+    args[argIndex++] = [argName UTF8String];
+
+    // We don't support unknown or void pointers at this time
+    if ([argType isEqualToString:@"^?"] || [argType isEqualToString:@"^v"]) {
+      supported = NO;
+    }
   }
 
-  rb_objc_register_struct_from_objc([structKey UTF8String], [name UTF8String], args, argCount);
+  if (supported) {
+    rb_objc_register_struct_from_objc([structKey UTF8String], [name UTF8String], args, argCount);
+  }
 
   free(args);
 }

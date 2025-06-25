@@ -158,18 +158,15 @@ rb_objc_ffi_type_for_type(const char *type)
   int inStructIndex = 0;
   long inStructCount = 0;
 
-  type = objc_skip_type_qualifiers(type);
+  type = rb_objc_skip_type_qualifiers(type);
 
   if (strcmp(type, "@?") == 0) {
     return &ffi_type_pointer;
   }
 
   if (*type == _C_STRUCT_B) {
-    inStructHash = HASH_SEED;
-    while (*type != _C_STRUCT_E && *type++ != '=') {
-      if (*type == '=') continue;
-      inStructHash = ((inStructHash << HASH_BITSHIFT) + inStructHash) + (*type);
-    }
+    inStructHash = rb_objc_hash_struct(type);
+    type = rb_objc_skip_type_sname(type);
     inStructCount = rb_array_len(rb_struct_s_members((VALUE)NSMapGet(knownStructs, (void*)inStructHash)));
                                
     inStruct = (ffi_type *)malloc(sizeof(ffi_type));
@@ -180,7 +177,7 @@ rb_objc_ffi_type_for_type(const char *type)
     
     while (*type != _C_STRUCT_E) {
       inStruct->elements[inStructIndex++] = rb_objc_ffi_type_for_type(type);
-      type = objc_skip_typespec(type);
+      type = rb_objc_skip_typespec(type);
     }
     inStruct->elements[inStructIndex] = NULL;
 
@@ -350,9 +347,9 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
     
   if (*type == _C_STRUCT_B) {
     inStruct = YES;
-    while (*type != _C_STRUCT_E && *type++ != '=');
+    type = rb_objc_skip_type_sname(type);
     if (*type == _C_STRUCT_E) {
-      return;
+      rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into Objective-C with empty struct encoding", rb_thing);
     }
   }
 
@@ -363,7 +360,7 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
     void	*where;
     VALUE	rb_val;
 
-    type = objc_skip_type_qualifiers(type);
+    type = rb_objc_skip_type_qualifiers(type);
         
     NSGetSizeAndAlignment(type, &tsize, &align);
    
@@ -580,7 +577,7 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
 
     if (inStruct) {
       // skip the component we have just processed
-      type = objc_skip_typespec(type);
+      type = rb_objc_skip_typespec(type);
     }
 
   } while (inStruct && *type != _C_STRUCT_E);
@@ -601,21 +598,13 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
   VALUE end = Qnil;
 
   if (*type == _C_STRUCT_B) {
-
-    NSDebugLog(@"Starting conversion of ObjC structure %s to Ruby value", type);
-
     inStruct = YES;
-    inStructHash = HASH_SEED;
-    while (*type != _C_STRUCT_E && *type++ != '=') {
-      if (*type == '=') continue;
-      inStructHash = ((inStructHash << HASH_BITSHIFT) + inStructHash) + (*type);
-    }
+    inStructHash = rb_objc_hash_struct(type);
+    type = rb_objc_skip_type_sname(type);
     if (*type == _C_STRUCT_E) {
-      *rb_val_ptr = Qundef;
-      return;
+      rb_raise(rb_eTypeError, "can't convert value using Objective-C encoding with empty struct into Ruby");
     }
   }
-
 
   do {
     VALUE    rb_val;
@@ -623,7 +612,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
     NSUInteger tsize;
     void	*where;
 
-    type = objc_skip_type_qualifiers(type);
+    type = rb_objc_skip_type_qualifiers(type);
 
     NSGetSizeAndAlignment(type, &tsize, &align);
       
@@ -650,8 +639,12 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
 
       case _C_PTR:
         // Assume toll-free bridge if pointer to struct
+        // Assume numeric if pointer to unknown or void
+        // Otherwise use ObjRuby::Pointer
         if (strncmp(type, "^{", 2) == 0)
           ret = rb_objc_convert_object_to_rb(where, &rb_val);
+        else if (strncmp(type, "^?", 2) == 0 || strncmp(type, "^v", 2) == 0)
+          rb_val = LL2NUM((long long) where);
         else
           rb_val = LL2NUM((long long) where);
         break;
@@ -768,7 +761,7 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
         rb_ary_push(end, rb_val);
       }
       // skip the type of the component we have just processed
-      type = (char*)objc_skip_typespec(type);
+      type = (char*)rb_objc_skip_typespec(type);
     } else {
       // We are not in a C structure so simply return the
       // Ruby value
@@ -1341,6 +1334,10 @@ rb_objc_register_constant_from_objc(const char *name, const char *type)
   data = dlsym(RTLD_DEFAULT, name);
 
   if (data != NULL) {
+    // Skip struct constants whose type is unknown to us
+    if (*type == _C_STRUCT_B && NSMapGet(knownStructs, (void*)rb_objc_hash_struct(type)) == NULL) {
+      return;
+    }
     rb_objc_convert_to_rb(data, 0, type, &rb_retval);
     rb_define_const(rb_mRigs, name, rb_retval);
   }
@@ -1402,7 +1399,7 @@ rb_objc_register_struct_from_objc(const char *key, const char *name, const char 
   if (NSMapGet(knownStructs, (void*)hash)) {
     return;
   }
-  
+
   switch(argCount) {
   case 1:
     rb_struct = rb_struct_define_under(rb_mRigs, name, args[0], NULL);

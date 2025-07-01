@@ -42,8 +42,11 @@ char *rb_objc_sel_to_alias(SEL sel);
 
 unsigned long rb_objc_hash(const char *value);
 unsigned long rb_objc_hash_struct(const char *value);
+unsigned long rb_objc_struct_type_arity(const char *type);
 const char *rb_objc_skip_type_qualifiers(const char *type);
+const char *rb_objc_skip_type_size(const char *type);
 const char *rb_objc_skip_type_sname(const char *type);
+const char *rb_objc_skip_type_uname(const char *type);
 const char *rb_objc_skip_typespec(const char *type);
 
 #endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

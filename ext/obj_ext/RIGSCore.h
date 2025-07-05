@@ -40,11 +40,12 @@ VALUE rb_objc_register_instance_method_from_rb(VALUE rb_class, VALUE rb_method);
 void rb_objc_register_float_from_objc(const char *name, double value);
 void rb_objc_register_integer_from_objc(const char *name, long long value);
 void rb_objc_register_struct_from_objc(const char *key, const char *name, const char *args[], size_t argCount);
-void rb_objc_register_format_string_from_objc(const char *selector, size_t index);
-void rb_objc_register_block_from_objc(const char *selector, size_t index, const char *objcTypes);
 void rb_objc_register_constant_from_objc(const char *name, const char *type);
 void rb_objc_register_function_from_objc(const char *name, const char *objcTypes);
 void rb_objc_register_protocol_from_objc(const char *selector, const char *objcTypes);
+void rb_objc_register_format_string_from_objc(const char *selector, size_t index);
+void rb_objc_register_type_arg_from_objc(const char *selector, int index, const char *objcTypes);
+void rb_objc_register_block_arg_from_objc(const char *selector, size_t index, const char *objcTypes);
 
 VALUE rb_objc_import(VALUE rb_self, VALUE rb_name);
 VALUE rb_objc_new(int rigs_argc, VALUE *rigs_argv, VALUE rb_class);

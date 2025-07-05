@@ -212,6 +212,14 @@ rb_objc_hash_struct(const char *value)
   return hash;
 }
 
+inline const char *
+rb_objc_skip_type_size(const char *type)
+{
+  while (isdigit(*type)) {
+    ++type;
+  }
+  return type;
+}
 
 inline const char *
 rb_objc_skip_type_qualifiers(const char *type)
@@ -222,10 +230,9 @@ rb_objc_skip_type_qualifiers(const char *type)
          || *type == _C_OUT
          || *type == _C_BYCOPY
          || *type == _C_BYREF
-         || *type == _C_ONEWAY)
-    {
-      type += 1;
-    }
+         || *type == _C_ONEWAY) {
+    ++type;
+  }
   return type;
 }
 
@@ -236,36 +243,44 @@ rb_objc_skip_type_sname(const char *type)
   return type;
 }
 
+inline const char *
+rb_objc_skip_type_uname(const char *type)
+{
+  while (*type != _C_UNION_E && *type++ != '=');
+  return type;
+}
+
+unsigned long
+rb_objc_struct_type_arity(const char *type)
+{
+  unsigned long arity;
+
+  type = rb_objc_skip_type_sname(type);
+  arity = 0;
+
+  while(*type != _C_STRUCT_E) {
+    arity++;
+    type = rb_objc_skip_typespec(type);
+  }
+
+  return arity;
+}
+
 const char *
 rb_objc_skip_typespec(const char *type)
 {
-  /* Skip the variable name if any */
-  if (*type == '"')
-    {
-      for (type++; *type++ != '"';)
-        /* do nothing */;
-    }
-
   type = rb_objc_skip_type_qualifiers(type);
 
   switch (*type) {
 
   case _C_ID:
-    /* An id may be annotated by the actual type if it is known
-       with the @"ClassName" syntax */
+    while (*++type == _C_UNDEF)
+      /* skip blocks */;
+    return type;
 
-    if (*++type != '"')
-      return type;
-    else
-      {
-        while (*++type != '"')
-          /* do nothing */;
-        return type + 1;
-      }
-
-    /* The following are one character type codes */
   case _C_CLASS:
   case _C_SEL:
+  case _C_BOOL:
   case _C_CHR:
   case _C_UCHR:
   case _C_CHARPTR:
@@ -282,21 +297,16 @@ rb_objc_skip_typespec(const char *type)
   case _C_DBL:
   case _C_VOID:
   case _C_UNDEF:
-    return ++type;
-    break;
+    /* one character type codes */
+    return type + 1;
 
   case _C_ARY_B:
     /* skip digits, typespec and closing ']' */
-
     while (isdigit((unsigned char)*++type))
-      /* do nothing */;
-    type = rb_objc_skip_typespec(type);
-    if (*type == _C_ARY_E)
-      return ++type;
-    else
-      {
-        return 0;
-      }
+      /* skip digits */;
+    while (*type != _C_ARY_E)
+      type = rb_objc_skip_typespec(type);
+    return type + 1;
 
   case _C_BFLD:
     /* The new encoding of bitfields is: b 'position' 'type' 'size' */
@@ -310,30 +320,21 @@ rb_objc_skip_typespec(const char *type)
     /* skip name, and elements until closing '}'  */
     type = rb_objc_skip_type_sname(type);
     while (*type != _C_STRUCT_E)
-      {
-        type = rb_objc_skip_typespec(type);
-      }
-    return ++type;
+      type = rb_objc_skip_typespec(type);
+    return type + 1;
 
   case _C_UNION_B:
     /* skip name, and elements until closing ')'  */
-
-    while (*type != _C_UNION_E && *type++ != '=')
-      /* do nothing */;
+    type = rb_objc_skip_type_uname(type);
     while (*type != _C_UNION_E)
-      {
-        type = rb_objc_skip_typespec(type);
-      }
-    return ++type;
+      type = rb_objc_skip_typespec(type);
+    return type + 1;
 
   case _C_PTR:
-    /* Just skip the following typespec */
-
-    return rb_objc_skip_typespec(++type);
+    /* skip the following typespec */
+    return rb_objc_skip_typespec(type + 1);
 
   default:
-    {
-      return 0;
-    }
+    return 0;
   }
 }

@@ -41,6 +41,7 @@ char *rb_objc_sel_to_method(SEL sel);
 char *rb_objc_sel_to_alias(SEL sel);
 
 unsigned long rb_objc_hash(const char *value);
+unsigned long rb_objc_hash_s(const char *value, unsigned long seed);
 unsigned long rb_objc_hash_struct(const char *value);
 unsigned long rb_objc_struct_type_arity(const char *type);
 const char *rb_objc_skip_type_qualifiers(const char *type);

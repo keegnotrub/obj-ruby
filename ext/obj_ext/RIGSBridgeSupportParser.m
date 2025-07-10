@@ -71,7 +71,10 @@ didStartElement:(NSString *)elementName
  didEndElement:(NSString *)elementName 
   namespaceURI:(NSString *)namespaceURI 
  qualifiedName:(NSString *)qName {
-  if ([elementName isEqualToString:@"informal_protocol"]) {
+  if ([elementName isEqualToString:@"class"]) {
+    [self finalizeClass];
+  }
+  else if ([elementName isEqualToString:@"informal_protocol"]) {
     [self finalizeProtocol];
   }
   else if ([elementName isEqualToString:@"method"]) {
@@ -80,7 +83,7 @@ didStartElement:(NSString *)elementName
   else if ([elementName isEqualToString:@"function"]) {
     [self finalizeFunction];
   }
-  else if ([elementName isEqualToString:@"arg"] || [elementName isEqualToString:@"retval"]) {
+  else if ([elementName isEqualToString:@"retval"] || [elementName isEqualToString:@"arg"]) {
     [self finalizeArg];
   }
 }
@@ -254,11 +257,7 @@ didStartElement:(NSString *)elementName
 
 - (void)parseClassWithName:(NSString*)name
 {
-  Class objc_class = NSClassFromString(name);
-
-  if (objc_class) {
-    rb_objc_register_class_from_objc(objc_class);
-  }
+  _className = [name retain];
 }
 
 - (NSUInteger)parseStructArgCountWithType:(NSString*)type
@@ -270,6 +269,18 @@ didStartElement:(NSString *)elementName
                                                       range:NSMakeRange(0, [type length])];
 
   return quoteCount / 2;
+}
+
+- (void)finalizeClass
+{
+  Class objc_class;
+
+  if ((objc_class = NSClassFromString(_className))) {
+    rb_objc_register_class_from_objc(objc_class);
+  }
+  
+  [_className release];
+  _className = nil;
 }
 
 - (void)finalizeProtocol

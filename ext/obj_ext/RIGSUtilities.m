@@ -181,12 +181,17 @@ rb_objc_sel_to_alias(SEL sel)
   return NULL;
 }
 
-
 unsigned long
 rb_objc_hash(const char *value)
 {
+  return rb_objc_hash_s(value, HASH_SEED);
+}
+
+unsigned long
+rb_objc_hash_s(const char *value, unsigned long seed)
+{
   char keyChar;
-  unsigned long hash = HASH_SEED;
+  unsigned long hash = seed;
   
   while ((keyChar = *value++)) {
     hash = ((hash << HASH_BITSHIFT) + hash) + keyChar;
@@ -230,7 +235,8 @@ rb_objc_skip_type_qualifiers(const char *type)
          || *type == _C_OUT
          || *type == _C_BYCOPY
          || *type == _C_BYREF
-         || *type == _C_ONEWAY) {
+         || *type == _C_ONEWAY
+         || *type == _C_ATOMIC) {
     ++type;
   }
   return type;
@@ -274,8 +280,8 @@ rb_objc_skip_typespec(const char *type)
   switch (*type) {
 
   case _C_ID:
-    while (*++type == _C_UNDEF)
-      /* skip blocks */;
+    /* skip blocks */;
+    while (*++type == _C_UNDEF);
     return type;
 
   case _C_CLASS:
@@ -300,21 +306,17 @@ rb_objc_skip_typespec(const char *type)
     /* one character type codes */
     return type + 1;
 
+  case _C_BFLD:
+    /* skip number of bits */
+    while (isdigit((unsigned char)*++type));
+    return type;
+
   case _C_ARY_B:
-    /* skip digits, typespec and closing ']' */
-    while (isdigit((unsigned char)*++type))
-      /* skip digits */;
+    /* skip digits, and elements until closing ']' */
+    while (isdigit((unsigned char)*++type));
     while (*type != _C_ARY_E)
       type = rb_objc_skip_typespec(type);
     return type + 1;
-
-  case _C_BFLD:
-    /* The new encoding of bitfields is: b 'position' 'type' 'size' */
-    while (isdigit((unsigned char)*++type))
-      /* skip position */;
-    while (isdigit((unsigned char)*++type))
-      /* skip type and size */;
-    return type;
 
   case _C_STRUCT_B:
     /* skip name, and elements until closing '}'  */

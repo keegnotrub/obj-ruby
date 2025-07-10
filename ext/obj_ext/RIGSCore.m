@@ -51,6 +51,8 @@ static NSMapTable *knownFunctions = 0;
 // Hash table that maps known ObjC selectors with arg position to block objcTypes encoding
 static NSMapTable *knownBlockArgs = 0;
 
+static NSMapTable *knownMethods = 0;
+
 // Hash table that maps known ObjC selectors with arg position to objcTypes encoding
 static NSMapTable *knownTypeArgs = 0;
 
@@ -1135,16 +1137,12 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     const char *our_method;
     int our_argc;
     VALUE *our_argv;
+    Class class;
     id rcv;
     SEL sel;
     const char *method;
-    const char *pos;
-    const char *lpos;
-    const char *type;
-    unsigned long typeIndex;
     unsigned long hash;
-    Method mth;
-    char types[128] = { '\0' };
+    const char *objcTypes;
 
     our_method = rb_id2name(rb_frame_this_func());
     our_argc = rigs_argc;
@@ -1161,7 +1159,7 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 
     sel = rb_objc_method_to_sel(our_method, our_argc);
     if (sel == NULL) {
-      rb_raise(rb_eTypeError, "method %s is not a valid Objective-C selector", method);
+      rb_raise(rb_eTypeError, "method %s is not a valid Objective-C selector", our_method);
     }
 
     method = sel_getName(sel);
@@ -1171,35 +1169,27 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     switch (TYPE(rb_self)) {
     case T_DATA:
       Data_Get_Struct(rb_self, void, rcv);
-      mth = class_getInstanceMethod(object_getClass(rcv), sel);
+      class = object_getClass(rcv);
       break;
     case T_CLASS:
       rcv = (Class)NUM2LL(rb_iv_get(rb_self, "@objc_class"));
-      mth = class_getClassMethod(rcv, sel);
+      class = rcv;
       break;
     default:
-      rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into compatible objc_msgSend value", rb_self);
+      rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into a compatible objc_msgSend value", rb_self);
       break;
     }
 
-    pos = rb_objc_skip_type_qualifiers(method_getTypeEncoding(mth));
-    typeIndex = 0;
-    while((lpos = pos) && (pos = rb_objc_skip_typespec(lpos))) {
-      if (typeIndex != 1 &&
-          typeIndex != 2 &&
-          (type = NSMapGet(knownTypeArgs, (void*)(hash + (typeIndex == 0 ? -1 : typeIndex - 2))))) {
-        strlcat(types, type, strlen(type) + strlen(types) + 1);
-      }
-      else {
-        strlcat(types, lpos, pos - lpos + strlen(types) + 1);
-      }
-      pos = rb_objc_skip_type_size(pos);
-      pos = rb_objc_skip_type_qualifiers(pos);
-      typeIndex++;
+    do {
+      objcTypes = NSMapGet(knownMethods, (void*)rb_objc_hash_s(class_getName(class), hash));
+    } while (objcTypes == NULL && (class = class_getSuperclass(class)));
+
+    if (objcTypes == NULL) {
+      rb_raise(rb_eTypeError, "unable to find Objective-C type encodings for method %s", our_method);
     }
 
     @try {
-      return rb_objc_dispatch(rcv, method, hash, types, our_argc, our_argv);
+      return rb_objc_dispatch(rcv, method, hash, objcTypes, our_argc, our_argv);
     }
     @catch (NSException *exception) {
       rb_objc_raise_exception(exception);
@@ -1232,6 +1222,49 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
   }  
 }
 
+static BOOL
+rb_objc_register_method(Class class, Method method)
+{
+  unsigned long hash;
+  unsigned long chash;
+  void *data;
+  const char *pos;
+  const char *lpos;
+  const char *type;
+  unsigned long typeIndex;
+  char objcTypes[256] = { '\0' };
+
+  pos = method_getTypeEncoding(method);
+  hash = rb_objc_hash(sel_getName(method_getName(method)));
+  chash = rb_objc_hash_s(class_getName(class), hash);
+  data = NSMapGet(knownMethods, (void*)chash);
+
+  if (data) return YES;
+  if (strlen(pos) > 255) return NO;
+  
+  pos = rb_objc_skip_type_qualifiers(pos);
+  typeIndex = 0;
+  while((lpos = pos) && (pos = rb_objc_skip_typespec(lpos))) {
+    if (typeIndex != 1 &&
+        typeIndex != 2 &&
+        (type = NSMapGet(knownTypeArgs, (void*)(hash + (typeIndex == 0 ? -1 : typeIndex - 2))))) {
+      strlcat(objcTypes, type, strlen(type) + strlen(objcTypes) + 1);
+    }
+    else {
+      strlcat(objcTypes, lpos, pos - lpos + strlen(objcTypes) + 1);
+    }
+    pos = rb_objc_skip_type_size(pos);
+    pos = rb_objc_skip_type_qualifiers(pos);
+    typeIndex++;
+  }
+
+  data = malloc(sizeof(char) * (strlen(objcTypes) + 1));
+  strcpy(data, objcTypes);
+  NSMapInsertKnownAbsent(knownMethods, (void*)chash, (void*)data);
+
+  return YES;
+}
+
 static unsigned int
 rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
 {
@@ -1250,6 +1283,7 @@ rb_objc_register_instance_methods(Class objc_class, VALUE rb_class)
     mthRubyName = rb_objc_sel_to_method(mthSel);
 
     if (mthRubyName == NULL) continue;
+    if (!rb_objc_register_method(objc_class, methods[i])) continue;
 
     rb_define_method(rb_class, mthRubyName, rb_objc_send, -1);
 
@@ -1273,16 +1307,13 @@ rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
   SEL mthSel;
   char *mthRubyName;
   char *mthRubyAlias;
-  Class objc_meta_class;
   unsigned int cmth_cnt;
   unsigned int i;
   Method *methods;
   VALUE rb_singleton;
 
-  objc_meta_class = objc_getMetaClass(class_getName(objc_class));
-    
   /* Define all Ruby Class (singleton) methods for this Class */
-  methods = class_copyMethodList(objc_meta_class, &cmth_cnt);
+  methods = class_copyMethodList(object_getClass(objc_class), &cmth_cnt);
   rb_singleton = rb_singleton_class(rb_class);
 
   for (i=0;i<cmth_cnt;i++) {
@@ -1290,6 +1321,7 @@ rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
     mthRubyName = rb_objc_sel_to_method(mthSel);
 
     if (mthRubyName == NULL) continue;
+    if (!rb_objc_register_method(objc_class, methods[i])) continue;
     
     rb_define_method(rb_singleton, mthRubyName, rb_objc_send, -1);
 
@@ -1495,7 +1527,7 @@ rb_objc_register_class_from_objc (Class objc_class)
   rb_iv_set(rb_class, "@objc_class", LL2NUM((long long)objc_class));
 
   cmth_cnt = rb_objc_register_class_methods(objc_class, rb_class);
-  imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);
+  imth_cnt = rb_objc_register_instance_methods(objc_class, rb_class);  
 
   NSDebugLog(@"%d instance and %d class methods defined for class %s", imth_cnt, cmth_cnt, cname);
 
@@ -1794,6 +1826,7 @@ Init_obj_ext()
   knownObjects = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+  knownMethods = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownBlockArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownTypeArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownProtocols = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);

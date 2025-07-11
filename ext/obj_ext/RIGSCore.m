@@ -1142,6 +1142,7 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     SEL sel;
     const char *method;
     unsigned long hash;
+    unsigned long mhash;
     const char *objcTypes;
 
     our_method = rb_id2name(rb_frame_this_func());
@@ -1170,18 +1171,20 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     case T_DATA:
       Data_Get_Struct(rb_self, void, rcv);
       class = object_getClass(rcv);
+      mhash = hash;
       break;
     case T_CLASS:
       rcv = (Class)NUM2LL(rb_iv_get(rb_self, "@objc_class"));
       class = rcv;
+      mhash = hash << 1;
       break;
     default:
       rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into a compatible objc_msgSend value", rb_self);
       break;
     }
 
-    do {
-      objcTypes = NSMapGet(knownMethods, (void*)rb_objc_hash_s(class_getName(class), hash));
+    do {      
+      objcTypes = NSMapGet(knownMethods, (void*)rb_objc_hash_s(class_getName(class), mhash));
     } while (objcTypes == NULL && (class = class_getSuperclass(class)));
 
     if (objcTypes == NULL) {
@@ -1236,10 +1239,10 @@ rb_objc_register_method(Class class, Method method)
 
   pos = method_getTypeEncoding(method);
   hash = rb_objc_hash(sel_getName(method_getName(method)));
-  chash = rb_objc_hash_s(class_getName(class), hash);
+  chash = rb_objc_hash_s(class_getName(class), hash << (class_isMetaClass(class) ? 1 : 0));
   data = NSMapGet(knownMethods, (void*)chash);
 
-  if (data) return YES;
+  if (data) return NO;
   if (strlen(pos) > 255) return NO;
   
   pos = rb_objc_skip_type_qualifiers(pos);
@@ -1313,7 +1316,8 @@ rb_objc_register_class_methods(Class objc_class, VALUE rb_class)
   VALUE rb_singleton;
 
   /* Define all Ruby Class (singleton) methods for this Class */
-  methods = class_copyMethodList(object_getClass(objc_class), &cmth_cnt);
+  objc_class = object_getClass(objc_class);
+  methods = class_copyMethodList(objc_class, &cmth_cnt);
   rb_singleton = rb_singleton_class(rb_class);
 
   for (i=0;i<cmth_cnt;i++) {

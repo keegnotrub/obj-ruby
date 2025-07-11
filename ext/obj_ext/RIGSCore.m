@@ -48,8 +48,11 @@ static NSMapTable *knownStructs = 0;
 // Hash table that maps known ObjC functions to objcTypes encoding
 static NSMapTable *knownFunctions = 0;
 
-// Hash table that maps known ObjC selectors with class to objcTypes encoding
-static NSMapTable *knownMethods = 0;
+// Hash table that maps known ObjC class selectors with class to objcTypes encoding
+static NSMapTable *knownClassMethods = 0;
+
+// Hash table that maps known ObjC instance selectors with class to objcTypes encoding
+static NSMapTable *knownInstanceMethods = 0;
 
 // Hash table that maps known ObjC selectors with arg position to objcTypes encoding
 static NSMapTable *knownTypeArgs = 0;
@@ -1140,7 +1143,7 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     SEL sel;
     const char *method;
     unsigned long hash;
-    unsigned long mhash;
+    NSMapTable *knownMethods;
     const char *objcTypes;
 
     our_method = rb_id2name(rb_frame_this_func());
@@ -1169,12 +1172,12 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     case T_DATA:
       Data_Get_Struct(rb_self, void, rcv);
       class = object_getClass(rcv);
-      mhash = hash;
+      knownMethods = knownInstanceMethods;
       break;
     case T_CLASS:
       rcv = (Class)NUM2LL(rb_iv_get(rb_self, "@objc_class"));
       class = rcv;
-      mhash = hash << 1;
+      knownMethods = knownClassMethods;
       break;
     default:
       rb_raise(rb_eTypeError, "can't convert %"PRIsVALUE" into a compatible objc_msgSend value", rb_self);
@@ -1182,7 +1185,7 @@ rb_objc_send(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     }
 
     do {      
-      objcTypes = NSMapGet(knownMethods, (void*)rb_objc_hash_s(class_getName(class), mhash));
+      objcTypes = NSMapGet(knownMethods, (void*)rb_objc_hash_s(class_getName(class), hash));
     } while (objcTypes == NULL && (class = class_getSuperclass(class)));
 
     if (objcTypes == NULL) {
@@ -1226,6 +1229,7 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
 static BOOL
 rb_objc_register_method(Class class, Method method)
 {
+  NSMapTable *knownMethods;
   unsigned long hash;
   unsigned long chash;
   void *data;
@@ -1238,9 +1242,10 @@ rb_objc_register_method(Class class, Method method)
   pos = method_getTypeEncoding(method);
   
   if (strlen(pos) > 255) return NO;
-  
+
+  knownMethods = class_isMetaClass(class) ? knownClassMethods : knownInstanceMethods;
   hash = rb_objc_hash(sel_getName(method_getName(method)));
-  chash = rb_objc_hash_s(class_getName(class), hash << (class_isMetaClass(class) ? 1 : 0));
+  chash = rb_objc_hash_s(class_getName(class), hash);
   data = NSMapGet(knownMethods, (void*)chash);
 
   if (data) return NO;
@@ -1830,7 +1835,8 @@ Init_obj_ext()
   knownObjects = NSCreateMapTable(NSNonOwnedPointerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
-  knownMethods = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+  knownClassMethods = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+  knownInstanceMethods = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownTypeArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownBlockArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);

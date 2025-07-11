@@ -979,9 +979,6 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
   NSMethodSignature *signature;
 
   signature = [NSMethodSignature signatureWithObjCTypes:types];
-  if (!signature) {
-    rb_raise(rb_eTypeError, "selector %s is missing an Objective-C signature", method);
-  }
 
   if (rcv != nil) {
     nbArgsAdjust = 2;
@@ -1212,8 +1209,8 @@ rb_objc_invoke(int rigs_argc, VALUE *rigs_argv, VALUE rb_self)
     hash = rb_objc_hash(method);
     objcTypes = NSMapGet(knownFunctions, (void*)hash);
 
-    if (!objcTypes) {
-      return Qnil;
+    if (objcTypes == NULL) {
+      rb_raise(rb_eTypeError, "unable to find Objective-C type encodings for function %s", method);
     }
     
     @try {
@@ -1238,13 +1235,15 @@ rb_objc_register_method(Class class, Method method)
   char objcTypes[256] = { '\0' };
 
   pos = method_getTypeEncoding(method);
+  
+  if (strlen(pos) > 255) return NO;
+  
   hash = rb_objc_hash(sel_getName(method_getName(method)));
   chash = rb_objc_hash_s(class_getName(class), hash << (class_isMetaClass(class) ? 1 : 0));
   data = NSMapGet(knownMethods, (void*)chash);
 
   if (data) return NO;
-  if (strlen(pos) > 255) return NO;
-  
+
   pos = rb_objc_skip_type_qualifiers(pos);
   typeIndex = 0;
   while((lpos = pos) && (pos = rb_objc_skip_typespec(lpos))) {

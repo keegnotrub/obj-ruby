@@ -48,22 +48,23 @@ static NSMapTable *knownStructs = 0;
 // Hash table that maps known ObjC functions to objcTypes encoding
 static NSMapTable *knownFunctions = 0;
 
-// Hash table that maps known ObjC selectors with arg position to block objcTypes encoding
-static NSMapTable *knownBlockArgs = 0;
-
+// Hash table that maps known ObjC selectors with class to objcTypes encoding
 static NSMapTable *knownMethods = 0;
 
 // Hash table that maps known ObjC selectors with arg position to objcTypes encoding
 static NSMapTable *knownTypeArgs = 0;
+
+// Hash table that maps known ObjC selectors with arg position to block objcTypes encoding
+static NSMapTable *knownBlockArgs = 0;
+
+// Hash table that maps known ObjC selectors to printf arg positions (index+1)
+static NSMapTable *knownFormatStrings = 0;
 
 // Hash table that maps known ObjC selectors to objcTypes encoding
 static NSMapTable *knownProtocols = 0;
 
 // Hash table that maps known objcTypes encoding to Ruby proxy method implementations
 static NSMapTable *knownImplementations = 0;
-
-// Hash table that maps known ObjC selectors to printf arg positions (index+1)
-static NSMapTable *knownFormatStrings = 0;
 
 // Hash table that contains loaded Framework bundleIdentifiers
 static NSHashTable *knownFrameworks = 0;
@@ -1830,11 +1831,11 @@ Init_obj_ext()
   knownStructs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownFunctions = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownMethods = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
-  knownBlockArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownTypeArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+  knownBlockArgs = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
+  knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
   knownProtocols = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
   knownImplementations = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSNonOwnedPointerMapValueCallBacks, 0);
-  knownFormatStrings = NSCreateMapTable(NSIntegerMapKeyCallBacks, NSIntegerMapValueCallBacks, 0);
   knownFrameworks = NSCreateHashTable(NSIntegerHashCallBacks, 0);
 
   // Ruby class methods under the ObjC Ruby module

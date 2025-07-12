@@ -54,24 +54,16 @@ didStartElement:(NSString *)elementName
     [self parseFunctionWithName:[attributeDict objectForKey:@"name"]];
   }
   else if ([elementName isEqualToString:@"retval"]) {
-    [self parseArgWithIndex:-1
-                       type:[attributeDict objectForKey:@"type64"]
-                     printf:nil
-                      block:nil];
+    [self parseArgWithType:[attributeDict objectForKey:@"type64"]
+                     index:@"-1"
+                    printf:nil
+                     block:nil];
   }
   else if ([elementName isEqualToString:@"arg"]) {
-    if (_methodName) {
-      [self parseArgWithIndex:[attributeDict objectForKey:@"index"] ? [[attributeDict objectForKey:@"index"] intValue] : _argIndex++
-                         type:[attributeDict objectForKey:@"type64"]
-                       printf:[attributeDict objectForKey:@"printf_format"]
-                        block:[attributeDict objectForKey:@"function_pointer"]];
-    }
-    else if (_functionName) {
-      [self parseArgWithIndex:_argIndex++
-                         type:[attributeDict objectForKey:@"type64"]
-                       printf:[attributeDict objectForKey:@"printf_format"]
-                        block:nil];
-    }
+    [self parseArgWithType:[attributeDict objectForKey:@"type64"]
+                     index:[attributeDict objectForKey:@"index"]
+                    printf:[attributeDict objectForKey:@"printf_format"]
+                     block:[attributeDict objectForKey:@"function_pointer"]];
   }
 }
 
@@ -79,7 +71,10 @@ didStartElement:(NSString *)elementName
  didEndElement:(NSString *)elementName 
   namespaceURI:(NSString *)namespaceURI 
  qualifiedName:(NSString *)qName {
-  if ([elementName isEqualToString:@"informal_protocol"]) {
+  if ([elementName isEqualToString:@"class"]) {
+    [self finalizeClass];
+  }
+  else if ([elementName isEqualToString:@"informal_protocol"]) {
     [self finalizeProtocol];
   }
   else if ([elementName isEqualToString:@"method"]) {
@@ -88,7 +83,7 @@ didStartElement:(NSString *)elementName
   else if ([elementName isEqualToString:@"function"]) {
     [self finalizeFunction];
   }
-  else if ([elementName isEqualToString:@"arg"] || [elementName isEqualToString:@"retval"]) {
+  else if ([elementName isEqualToString:@"retval"] || [elementName isEqualToString:@"arg"]) {
     [self finalizeArg];
   }
 }
@@ -139,36 +134,46 @@ didStartElement:(NSString *)elementName
   _argDepth = 0;
 }
 
-- (void)parseArgWithIndex:(NSInteger)index type:(NSString*)type printf:(NSString*)printf block:(NSString*)block
+- (void)parseArgWithType:(NSString*)type index:(NSString*)index printf:(NSString*)printf block:(NSString*)block
 {
   _argDepth++;
   
   if (_methodName) {
-    if ([printf isEqualToString:@"true"]) {
-      _formatStringIndex = index;
+    if (_argDepth == 1) {
+      if ([printf isEqualToString:@"true"]) {
+        _formatStringIndex = [index integerValue];
+      }
+      if ([block isEqualToString:@"true"] && [type isEqualToString:@"@?"]) {
+        _blockIndex = [index integerValue];
+        _objcTypes = [[type mutableCopy] retain];
+      }
+      if (type) {
+        rb_objc_register_type_arg_from_objc([_methodName UTF8String], [index intValue], [type UTF8String]);
+      }
     }
-    if ([block isEqualToString:@"true"] && [type isEqualToString:@"@?"]) {
-      _blockIndex = index;
-      _objcTypes = [[NSMutableString string] retain];
+    else {
+      if (_objcTypes) {
+        if ([index isEqualToString:@"-1"]) {
+          [_objcTypes insertString:type atIndex:0];
+        }
+        else {
+          [_objcTypes appendString:type];
+        }
+      }
     }
-    if (_objcTypes) {
-      if (index == -1) {
+  }
+  else if (_functionName) {
+    if (_argDepth == 1) {
+      if ([printf isEqualToString:@"true"]) {
+        _formatStringIndex = _argIndex;
+      }
+      if ([index isEqualToString:@"-1"]) {
         [_objcTypes insertString:type atIndex:0];
       }
       else {
         [_objcTypes appendString:type];
       }
-    }
-  }
-  else if (_functionName) {
-    if ([printf isEqualToString:@"true"]) {
-      _formatStringIndex = index;
-    }
-    if (index == -1) {
-      [_objcTypes insertString:type atIndex:0];
-    }
-    else {
-      [_objcTypes appendString:type];
+      _argIndex++;
     }
   }
 }
@@ -252,11 +257,7 @@ didStartElement:(NSString *)elementName
 
 - (void)parseClassWithName:(NSString*)name
 {
-  Class objc_class = NSClassFromString(name);
-
-  if (objc_class) {
-    rb_objc_register_class_from_objc(objc_class);
-  }
+  _className = [name retain];
 }
 
 - (NSUInteger)parseStructArgCountWithType:(NSString*)type
@@ -268,6 +269,18 @@ didStartElement:(NSString *)elementName
                                                       range:NSMakeRange(0, [type length])];
 
   return quoteCount / 2;
+}
+
+- (void)finalizeClass
+{
+  Class objc_class;
+
+  if ((objc_class = NSClassFromString(_className))) {
+    rb_objc_register_class_from_objc(objc_class);
+  }
+  
+  [_className release];
+  _className = nil;
 }
 
 - (void)finalizeProtocol
@@ -306,7 +319,7 @@ didStartElement:(NSString *)elementName
   
   if (_blockIndex != -1) {
     if (_methodName) {
-      rb_objc_register_block_from_objc([_methodName UTF8String], _blockIndex, [_objcTypes UTF8String]);
+      rb_objc_register_block_arg_from_objc([_methodName UTF8String], _blockIndex, [_objcTypes UTF8String]);
     }
 
     _blockIndex = -1;

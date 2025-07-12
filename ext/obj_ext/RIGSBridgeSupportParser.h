@@ -25,6 +25,7 @@
 
 @interface RIGSBridgeSupportParser : NSObject<NSXMLParserDelegate>
 {
+  NSString *_className;
   NSString *_methodName;
   NSString *_functionName;
   NSString *_protocolName;

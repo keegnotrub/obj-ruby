@@ -1,0 +1,158 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "benchmark"
+
+SIZE = 1_000_000
+COLS = 12
+
+def run_objc_hash
+  dict = ObjRuby::NSMutableDictionary.new
+
+  (0...SIZE).each do |i|
+    if (i % 2).zero?
+      dict.setObject_forKey("foo", i)
+    end
+  end
+
+  raise unless dict.count == SIZE / 2
+
+  (0...SIZE).each do |i|
+    unless dict.objectForKey(i)
+      dict.setObject_forKey("bar", i)
+    end
+  end
+
+  raise unless dict.count == SIZE
+end
+
+def run_ruby_hash
+  hash = {}
+
+  (0...SIZE).each do |i|
+    if (i % 2).zero?
+      hash[i] = "foo"
+    end
+  end
+
+  raise unless hash.size == SIZE / 2
+
+  (0...SIZE).each do |i|
+    unless hash[i]
+      hash[i] = "bar"
+    end
+  end
+
+  raise unless hash.size == SIZE
+end
+
+def run_objc_set
+  set = ObjRuby::NSMutableSet.new
+
+  (0...SIZE).each do |i|
+    if (i % 2).zero?
+      set.addObject(i)
+    end
+  end
+
+  raise unless set.count == SIZE / 2
+
+  (0...SIZE).each do |i|
+    unless set.containsObject(i)
+      set.addObject(i)
+    end
+  end
+
+  raise unless set.count == SIZE
+end
+
+def run_ruby_set
+  set = Set.new
+
+  (0...SIZE).each do |i|
+    if (i % 2).zero?
+      set << i
+    end
+  end
+
+  raise unless set.size == SIZE / 2
+
+  (0...SIZE).each do |i|
+    unless set.include?(i)
+      set << i
+    end
+  end
+
+  raise unless set.size == SIZE
+end
+
+def run_objc_array
+  array = ObjRuby::NSMutableArray.new
+
+  (0...SIZE).each do |i|
+    if (i % 2).zero?
+      array.addObject("foo")
+    end
+  end
+
+  raise unless array.count == SIZE / 2
+
+  (0...SIZE).each do |i|
+    unless (i % 2).zero?
+      array.addObject("bar")
+    end
+  end
+  raise unless array.count == SIZE
+end
+
+def run_ruby_array
+  array = []
+
+  (0...SIZE).each do |i|
+    if (i % 2).zero?
+      array << "foo"
+    end
+  end
+
+  raise unless array.size == SIZE / 2
+
+  (0...SIZE).each do |i|
+    unless (i % 2).zero?
+      array << "bar"
+    end
+  end
+
+  raise unless array.size == SIZE
+end
+
+Benchmark.bm(COLS) do |bm|
+  bm.report("Warmup:") do
+    require "obj_ruby"
+    require "obj_ruby/cocoa"
+  end
+
+  bm.report("NSDictionary:") do
+    run_objc_hash
+  end
+
+  bm.report("Hash:") do
+    run_ruby_hash
+  end
+
+  bm.report("NSSet:") do
+    run_objc_set
+  end
+
+  bm.report("Set:") do
+    run_ruby_set
+  end
+
+  bm.report("NSArray:") do
+    run_objc_array
+  end
+
+  bm.report("Array:") do
+    run_ruby_array
+  end
+end

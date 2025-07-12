@@ -3,6 +3,8 @@ AllCops:
   NewCops: enable
 Naming/MethodName:
   Enabled: false
+Metrics/MethodLength:
+  Enabled: false
 Style/IfUnlessModifier:
   Enabled: false
 Style/StringLiterals:

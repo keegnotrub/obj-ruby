@@ -292,6 +292,7 @@ rb_objc_convert_object_to_rb(void *where, VALUE *rb_val_ptr)
 {
   id val;
   Class retClass;
+  Class class;
   VALUE rb_val;
   VALUE rb_class;
   BOOL ret;
@@ -312,10 +313,11 @@ rb_objc_convert_object_to_rb(void *where, VALUE *rb_val_ptr)
     }
 
     retClass = [val classForCoder];
-    if (retClass != [val class] && strncmp(object_getClassName(val), "NSConcrete", 10) == 0) {
+    class = object_getClass(val);
+    if (retClass != class && strncmp(class_getName(class), "NSConcrete", 10) == 0) {
       // [NSAttributedString alloc] returns NSConcreteAttributedString
       // which is where initWithString is defined so we need it defined in Ruby
-      retClass = [val class];
+      retClass = class;
     }
 
     rb_class = (VALUE) NSMapGet(knownClasses, (void *)retClass);

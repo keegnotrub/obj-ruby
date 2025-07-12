@@ -15,8 +15,6 @@ RSpec.describe ObjRuby::NSProcessInfo do
 
     version = info.operatingSystemVersion
 
-    pp version
-
     expect(version).not_to be_nil
     expect(version).to be_a ObjRuby::NSOperatingSystemVersion
   end

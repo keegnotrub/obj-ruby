@@ -395,11 +395,11 @@ rb_objc_convert_to_objc(VALUE rb_thing, void **data, size_t offset, const char *
       switch (TYPE(rb_val))
         {
         case T_DATA:
-          if (rb_obj_is_kind_of(rb_val, rb_cTime) == Qtrue) {
-            *(id*)where = rb_objc_date_from_rb(rb_val);
-          }
-          else if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
+          if (rb_iv_get(CLASS_OF(rb_val), "@objc_class") != Qnil) {
             Data_Get_Struct(rb_val, void, *(id*)where);
+          }
+          else if (rb_obj_is_kind_of(rb_val, rb_cTime) == Qtrue) {
+            *(id*)where = rb_objc_date_from_rb(rb_val);
           }
           else {
             ret = NO;

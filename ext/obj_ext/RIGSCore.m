@@ -1257,7 +1257,7 @@ rb_objc_register_method(Class class, Method method)
   while((lpos = pos) && (pos = rb_objc_skip_typespec(lpos))) {
     if (typeIndex != 1 &&
         typeIndex != 2 &&
-        (type = NSMapGet(knownTypeArgs, (void*)(hash + (typeIndex == 0 ? -1 : typeIndex - 2))))) {
+        (type = NSMapGet(knownTypeArgs, (void*)(hash + (typeIndex == 0 ? -1 : typeIndex - 3))))) {
       strlcat(objcTypes, type, strlen(type) + strlen(objcTypes) + 1);
     }
     else {

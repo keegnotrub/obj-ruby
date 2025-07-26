@@ -168,10 +168,6 @@ rb_objc_ffi_type_for_type(const char *type)
 
   type = rb_objc_skip_type_qualifiers(type);
 
-  if (strcmp(type, "@?") == 0) {
-    return &ffi_type_pointer;
-  }
-
   if (*type == _C_STRUCT_B) {
     inStructCount = rb_objc_struct_type_arity(type);
 
@@ -189,6 +185,46 @@ rb_objc_ffi_type_for_type(const char *type)
     inStruct->elements[inStructIndex] = NULL;
 
     return inStruct;
+  }
+
+  if (*type == _C_ARY_B) {
+    while (isdigit((unsigned char)*++type)) {
+      inStructCount = (inStructCount << 3) + (inStructCount << 1) + (*type - '0');
+    }
+    
+    inStruct = (ffi_type *)malloc(sizeof(ffi_type));
+    inStruct->size = 0;
+    inStruct->alignment = 0;
+    inStruct->type = FFI_TYPE_STRUCT;
+    inStruct->elements = malloc((inStructCount + 1) * sizeof(ffi_type *));
+
+    while (*type != _C_ARY_E) {
+      inStruct->elements[inStructIndex++] = rb_objc_ffi_type_for_type(type);
+      type = rb_objc_skip_typespec(type);
+    }
+    inStruct->elements[inStructIndex] = NULL;
+
+    return inStruct;
+  }
+
+  if (*type == _C_BFLD) {
+    while (isdigit((unsigned char)*++type)) {
+      inStructCount = (inStructCount << 3) + (inStructCount << 1) + (*type - '0');
+      if (*(type + 1) == _C_BFLD) type++;
+    }
+
+    switch(inStructCount) {
+    case 64:
+      return &ffi_type_uint64;
+    case 32:
+      return &ffi_type_uint32;
+    case 16:
+      return &ffi_type_uint16;
+    case 8:
+      return &ffi_type_uint8;
+    default:
+      return NULL;
+    }
   }
 
   switch (*type) {
@@ -213,10 +249,10 @@ rb_objc_ffi_type_for_type(const char *type)
     return &ffi_type_uint;
   case _C_LNG:
     return &ffi_type_slong;
-  case _C_LNG_LNG: 
-    return &ffi_type_sint64;
   case _C_ULNG:
     return &ffi_type_ulong;
+  case _C_LNG_LNG: 
+    return &ffi_type_sint64;
   case _C_ULNG_LNG: 
     return &ffi_type_uint64;    
   case _C_FLT:
@@ -618,6 +654,15 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
 
     type = rb_objc_skip_type_qualifiers(type);
 
+    // what if we made our own where by we dont
+    // offset (zero) when we encounter a bit field
+    // then we just keep bit masking the where?
+    // we'd need to know though to offset at the
+    // last one I think though... bummer...
+    //
+    // also is there like a max size we can
+    // support to just force the int size we
+    // bit mask with? say uint32_t?
     NSGetSizeAndAlignment(type, &tsize, &align);
       
     offset = ROUND(offset, align);
@@ -781,31 +826,14 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
   }
 }
 
-static NSMethodSignature*
-rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *formatString, int nbArgsExtra)
+static void
+rb_objc_type_extend(const char *types, const char *formatString, int nbArgsExtra, char *objcTypes)
 {
-  char objcTypes[128];
-  uint8_t objcTypesIndex;
+  size_t objcTypesIndex;
   size_t formatStringLength;
-  const char *type;
-  size_t nbArgs;
   size_t i;
 
-  nbArgs = [signature numberOfArguments];
-  objcTypesIndex = 0;
-  
-  type = [signature methodReturnType];
-  while (*type) {
-    objcTypes[objcTypesIndex++] = *type++;
-  }
-
-  for(i=0; i<nbArgs; i++) {
-    type = [signature getArgumentTypeAtIndex:i];
-    while (*type) {
-      objcTypes[objcTypesIndex++] = *type++;
-    }
-  }
-
+  objcTypesIndex = strlcat(objcTypes, types, strlen(types) + strlen(objcTypes) + 1);
   formatStringLength = strlen(formatString);
   i = 0;
   
@@ -868,8 +896,6 @@ rb_objc_signature_with_format_string(NSMethodSignature *signature, const char *f
     objcTypes[objcTypesIndex++] = _C_ID;
   }
   objcTypes[objcTypesIndex] = '\0';
-
-  return [NSMethodSignature signatureWithObjCTypes:objcTypes];
 }
 
 static void
@@ -969,26 +995,31 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
   int nbArgsExtra;
   int nbArgsAdjust;
   int i;
-  const char *type;
   void *data;
   void **args;
   VALUE rb_arg;
   VALUE rb_retval;
   ffi_cif cif;
   ffi_type **arg_types;
-  ffi_type *ret_type;
+  ffi_type *ret_type;  
+  size_t ret_len;
   ffi_closure *closure;
   ffi_status status;
   void *closurePtr;
   struct rb_objc_block *block;
   ffi_cif closureCif;
-  NSMethodSignature *signature;
-
-  signature = [NSMethodSignature signatureWithObjCTypes:types];
-
+  ffi_type *type;
+  size_t len;
+  const char *ltypes;
+  const char *rtypes;
+  NSInteger formatStringIndex;
+  const char *formatString;
+  const char* blockObjcTypes;
+  char buf[256] = { '\0' };    
+ 
   if (rcv != nil) {
     nbArgsAdjust = 2;
-    switch(*(signature.methodReturnType)) {
+    switch(*types) {
 #ifndef __aarch64__
     case _C_STRUCT_B:
       sym = objc_msgSend_stret;
@@ -1008,17 +1039,20 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
     return Qnil;
   }
 
-  nbArgs = (int)[signature numberOfArguments];
+  ret_type = rb_objc_ffi_type_for_type(types);  
+  ret_len = 0;
+  rtypes = types;
+  types = rb_objc_type_size(types, &ret_len);  
+  ret_len = MAX(sizeof(long), ret_len);
+
+  nbArgs = (int)rb_objc_type_arity(types);
   nbArgsExtra = rigs_argc - (nbArgs - nbArgsAdjust);
   
   if (nbArgsExtra < 0) {
     rb_raise(rb_eArgError, "wrong number of arguments (%d for %d)", rigs_argc, nbArgs - nbArgsAdjust);
   }
-  
-  if (nbArgsExtra > 0) {
-    NSInteger formatStringIndex;
-    const char *formatString;
-      
+
+  if (nbArgsExtra > 0) {      
     formatStringIndex = (NSInteger)NSMapGet(knownFormatStrings, (void*)hash) - 1;
     if (formatStringIndex != -1 && TYPE(rigs_argv[formatStringIndex]) == T_STRING) {
       formatString = rb_string_value_cstr(&rigs_argv[formatStringIndex]);
@@ -1026,8 +1060,10 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
     else {
       formatString = "";
     }
-    signature = rb_objc_signature_with_format_string(signature, formatString, nbArgsExtra);
-    nbArgs = (int)[signature numberOfArguments];
+
+    rb_objc_type_extend(types, formatString, nbArgsExtra, buf);
+    types = buf;
+    nbArgs = (int)rb_objc_type_arity(types);
   }
 
   args = alloca(sizeof(void*) * nbArgs);
@@ -1037,10 +1073,10 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
   memset(arg_types, 0, sizeof(ffi_type*) * nbArgs);
 
   for (i=0;i<nbArgsAdjust;i++) {
-    type = [signature getArgumentTypeAtIndex:i];
-    NSUInteger tsize;
-    NSGetSizeAndAlignment(type, &tsize, NULL);
-    data = alloca(tsize);
+    type = rb_objc_ffi_type_for_type(types);
+    len = 0;
+    types = rb_objc_type_size(types, &len);
+    data = alloca(len);
     switch (i) {
     case 0:
       *(id*)data = rcv;
@@ -1050,15 +1086,14 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
       break;
     }
     args[i] = data;
-    arg_types[i] = rb_objc_ffi_type_for_type(type);
+    arg_types[i] = type;
   }
 
   block = NULL;
   closure = NULL;
   for (i=nbArgsAdjust;i<nbArgs;i++) {
-    type = [signature getArgumentTypeAtIndex:i];
-    if (strcmp(type, "@?") == 0) {
-      const char* blockObjcTypes = NSMapGet(knownBlockArgs, (void*)(hash + i - nbArgsAdjust));
+    if (*types == _C_ID && *(types + 1) == _C_UNDEF) {
+      blockObjcTypes = NSMapGet(knownBlockArgs, (void*)(hash + i - nbArgsAdjust));
       if (blockObjcTypes && rb_objc_build_closure_cif(&closureCif, blockObjcTypes) == FFI_OK) {
         closure = ffi_closure_alloc(sizeof(ffi_closure), &closurePtr);
         if (ffi_prep_closure_loc(closure, &closureCif, rb_objc_block_handler, &rigs_argv[i-nbArgsAdjust], closurePtr) == FFI_OK) {
@@ -1074,28 +1109,27 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
         }
       }
 
-      NSUInteger tsize;
-      NSGetSizeAndAlignment(type, &tsize, NULL);
-      data = alloca(tsize);
+      type = rb_objc_ffi_type_for_type(types);
+      len = 0;
+      types = rb_objc_type_size(types, &len);
+      data = alloca(len);
       *(struct rb_objc_block**)data = block;
       args[i] = data;
-      arg_types[i] = rb_objc_ffi_type_for_type(type);
+      arg_types[i] = type;
     }
     else {
-      NSUInteger tsize;
-      NSGetSizeAndAlignment(type, &tsize, NULL);
-      void *tdata = alloca(tsize);
-      rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], &tdata, 0, type);
-      args[i] = tdata;
-      arg_types[i] = rb_objc_ffi_type_for_type(type);
+      type = rb_objc_ffi_type_for_type(types);
+      len = 0;
+      ltypes = types;
+      types = rb_objc_type_size(types, &len);
+      data = alloca(len);
+      rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], &data, 0, ltypes);
+      args[i] = data;
+      arg_types[i] = type;
     }
   }
 
-  type = [signature methodReturnType];
-
-  ret_type = rb_objc_ffi_type_for_type(type);
   if (ret_type != &ffi_type_void) {
-    size_t ret_len = MAX(sizeof(long), [signature methodReturnLength]);
     data = alloca(ret_len);
   }
   else {
@@ -1119,7 +1153,7 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
     }
     
     if (ret_type != &ffi_type_void) {
-      rb_objc_convert_to_rb(data, 0, type, &rb_retval);
+      rb_objc_convert_to_rb(data, 0, rtypes, &rb_retval);
     }
   }
 
@@ -1262,6 +1296,10 @@ rb_objc_register_method(Class class, Method method)
     }
     else {
       strlcat(objcTypes, lpos, pos - lpos + strlen(objcTypes) + 1);
+      if (*lpos == _C_PTR) lpos++;
+      if (*lpos == _C_STRUCT_B && NSMapGet(knownStructs, (void*)(rb_objc_hash_struct(lpos))) == NULL) {
+        return NO;
+      }
     }
     pos = rb_objc_skip_type_size(pos);
     pos = rb_objc_skip_type_qualifiers(pos);
@@ -1869,4 +1907,83 @@ Init_obj_ext()
 
   // rb_cSet doesn't have a C API
   rb_cSet = rb_const_get(rb_cObject, rb_intern("Set"));
+
+  // const char *thing = "[8S]";
+  // NSUInteger size;
+
+  // while (strlen(thing = NSGetSizeAndAlignment(thing, &size, NULL)) > 0) {
+  //   NSLog(@"%s %lu", thing, size);
+  // }
+
+  // NSLog(@"%lu", size);
+
+  // NSDecimalNumber *num = [NSDecimalNumber decimalNumberWithString:@"3.14"];
+
+  // NSDecimal dec = [num decimalValue];
+
+  // {?=b8b4b1b1b18[8S]}16@0:8
+
+  // https://fuchsia.googlesource.com/third_party/swift-corelibs-foundation/+/refs/tags/swift-4.0-DEVELOPMENT-SNAPSHOT-2017-10-06-a/Foundation/Decimal.swift
+
+  // typedef struct {
+  //   signed char	exponent;   // 8 - Signed exponent - -128 to 127 
+  //   BOOL	isNegative;         // 4 - Is this negative?
+  //   BOOL	validNumber;        // Is this a valid number?
+  //   unsigned char	length;	  // digits in mantissa.
+  //   unsigned char  cMantissa[2*NSDecimalMaxDigit];
+  // } NSDecimal;  
+
+  // uint32_t bits = 0;
+
+  // int32_t offsets[5] = { 8, 4, 1, 1, 18 };
+  // int32_t values[5] = { -2, 1, 0, 1, 0 };
+  // int32_t offset = 0;
+
+  // for (int i=0; i<5; i++) {
+  //   bits |= (((1 << offsets[i]) - 1) & values[i]) << offset;
+  //   offset += offsets[i];
+  // }
+  
+  // bits |= (((1 << 8) - 1) & -2) << 0;
+  // bits |= (((1 << 4) - 1) & 1) << 8;
+  // bits |= (((1 << 1) - 1) & 0) << 12;
+  // bits |= (((1 << 1) - 1) & 1) << 13;
+  // bits |= (((1 << 18) - 1) & 0) << 14;
+
+  // unsigned short mantissa[8] = { 0 };
+  // mantissa[0] = 314;
+  // mantissa[1] = 0;
+  // mantissa[2] = 0;
+  // mantissa[3] = 0;
+  // mantissa[4] = 0;
+  // mantissa[5] = 0;
+  // mantissa[6] = 0;
+  // mantissa[7] = 0;
+  
+  // void *data;
+  // data = malloc(sizeof(NSDecimal));
+  // memset(data, 0, sizeof(NSDecimal));
+  // memcpy(data, &bits, sizeof(uint32_t));
+  // memcpy((uint8_t*)data + sizeof(uint32_t), &mantissa, sizeof(unsigned short) * 8);
+
+  // dec = *(NSDecimal *)(data);
+
+  // NSLog(@"%@", NSDecimalString(&dec, @"."));
+
+  // size_t size = 0;
+  // NSGetSizeAndAlignment("[8S]", &size, NULL);
+  // NSLog(@"%s %lu %lu", @encode(BOOL*), size, sizeof(BOOL*));
+
+  // NSLog(@"%d", 31 >> 3);
+
+  // bitfields
+  // NSNumber decimalValue {_NSDecimal=b8b4b1b1b18[8S]}@: YES
+  // DecimalNumber decimalNumberWithDecimal: @@:{_NSDecimal=b8b4b1b1b18[8S]} YES
+  // NSDecimalNumber decimalValue {_NSDecimal=b8b4b1b1b18[8S]}@: YES
+  // NSDecimalNumber initWithDecimal: @@:{_NSDecimal=b8b4b1b1b18[8S]} YES
+  // NSScanner scanDecimal: B@:^{_NSDecimal=b8b4b1b1b18[8S]} YES
+  
+  // consider loading (or backporting)
+  // QuartzCore -> CA*
+  // CoreFoundation -> CG*
 }

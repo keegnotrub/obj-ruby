@@ -44,10 +44,12 @@ unsigned long rb_objc_hash(const char *value);
 unsigned long rb_objc_hash_s(const char *value, unsigned long seed);
 unsigned long rb_objc_hash_struct(const char *value);
 unsigned long rb_objc_struct_type_arity(const char *type);
+unsigned long rb_objc_type_arity(const char *type);
 const char *rb_objc_skip_type_qualifiers(const char *type);
 const char *rb_objc_skip_type_size(const char *type);
 const char *rb_objc_skip_type_sname(const char *type);
 const char *rb_objc_skip_type_uname(const char *type);
 const char *rb_objc_skip_typespec(const char *type);
+const char *rb_objc_type_size(const char *type, size_t *size);
 
 #endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

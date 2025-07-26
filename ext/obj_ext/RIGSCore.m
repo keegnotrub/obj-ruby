@@ -833,10 +833,10 @@ rb_objc_type_extend(const char *types, const char *formatString, int nbArgsExtra
   size_t formatStringLength;
   size_t i;
 
-  objcTypesIndex = strlcat(objcTypes, types, strlen(types) + strlen(objcTypes) + 1);
+  objcTypesIndex = strlcpy(objcTypes, types, strlen(types) + strlen(objcTypes) + 1);
   formatStringLength = strlen(formatString);
   i = 0;
-  
+
   while (i < formatStringLength) {
     if (formatString[i++] != '%') continue;
     if (i < formatStringLength && formatString[i] == '%') {
@@ -1063,7 +1063,7 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
 
     rb_objc_type_extend(types, formatString, nbArgsExtra, buf);
     types = buf;
-    nbArgs = (int)rb_objc_type_arity(types);
+    nbArgs += nbArgsExtra;
   }
 
   args = alloca(sizeof(void*) * nbArgs);

@@ -272,6 +272,126 @@ rb_objc_struct_type_arity(const char *type)
   return arity;
 }
 
+unsigned long
+rb_objc_type_arity(const char *type)
+{
+  unsigned long arity;
+
+  arity = 0;
+  while((type = rb_objc_skip_typespec(type))) {
+    arity++;
+  }
+
+  return arity;
+}
+
+
+const char *
+rb_objc_type_size(const char *type, size_t *size)
+{
+  int count;
+  size_t tsize;
+
+  count = 0;
+  tsize = 0;
+  type = rb_objc_skip_type_qualifiers(type);
+  
+  switch (*type) {
+  case _C_ID:
+    /* skip blocks */
+    while (*++type == _C_UNDEF);
+    *size += sizeof(id);
+    return type;
+  case _C_CLASS:
+    *size += sizeof(Class);
+    return type + 1;
+  case _C_SEL:
+    *size += sizeof(SEL);
+    return type + 1;
+  case _C_BOOL:
+    *size += sizeof(BOOL);
+    return type + 1;
+  case _C_CHR:
+    *size += sizeof(char);
+    return type + 1;
+  case _C_UCHR:
+    *size += sizeof(unsigned char);
+    return type + 1;    
+  case _C_CHARPTR:
+  case _C_ATOM:
+    *size += sizeof(char*);
+    return type + 1;
+  case _C_SHT:
+    *size += sizeof(short);
+    return type + 1;
+  case _C_USHT:
+    *size += sizeof(unsigned short);
+    return type + 1;
+  case _C_INT:
+    *size += sizeof(int);
+    return type + 1;
+  case _C_UINT:
+    *size += sizeof(unsigned int);
+    return type + 1;
+  case _C_LNG:
+    *size += sizeof(long);
+    return type + 1;
+  case _C_ULNG:
+    *size += sizeof(unsigned long);
+    return type + 1;
+  case _C_LNG_LNG:
+    *size += sizeof(long long);
+    return type + 1;
+  case _C_ULNG_LNG:
+    *size += sizeof(unsigned long long);
+    return type + 1;
+  case _C_FLT:
+    *size += sizeof(float);
+    return type + 1;
+  case _C_DBL:
+    *size += sizeof(double);
+    return type + 1;
+  case _C_VOID:
+  case _C_UNDEF:
+    return type + 1;
+  case _C_BFLD:
+    /* skip marker, sum bits until first non-marker */
+    while (isdigit((unsigned char)*++type)) {
+      count = (count << 3) + (count << 1) + (*type - '0');
+      if (*(type + 1) == _C_BFLD) type++;
+    }
+    *size += count >> 3;
+    return type;
+  case _C_ARY_B:
+    /* skip marker, multiply count by size elements until closing ']' */
+    while (isdigit((unsigned char)*++type))
+      count = (count << 3) + (count << 1) + (*type - '0');
+    while (*type != _C_ARY_E)
+      type = rb_objc_type_size(type, &tsize);
+    *size += tsize * count;
+    return type + 1;
+  case _C_STRUCT_B:
+    /* skip name, size elements until closing '}'  */
+    type = rb_objc_skip_type_sname(type);
+    while (*type != _C_STRUCT_E)
+      type = rb_objc_type_size(type, size);
+    return type + 1;
+  case _C_UNION_B:
+    /* skip name, size elements until closing ')'  */
+    type = rb_objc_skip_type_uname(type);
+    while (*type != _C_UNION_E)
+      type = rb_objc_type_size(type, size);
+    return type + 1;
+  case _C_PTR:
+    /* skip the following typespec */
+    type = rb_objc_skip_typespec(type + 1);
+    *size += sizeof(void*);
+    return type;
+  default:
+    return 0;
+  }
+}
+
 const char *
 rb_objc_skip_typespec(const char *type)
 {
@@ -280,7 +400,7 @@ rb_objc_skip_typespec(const char *type)
   switch (*type) {
 
   case _C_ID:
-    /* skip blocks */;
+    /* skip blocks */
     while (*++type == _C_UNDEF);
     return type;
 
@@ -309,6 +429,8 @@ rb_objc_skip_typespec(const char *type)
   case _C_BFLD:
     /* skip number of bits */
     while (isdigit((unsigned char)*++type));
+    while (*type == _C_BFLD)
+      type = rb_objc_skip_typespec(type);
     return type;
 
   case _C_ARY_B:

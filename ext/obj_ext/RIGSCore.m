@@ -999,23 +999,23 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
   void **args;
   VALUE rb_arg;
   VALUE rb_retval;
-  ffi_cif cif;
   ffi_type **arg_types;
+  ffi_type *type;
   ffi_type *ret_type;  
+  size_t len;
   size_t ret_len;
+  const char *atypes;
+  const char *rtypes;
+  ffi_cif cif;
   ffi_closure *closure;
   ffi_status status;
   void *closurePtr;
   struct rb_objc_block *block;
   ffi_cif closureCif;
-  ffi_type *type;
-  size_t len;
-  const char *ltypes;
-  const char *rtypes;
   NSInteger formatStringIndex;
   const char *formatString;
-  const char* blockObjcTypes;
-  char buf[256] = { '\0' };    
+  const char *blockObjcTypes;
+  char *buf;
  
   if (rcv != nil) {
     nbArgsAdjust = 2;
@@ -1060,6 +1060,9 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
     else {
       formatString = "";
     }
+
+    buf = alloca(sizeof(char) * 255);
+    memset(buf, '\0', sizeof(char) * 255);
 
     rb_objc_type_extend(types, formatString, nbArgsExtra, buf);
     types = buf;
@@ -1120,10 +1123,10 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
     else {
       type = rb_objc_ffi_type_for_type(types);
       len = 0;
-      ltypes = types;
+      atypes = types;
       types = rb_objc_type_size(types, &len);
       data = alloca(len);
-      rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], &data, 0, ltypes);
+      rb_objc_convert_to_objc(rigs_argv[i-nbArgsAdjust], &data, 0, atypes);
       args[i] = data;
       arg_types[i] = type;
     }

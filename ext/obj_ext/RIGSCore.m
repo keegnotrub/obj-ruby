@@ -827,78 +827,6 @@ rb_objc_convert_to_rb(void *data, size_t offset, const char *type, VALUE *rb_val
 }
 
 static void
-rb_objc_type_extend(const char *types, const char *formatString, int nbArgsExtra, char *objcTypes)
-{
-  size_t objcTypesIndex;
-  size_t formatStringLength;
-  size_t i;
-
-  objcTypesIndex = strlcpy(objcTypes, types, strlen(types) + strlen(objcTypes) + 1);
-  formatStringLength = strlen(formatString);
-  i = 0;
-
-  while (i < formatStringLength) {
-    if (formatString[i++] != '%') continue;
-    if (i < formatStringLength && formatString[i] == '%') {
-      i++;
-      continue;
-    }
-    objcTypes[objcTypesIndex] = '\0';
-    while (i < formatStringLength) {
-      switch (formatString[i++]) {
-      case 'd':
-      case 'i':
-      case 'o':
-      case 'u':
-      case 'x':
-      case 'X':
-      case 'c':
-      case 'C':
-        objcTypes[objcTypesIndex] = _C_INT;
-        break;
-      case 'D':
-      case 'O':
-      case 'U':
-        objcTypes[objcTypesIndex] = _C_LNG;
-        break;
-      case 'f':       
-      case 'F':
-      case 'e':       
-      case 'E':
-      case 'g':       
-      case 'G':
-      case 'a':
-      case 'A':
-        objcTypes[objcTypesIndex] = _C_DBL;
-        break;
-      case 's':
-      case 'S':
-        objcTypes[objcTypesIndex] = _C_CHARPTR;
-        break;
-      case 'p':
-        objcTypes[objcTypesIndex] = _C_PTR;
-        break;
-      case '@':
-        objcTypes[objcTypesIndex] = _C_ID;
-        break;            
-      }
-      if (objcTypes[objcTypesIndex] != '\0') {
-        objcTypesIndex++;
-        if (--nbArgsExtra < 0) {
-          rb_raise(rb_eArgError, "too many tokens in the format string '%s' for the given argument(s)", formatString);
-        }
-        break;
-      }
-    }
-  }
-
-  while (nbArgsExtra-- > 0) {
-    objcTypes[objcTypesIndex++] = _C_ID;
-  }
-  objcTypes[objcTypesIndex] = '\0';
-}
-
-static void
 rb_objc_proxy_handler(ffi_cif *cif, void *ret, void **args, void *user_data) {
   @autoreleasepool {
     SEL sel;
@@ -1016,6 +944,7 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
   const char *formatString;
   const char *blockObjcTypes;
   char *buf;
+  char keyChar;
  
   if (rcv != nil) {
     nbArgsAdjust = 2;
@@ -1063,10 +992,21 @@ rb_objc_dispatch(id rcv, const char *method, unsigned long hash, const char *typ
 
     buf = alloca(sizeof(char) * 255);
     memset(buf, '\0', sizeof(char) * 255);
+    len = strlcpy(buf, types, strlen(types) + strlen(buf) + 1);    
 
-    rb_objc_type_extend(types, formatString, nbArgsExtra, buf);
+    i = nbArgsExtra;
+    while (len < 255 && (formatString = rb_objc_format_keychar(formatString, &keyChar))) {
+      buf[len++] = keyChar;
+      nbArgs++;
+      if (--i < 0) {
+        rb_raise(rb_eArgError, "too many tokens in the format string for the given argument(s)");
+      }
+    }
+    while (len < 255 && i-- > 0) {
+      buf[len++] = _C_ID;
+      nbArgs++;
+    }
     types = buf;
-    nbArgs += nbArgsExtra;
   }
 
   args = alloca(sizeof(void*) * nbArgs);

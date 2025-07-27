@@ -51,5 +51,6 @@ const char *rb_objc_skip_type_sname(const char *type);
 const char *rb_objc_skip_type_uname(const char *type);
 const char *rb_objc_skip_typespec(const char *type);
 const char *rb_objc_type_size(const char *type, size_t *size);
+const char *rb_objc_format_keychar(const char *format, char *keyChar);
 
 #endif /* __RIGSUtilitis_h_GNUSTEP_RUBY_INCLUDE */

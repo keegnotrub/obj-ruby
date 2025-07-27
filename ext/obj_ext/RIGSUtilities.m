@@ -462,3 +462,52 @@ rb_objc_skip_typespec(const char *type)
     return 0;
   }
 }
+
+const char *
+rb_objc_format_keychar(const char *format, char *keyChar)
+{
+  char fmtChar;
+
+  while ((fmtChar = *format++)) {
+    if (fmtChar != '%') continue;    
+    switch(*format) {
+    case 'd':
+    case 'i':
+    case 'o':
+    case 'u':
+    case 'x':
+    case 'X':
+    case 'c':
+    case 'C':
+      *keyChar = _C_INT;
+      return format + 1;
+    case 'D':
+    case 'O':
+    case 'U':
+      *keyChar = _C_LNG;
+      return format + 1;
+    case 'f':       
+    case 'F':
+    case 'e':       
+    case 'E':
+    case 'g':       
+    case 'G':
+    case 'a':
+    case 'A':
+      *keyChar = _C_DBL;
+      return format + 1;
+    case 's':
+    case 'S':
+      *keyChar = _C_CHARPTR;
+      return format + 1;
+    case 'p':
+      *keyChar = _C_PTR;
+      return format + 1;
+    case '@':
+      *keyChar = _C_ID;
+      return format + 1;
+    }
+  }
+
+  return 0;
+}
